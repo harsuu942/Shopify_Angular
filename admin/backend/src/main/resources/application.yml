@@ -1,0 +1,45 @@
+spring:
+  application:
+    name: hearth-admin-api
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/hearth_admin?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+        format_sql: true
+  jackson:
+    default-property-inclusion: non_null
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+server:
+  port: 8081
+  error:
+    include-message: always
+  compression:
+    enabled: true
+app:
+  upload-dir: ${ADMIN_UPLOAD_DIR:./data/product-images}
+  jwt:
+    secret: ${JWT_SECRET:local-development-signing-key-change-before-production-2026}
+    expiration-minutes: 480
+  cors-origin: ${CORS_ORIGIN:http://localhost:4201,http://127.0.0.1:4201}
+  rate-limit:
+    requests-per-minute: ${RATE_LIMIT_PER_MINUTE:300}
+    auth-per-minute: ${AUTH_RATE_LIMIT_PER_MINUTE:10}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+    jmx:
+      exposure:
+        exclude: "*"

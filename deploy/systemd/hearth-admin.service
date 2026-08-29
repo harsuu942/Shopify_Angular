@@ -1,0 +1,30 @@
+[Unit]
+Description=Hearth Admin Spring Boot API
+After=network-online.target mysql.service
+Wants=network-online.target
+
+[Service]
+Type=exec
+User=hearth
+Group=hearth
+WorkingDirectory=/opt/hearth/admin
+EnvironmentFile=/etc/hearth/admin.env
+ExecStart=/usr/bin/java -XX:MaxRAMPercentage=75.0 -Djava.security.egd=file:/dev/urandom -jar /opt/hearth/admin/hearth-admin-api.jar
+SuccessExitStatus=143
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=35
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/hearth-admin/product-images
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+UMask=0027
+
+[Install]
+WantedBy=multi-user.target

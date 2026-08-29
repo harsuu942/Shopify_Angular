@@ -1,0 +1,13 @@
+node_modules/
+dist/
+target/
+out-tsc/
+.pnpm-store/
+.angular/
+.idea/
+.vscode/
+*.log
+release/
+deploy/env/admin.env
+deploy/env/shopify.env
+.DS_Store

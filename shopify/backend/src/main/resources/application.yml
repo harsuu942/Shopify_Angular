@@ -1,0 +1,62 @@
+spring:
+  application:
+    name: hearth-shopify-api
+  datasource:
+    url: jdbc:h2:mem:hearth;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    open-in-view: false
+  h2:
+    console:
+      enabled: false
+server:
+  port: 8080
+  error:
+    include-message: never
+  compression:
+    enabled: true
+  forward-headers-strategy: framework
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+    jmx:
+      exposure:
+        exclude: "*"
+app:
+  cors-origin: ${CORS_ORIGIN:http://localhost:4200}
+  rate-limit:
+    requests-per-minute: ${RATE_LIMIT_PER_MINUTE:300}
+    auth-per-minute: ${AUTH_RATE_LIMIT_PER_MINUTE:20}
+  auth:
+    customer-email: customer@example.com
+    customer-password: Customer123!
+    admin-email: admin@example.com
+    admin-password: Admin123!
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: ${DDL_MODE:validate}
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+server:
+  shutdown: graceful
+app:
+  cors-origin: ${SHOPIFY_PUBLIC_URL}
+  auth:
+    customer-email: ${CUSTOMER_EMAIL}
+    customer-password: ${CUSTOMER_PASSWORD}
+    admin-email: ${SHOP_ADMIN_EMAIL}
+    admin-password: ${SHOP_ADMIN_PASSWORD}

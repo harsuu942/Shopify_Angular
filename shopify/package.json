@@ -1,0 +1,14 @@
+{
+  "name": "hearth-shopify",
+  "private": true,
+  "scripts": {
+    "install:frontend": "pnpm --dir frontend install --ignore-workspace",
+    "frontend": "pnpm --dir frontend start",
+    "backend": "mvn -f backend/pom.xml -Dexec.skip=true spring-boot:run",
+    "dev": "frontend/node_modules/.bin/concurrently -k -n API,WEB -c blue,green \"mvn -f backend/pom.xml -Dexec.skip=true spring-boot:run\" \"pnpm --dir frontend start\"",
+    "build:frontend": "pnpm --dir frontend build",
+    "build:backend": "mvn -f backend/pom.xml clean package",
+    "build": "pnpm build:frontend && pnpm build:backend"
+  },
+  "packageManager": "pnpm@11.9.0"
+}

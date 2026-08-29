@@ -1,0 +1,29 @@
+[Unit]
+Description=Hearth Shopify Spring Boot API
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=exec
+User=hearth
+Group=hearth
+WorkingDirectory=/opt/hearth/shopify
+EnvironmentFile=/etc/hearth/shopify.env
+ExecStart=/usr/bin/java -XX:MaxRAMPercentage=75.0 -Djava.security.egd=file:/dev/urandom -jar /opt/hearth/shopify/hearth-shopify-api.jar
+SuccessExitStatus=143
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=35
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+UMask=0027
+
+[Install]
+WantedBy=multi-user.target
