@@ -382,7 +382,7 @@ const authInterceptor=(req:any,next:any)=>{
 
   @if(modal()!.type==='blog'){<form (ngSubmit)="saveBlog()" class="form-grid"><label class="full">Article Title<input name="blogTitle" [(ngModel)]="blogDraft.title" (input)="autoGenerateSlug()" required placeholder="e.g. How to Bleed a Radiator"></label><label>Slug<input name="blogSlug" [(ngModel)]="blogDraft.slug" required placeholder="e.g. how-to-bleed-a-radiator"></label><label>Category<input name="blogCategory" [(ngModel)]="blogDraft.category" required placeholder="e.g. Buying Guides, Radiators & Heating"></label><label>Author<input name="blogAuthor" [(ngModel)]="blogDraft.author" required placeholder="e.g. THP Heating Specialist"></label><label>Read Time (Minutes)<input name="blogReadTime" type="number" min="1" [(ngModel)]="blogDraft.readTimeMinutes"></label><label>Publication Date<input name="blogDate" [(ngModel)]="blogDraft.publishedAt" placeholder="e.g. 15 Oct 2026"></label><label>Status<select name="blogStatus" [(ngModel)]="blogDraft.status"><option value="PUBLISHED">PUBLISHED (Visible & Synced)</option><option value="DRAFT">DRAFT (Admin Only)</option></select></label><label class="full">Cover Image URL<input name="blogCover" type="url" [(ngModel)]="blogDraft.coverImage" placeholder="https://example.com/image.jpg"></label><label class="full">Excerpt Summary<textarea name="blogExcerpt" rows="3" [(ngModel)]="blogDraft.excerpt" placeholder="Brief summary of the article for listings..."></textarea></label><label class="full">Tags (comma-separated)<input name="blogTags" [(ngModel)]="blogDraft.tags" placeholder="e.g. Radiators, BTU, Heating Advice"></label><label class="full">HTML Content Body<textarea name="blogContent" rows="12" [(ngModel)]="blogDraft.content" required placeholder="Full HTML article content..." style="font-family:monospace;font-size:0.85rem"></textarea></label><div class="form-actions full"><button type="button" class="secondary" (click)="closeModal()">Cancel</button><button type="submit" class="primary" [disabled]="savingBlog()">{{savingBlog()?'Saving…':'💾 Save & Sync Article'}}</button></div></form>}
 
-  @if(modal()!.type==='banner'){<form (ngSubmit)="saveBanner()" class="form-grid">@if(bannerDraft.imageUrl){<div class="product-edit-preview full" style="display:flex;align-items:center;gap:16px;background:#f8fafc;padding:12px 16px;border-radius:8px;border:1px solid #e2e8f0"><img [src]="bannerDraft.imageUrl" [alt]="bannerDraft.title" style="width:120px;height:70px;object-fit:cover;border-radius:6px;border:1px solid #cbd5e1"><div><strong style="font-size:0.92rem;display:block">Banner Image Preview</strong><small class="muted" style="word-break:break-all">{{bannerDraft.imageUrl}}</small></div></div>}<label class="full">Banner Section / Placement *<select name="btype" [(ngModel)]="bannerDraft.type"><option value="BANNER">Top Hero Slider Banner</option><option value="CAMPAIGN_BANNER">Second Campaign Banner (Dual Cards)</option></select></label><label class="full">Eyebrow Tag (Kicker)<input name="btag" [(ngModel)]="bannerDraft.tag" placeholder="e.g. ✦ BRITISH HEATING & LUXURY BATHROOMS · 2026 or DESIGN-LED HEATING"></label><label class="full">Banner Headline (Title) *<input name="btitle" [(ngModel)]="bannerDraft.title" required placeholder="e.g. Designer Radiators or Luxury Heating Built for Considered Homes."></label><label class="full">Subtitle / Body Description<textarea name="bbody" rows="3" [(ngModel)]="bannerDraft.body" placeholder="e.g. Architectural warmth in statement finishes with superior heat outputs..."></textarea></label><label>Primary Button Text<input name="bbtnText" [(ngModel)]="bannerDraft.buttonText" placeholder="e.g. Shop Collection → or Explore Heating Range →"></label><label>Target Link / Section Anchor<input name="blinkUrl" [(ngModel)]="bannerDraft.linkUrl" placeholder="e.g. /category/Radiators or #new-arrivals"></label><label>Slide Order (Position)<input type="number" min="1" step="1" name="bsortOrder" [(ngModel)]="bannerDraft.sortOrder" placeholder="1"></label><label>Publication Status<select name="bstatus" [(ngModel)]="bannerDraft.status"><option value="PUBLISHED">PUBLISHED (Active on Storefront)</option><option value="DRAFT">DRAFT (Hidden from Storefront)</option></select></label><div class="full image-upload-field"><span>Banner Featured / Background Image</span><div style="display:flex;gap:10px;align-items:center;margin-top:6px"><input name="bimgUrl" type="url" [(ngModel)]="bannerDraft.imageUrl" placeholder="https://... or pick from media" style="flex:1"><button type="button" class="secondary" (click)="openMediaPicker('banner')" style="white-space:nowrap;padding:10px 14px">🖼 Pick Media</button></div></div><div class="form-actions full"><button type="button" class="secondary" (click)="closeModal()">Cancel</button><button type="submit" class="primary" [disabled]="savingBanner()">{{savingBanner()?'Saving & Syncing…':'💾 Save Banner & Sync'}}</button></div></form>}
+  @if(modal()!.type==='banner'){<form (ngSubmit)="saveBanner()" class="form-grid">@if(bannerDraft.imageUrl){<div class="product-edit-preview full" style="display:flex;align-items:center;gap:16px;background:#f8fafc;padding:12px 16px;border-radius:8px;border:1px solid #e2e8f0"><img [src]="bannerDraft.imageUrl" [alt]="bannerDraft.title" style="width:120px;height:70px;object-fit:cover;border-radius:6px;border:1px solid #cbd5e1"><div style="flex:1"><strong style="font-size:0.92rem;display:block">Banner Image Preview</strong><small class="muted" style="word-break:break-all">{{bannerDraft.imageUrl}}</small></div><button type="button" class="secondary" (click)="cropExistingBanner()" style="padding:6px 12px;font-size:0.8rem">✂ Recrop Image</button><button type="button" class="delete-btn" (click)="bannerDraft.imageUrl=''" style="padding:6px 12px;font-size:0.8rem">✕ Remove</button></div>}<label class="full">Banner Section / Placement *<select name="btype" [(ngModel)]="bannerDraft.type"><option value="BANNER">Top Hero Slider Banner</option><option value="CAMPAIGN_BANNER">Second Campaign Banner (Dual Cards)</option></select></label><label class="full">Eyebrow Tag (Kicker)<input name="btag" [(ngModel)]="bannerDraft.tag" placeholder="e.g. ✦ BRITISH HEATING & LUXURY BATHROOMS · 2026 or DESIGN-LED HEATING"></label><label class="full">Banner Headline (Title) *<input name="btitle" [(ngModel)]="bannerDraft.title" required placeholder="e.g. Designer Radiators or Luxury Heating Built for Considered Homes."></label><label class="full">Subtitle / Body Description<textarea name="bbody" rows="3" [(ngModel)]="bannerDraft.body" placeholder="e.g. Architectural warmth in statement finishes with superior heat outputs..."></textarea></label><label>Primary Button Text<input name="bbtnText" [(ngModel)]="bannerDraft.buttonText" placeholder="e.g. Shop Collection → or Explore Heating Range →"></label><label>Target Link / Section Anchor<input name="blinkUrl" [(ngModel)]="bannerDraft.linkUrl" placeholder="e.g. /category/Radiators or #new-arrivals"></label><label>Slide Order (Position)<input type="number" min="1" step="1" name="bsortOrder" [(ngModel)]="bannerDraft.sortOrder" placeholder="1"></label><label>Publication Status<select name="bstatus" [(ngModel)]="bannerDraft.status"><option value="PUBLISHED">PUBLISHED (Active on Storefront)</option><option value="DRAFT">DRAFT (Hidden from Storefront)</option></select></label><div class="full image-upload-field"><span>Banner Featured / Background Image</span><div style="display:flex;gap:10px;align-items:center;margin-top:6px;flex-wrap:wrap"><input name="bimgUrl" type="url" [(ngModel)]="bannerDraft.imageUrl" placeholder="https://... or pick from media" style="flex:1;min-width:200px"><input type="file" #bannerFileInput accept="image/jpeg,image/png,image/webp" (change)="onBannerFileSelected($event)" style="display:none"><button type="button" class="primary" (click)="bannerFileInput.click()" style="white-space:nowrap;padding:10px 14px;display:flex;align-items:center;gap:6px"><span>✂</span> Upload &amp; Crop Banner</button><button type="button" class="secondary" (click)="openMediaPicker('banner')" style="white-space:nowrap;padding:10px 14px">🖼 Pick Media</button></div></div><div class="form-actions full"><button type="button" class="secondary" (click)="closeModal()">Cancel</button><button type="submit" class="primary" [disabled]="savingBanner()">{{savingBanner()?'Saving & Syncing…':'💾 Save Banner & Sync'}}</button></div></form>}
 
   @if(modal()!.type==='navMenu'){
     <form (ngSubmit)="saveNavMenu()" style="display:flex;flex-direction:column;gap:18px">
@@ -404,13 +404,18 @@ const authInterceptor=(req:any,next:any)=>{
                 <strong style="font-size:0.92rem;display:block;color:#0f172a">Category Featured Image Preview</strong>
                 <small class="muted" style="word-break:break-all">{{navMenuDraft.imageUrl}}</small>
               </div>
+              <button type="button" class="secondary" (click)="cropExistingNavImage()" style="padding:6px 12px;font-size:0.8rem">✂ Recrop</button>
               <button type="button" class="delete-btn" (click)="navMenuDraft.imageUrl=''" style="padding:6px 12px;font-size:0.8rem">✕ Remove</button>
             </div>
           }
           <div class="full image-upload-field">
             <span style="font-size:0.84rem;font-weight:600;color:#334155;display:block;margin-bottom:4px">Category Featured / Department Banner Image</span>
-            <div style="display:flex;gap:10px;align-items:center">
-              <input name="nmImgUrl" type="url" [(ngModel)]="navMenuDraft.imageUrl" placeholder="https://... or pick from media" style="flex:1">
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+              <input name="nmImgUrl" type="url" [(ngModel)]="navMenuDraft.imageUrl" placeholder="https://... or pick from media" style="flex:1;min-width:200px">
+              <input type="file" #navFileInput accept="image/jpeg,image/png,image/webp" (change)="onNavCategoryFileSelected($event)" style="display:none">
+              <button type="button" class="primary" (click)="navFileInput.click()" style="white-space:nowrap;padding:10px 14px;display:flex;align-items:center;gap:6px">
+                <span>✂</span> Upload &amp; Crop Image
+              </button>
               <button type="button" class="secondary" (click)="openMediaPicker('navCategory', null, navMenuDraft.category)" style="white-space:nowrap;padding:10px 14px;display:flex;align-items:center;gap:6px">
                 <span>🖼</span> Pick Image
               </button>
@@ -771,6 +776,92 @@ const authInterceptor=(req:any,next:any)=>{
   }
 
  </section></div>}
+
+@if(cropModalActive()){
+<div class="modal-backdrop" style="z-index:2200" (click)="closeCropModal()">
+  <section class="modal" style="max-width:960px;width:95%;z-index:2201" (click)="$event.stopPropagation()">
+    <header>
+      <div>
+        <p class="eyebrow">IMAGE FRAMING &amp; OPTIMIZATION</p>
+        <h2>✂ Crop &amp; Adjust {{cropTargetType === 'banner' ? 'Banner' : 'Category'}} Image</h2>
+      </div>
+      <button type="button" (click)="closeCropModal()">×</button>
+    </header>
+    <div style="padding:18px 24px;display:flex;flex-direction:column;gap:16px">
+      <!-- Aspect Ratio Presets -->
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:0.82rem;font-weight:700;color:#334155">Aspect Ratio:</span>
+        <button type="button" class="tab-btn" [class.active]="cropAspectRatio==='16:6'" (click)="setCropAspectRatio('16:6')">
+          Hero Slider (16:6 / 1920×720)
+        </button>
+        <button type="button" class="tab-btn" [class.active]="cropAspectRatio==='16:7'" (click)="setCropAspectRatio('16:7')">
+          Hero Slider (16:7 / 1920×840)
+        </button>
+        <button type="button" class="tab-btn" [class.active]="cropAspectRatio==='16:9'" (click)="setCropAspectRatio('16:9')">
+          Campaign Card (16:9 / 1200×675)
+        </button>
+        <button type="button" class="tab-btn" [class.active]="cropAspectRatio==='21:9'" (click)="setCropAspectRatio('21:9')">
+          Ultra-Wide (21:9 / 1920×820)
+        </button>
+      </div>
+
+      <!-- Crop Viewport Container with Guidelines & Pan/Drag -->
+      <div 
+        id="banner-crop-viewport"
+        (mousedown)="onCropMouseDown($event)"
+        (mousemove)="onCropMouseMove($event)"
+        (mouseup)="onCropMouseUp()"
+        (mouseleave)="onCropMouseUp()"
+        [style.aspectRatio]="getCssAspectRatio()"
+        style="width:100%;max-height:460px;background:#0f172a;border:2px dashed #0284c7;border-radius:8px;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:grab;user-select:none;box-shadow:inset 0 0 20px rgba(0,0,0,0.5)">
+        
+        <!-- Image being cropped -->
+        <img 
+          [src]="cropImageSrc" 
+          [style.transform]="'translate(' + cropPanX + 'px, ' + cropPanY + 'px) scale(' + cropZoom + ')'"
+          style="max-width:100%;max-height:100%;object-fit:contain;pointer-events:none;transform-origin:center center;transition:none">
+
+        <!-- Rule of Thirds Grid Overlay -->
+        <div style="position:absolute;inset:0;pointer-events:none;display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr 1fr;border:1px solid rgba(255,255,255,0.25)">
+          <div style="border-right:1px dashed rgba(255,255,255,0.3);border-bottom:1px dashed rgba(255,255,255,0.3)"></div>
+          <div style="border-right:1px dashed rgba(255,255,255,0.3);border-bottom:1px dashed rgba(255,255,255,0.3)"></div>
+          <div style="border-bottom:1px dashed rgba(255,255,255,0.3)"></div>
+          <div style="border-right:1px dashed rgba(255,255,255,0.3);border-bottom:1px dashed rgba(255,255,255,0.3)"></div>
+          <div style="border-right:1px dashed rgba(255,255,255,0.3);border-bottom:1px dashed rgba(255,255,255,0.3)"></div>
+          <div style="border-bottom:1px dashed rgba(255,255,255,0.3)"></div>
+          <div style="border-right:1px dashed rgba(255,255,255,0.3)"></div>
+          <div style="border-right:1px dashed rgba(255,255,255,0.3)"></div>
+          <div></div>
+        </div>
+
+        <!-- Drag instruction tag -->
+        <div style="position:absolute;bottom:10px;left:12px;background:rgba(15,23,42,0.75);color:#fff;font-size:0.75rem;padding:4px 10px;border-radius:4px;pointer-events:none;backdrop-filter:blur(4px)">
+          ✋ Drag image to position · Use slider below to zoom
+        </div>
+      </div>
+
+      <!-- Controls: Zoom Slider and Reset -->
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;background:#f8fafc;padding:12px 18px;border-radius:8px;border:1px solid #e2e8f0;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:240px">
+          <span style="font-size:0.82rem;font-weight:700;color:#334155;white-space:nowrap">🔍 Zoom ({{cropZoom | number:'1.2-2'}}x):</span>
+          <input type="range" min="1.0" max="3.0" step="0.05" [(ngModel)]="cropZoom" style="flex:1;cursor:pointer">
+        </div>
+        <button type="button" class="secondary" (click)="resetCropTransform()" style="padding:6px 14px;font-size:0.8rem">
+          ↺ Reset Framing
+        </button>
+      </div>
+
+      <!-- Footer Buttons -->
+      <div class="form-actions" style="margin:0;display:flex;justify-content:flex-end;gap:10px">
+        <button type="button" class="secondary" (click)="closeCropModal()">Cancel</button>
+        <button type="button" class="primary" [disabled]="croppingImage()" (click)="applyCropAndUpload()" style="display:flex;align-items:center;gap:6px">
+          <span>{{croppingImage() ? '⏳ Cropping & Uploading…' : '✓ Apply Crop & Save Image'}}</span>
+        </button>
+      </div>
+    </div>
+  </section>
+</div>
+}
 @if(mediaPickerActive()){
 <div class="modal-backdrop" style="z-index:2000" (click)="closeMediaPicker()">
   <section class="modal" style="max-width:880px;width:92%;z-index:2001" (click)="$event.stopPropagation()">
@@ -2346,6 +2437,236 @@ exportMediaManifestCsv(){
         this.notify('⚡ All storefront banners & campaigns synced dynamically!');
       }
     });
+  }
+
+  // ==========================================
+  // BANNER & MEDIA IMAGE CROPPING FUNCTIONALITY
+  // ==========================================
+  cropModalActive = signal<boolean>(false);
+  croppingImage = signal<boolean>(false);
+  cropAspectRatio: '16:6' | '16:7' | '16:9' | '21:9' = '16:6';
+  cropTargetType: 'banner' | 'navCategory' = 'banner';
+  cropImageSrc: string = '';
+  cropZoom: number = 1.0;
+  cropPanX: number = 0;
+  cropPanY: number = 0;
+  private isDraggingCrop: boolean = false;
+  private dragStartX: number = 0;
+  private dragStartY: number = 0;
+  private panStartX: number = 0;
+  private panStartY: number = 0;
+
+  onBannerFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    if (file.size > 15 * 1024 * 1024) {
+      this.notify('Selected image must be under 15MB');
+      input.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      if (dataUrl) {
+        this.openCropModal(dataUrl, 'banner');
+      }
+      input.value = '';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  cropExistingBanner() {
+    if (!this.bannerDraft.imageUrl) return;
+    this.openCropModal(this.bannerDraft.imageUrl, 'banner');
+  }
+
+  cropExistingNavImage() {
+    if (!this.navMenuDraft.imageUrl) return;
+    this.openCropModal(this.navMenuDraft.imageUrl, 'navCategory');
+  }
+
+  onNavCategoryFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      if (dataUrl) {
+        this.openCropModal(dataUrl, 'navCategory');
+      }
+      input.value = '';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  openCropModal(src: string, targetType: 'banner' | 'navCategory' = 'banner') {
+    this.cropImageSrc = src;
+    this.cropTargetType = targetType;
+    this.cropZoom = 1.0;
+    this.cropPanX = 0;
+    this.cropPanY = 0;
+    this.cropAspectRatio = targetType === 'banner' ? (this.bannerDraft.type === 'CAMPAIGN_BANNER' ? '16:9' : '16:6') : '16:9';
+    this.cropModalActive.set(true);
+  }
+
+  closeCropModal() {
+    this.cropModalActive.set(false);
+    this.cropImageSrc = '';
+    this.cropZoom = 1.0;
+    this.cropPanX = 0;
+    this.cropPanY = 0;
+  }
+
+  setCropAspectRatio(ratio: '16:6' | '16:7' | '16:9' | '21:9') {
+    this.cropAspectRatio = ratio;
+    this.resetCropTransform();
+  }
+
+  getCssAspectRatio(): string {
+    switch (this.cropAspectRatio) {
+      case '16:6': return '16 / 6';
+      case '16:7': return '16 / 7';
+      case '16:9': return '16 / 9';
+      case '21:9': return '21 / 9';
+      default: return '16 / 6';
+    }
+  }
+
+  getNumericAspectRatio(): number {
+    switch (this.cropAspectRatio) {
+      case '16:6': return 16 / 6;
+      case '16:7': return 16 / 7;
+      case '16:9': return 16 / 9;
+      case '21:9': return 21 / 9;
+      default: return 16 / 6;
+    }
+  }
+
+  onCropMouseDown(e: MouseEvent) {
+    e.preventDefault();
+    this.isDraggingCrop = true;
+    this.dragStartX = e.clientX;
+    this.dragStartY = e.clientY;
+    this.panStartX = this.cropPanX;
+    this.panStartY = this.cropPanY;
+  }
+
+  onCropMouseMove(e: MouseEvent) {
+    if (!this.isDraggingCrop) return;
+    this.cropPanX = this.panStartX + (e.clientX - this.dragStartX);
+    this.cropPanY = this.panStartY + (e.clientY - this.dragStartY);
+  }
+
+  onCropMouseUp() {
+    this.isDraggingCrop = false;
+  }
+
+  resetCropTransform() {
+    this.cropZoom = 1.0;
+    this.cropPanX = 0;
+    this.cropPanY = 0;
+  }
+
+  applyCropAndUpload() {
+    const viewport = document.getElementById('banner-crop-viewport');
+    if (!viewport || !this.cropImageSrc) return;
+    this.croppingImage.set(true);
+
+    let targetWidth = 1920;
+    let targetHeight = Math.round(targetWidth / this.getNumericAspectRatio());
+    if (this.cropAspectRatio === '16:9') {
+      targetWidth = 1600;
+      targetHeight = 900;
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      this.croppingImage.set(false);
+      return;
+    }
+
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const vpRect = viewport.getBoundingClientRect();
+      const vpWidth = vpRect.width;
+      const vpHeight = vpRect.height;
+
+      const scaleX = targetWidth / vpWidth;
+      const scaleY = targetHeight / vpHeight;
+
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(0, 0, targetWidth, targetHeight);
+
+      const imgAspect = img.naturalWidth / img.naturalHeight;
+      const vpAspect = vpWidth / vpHeight;
+
+      let baseDrawWidth = vpWidth;
+      let baseDrawHeight = vpHeight;
+
+      if (imgAspect > vpAspect) {
+        baseDrawHeight = vpHeight;
+        baseDrawWidth = vpHeight * imgAspect;
+      } else {
+        baseDrawWidth = vpWidth;
+        baseDrawHeight = vpWidth / imgAspect;
+      }
+
+      const zoomedWidth = baseDrawWidth * this.cropZoom;
+      const zoomedHeight = baseDrawHeight * this.cropZoom;
+
+      const centerX = (vpWidth / 2) + this.cropPanX;
+      const centerY = (vpHeight / 2) + this.cropPanY;
+
+      const drawX = (centerX - (zoomedWidth / 2)) * scaleX;
+      const drawY = (centerY - (zoomedHeight / 2)) * scaleY;
+      const drawW = zoomedWidth * scaleX;
+      const drawH = zoomedHeight * scaleY;
+
+      ctx.drawImage(img, drawX, drawY, drawW, drawH);
+
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          this.croppingImage.set(false);
+          this.notify('Failed to generate cropped image');
+          return;
+        }
+
+        const file = new File([blob], `banner-crop-${Date.now()}.jpg`, { type: 'image/jpeg' });
+        const form = new FormData();
+        form.append('file', file);
+
+        this.http.post<{url: string; filename: string}>('/api/products/images', form).pipe(
+          finalize(() => this.croppingImage.set(false)),
+          catchError(err => {
+            this.notify(err.error?.message || 'Banner upload failed');
+            return of(null);
+          })
+        ).subscribe(res => {
+          if (res && res.url) {
+            if (this.cropTargetType === 'banner') {
+              this.bannerDraft.imageUrl = res.url;
+              this.notify('✓ Banner cropped & uploaded successfully!');
+            } else if (this.cropTargetType === 'navCategory') {
+              this.navMenuDraft.imageUrl = res.url;
+              this.notify('✓ Category image cropped & uploaded successfully!');
+            }
+            this.closeCropModal();
+          }
+        });
+      }, 'image/jpeg', 0.92);
+    };
+    img.onerror = () => {
+      this.croppingImage.set(false);
+      this.notify('Could not load image for cropping');
+    };
+    img.src = this.cropImageSrc;
   }
 
  private emptyProduct():Product{return{sku:'',name:'',brand:'Terma',category:'Designer Radiators',description:'',priceMinor:0,costMinor:0,stock:10,lowStockThreshold:5,discountPercent:0,status:'PUBLISHED',taxClass:'STANDARD',shippingClass:'STANDARD',variants:[]}}

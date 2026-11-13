@@ -344,7 +344,8 @@ export class App {
     const idx = Math.min(this.currentBannerIndex(), list.length - 1);
     const cur = list[idx >= 0 ? idx : 0];
     if (cur?.imageUrl) {
-      return `linear-gradient(90deg, rgba(20,38,62,0.88) 0%, rgba(20,38,62,0.6) 45%, rgba(20,38,62,0.18) 100%), url('${cur.imageUrl}')`;
+      const imgUrl = this.imageSrc(cur.imageUrl);
+      return `linear-gradient(90deg, rgba(15,23,42,0.48) 0%, rgba(15,23,42,0.18) 45%, rgba(15,23,42,0.02) 100%), url('${imgUrl}')`;
     }
     return '#E47716';
   });
@@ -1599,6 +1600,7 @@ export class App {
       category: 'Bathrooms',
       icon: '🛁',
       badge: '',
+      imageUrl: '/api/product-images/2a19631f-69b4-404a-8fa2-49cdc0dbed53.jpg',
       description: 'Transform your bathroom with luxury heated towel warmers, mirror radiators, dual fuel all-season heating kits, and precision chrome & black valves.',
       filterOptions: {
         showPriceFilter: true,
@@ -1657,7 +1659,7 @@ export class App {
         cta: 'Explore Bathroom Warmers →',
         category: 'Bathrooms',
         query: 'Alex',
-        imageUrl: '/api/product-images/325c65f7-c7eb-4da9-b4e1-8a150483c9e5.jpg'
+        imageUrl: '/api/product-images/2a19631f-69b4-404a-8fa2-49cdc0dbed53.jpg'
       }
     },
     {

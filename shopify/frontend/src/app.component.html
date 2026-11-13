@@ -192,10 +192,14 @@
           <div class="child-mega-menu all-departments-mega" (mouseenter)="keepNavMenuOpen()" (click)="$event.stopPropagation()">
             <div class="mega-inner-container">
               <div class="mega-grid-wrapper">
-                @for(menu of navigationMenu; track menu.id) {
+                @for(menu of dynamicNavigationMenu(); track menu.id) {
                   <div class="mega-col mega-dept-col">
                     <div class="mega-heading" (click)="chooseParentCategory(menu.category)">
-                      <span>{{menu.icon}}</span>
+                      @if(menu.imageUrl) {
+                        <img [src]="imageSrc(menu.imageUrl)" class="mega-mini-cat-thumb" [alt]="menu.title" (error)="imageFailed($event)">
+                      } @else {
+                        <span>{{menu.icon}}</span>
+                      }
                       <h4>{{menu.title}}</h4>
                     </div>
                     
@@ -229,7 +233,7 @@
       </div>
 
       <!-- Main Category Nav Items with Click-to-Expand/Collapse Mega Menus -->
-      @for(menu of navigationMenu; track menu.id) {
+      @for(menu of dynamicNavigationMenu(); track menu.id) {
         <div class="nav-item-dropdown" (mouseenter)="openNavMenu(menu.id)" (mouseleave)="closeNavMenu(menu.id)">
           <button 
             class="nav-category-trigger" 
@@ -252,7 +256,11 @@
                 <!-- Top Clickable Action Bar to View All Category Products -->
                 <div class="mega-top-action-bar">
                   <div class="mega-cat-info">
-                    <span class="mega-cat-icon">{{menu.icon}}</span>
+                    @if(menu.imageUrl) {
+                      <img [src]="imageSrc(menu.imageUrl)" class="mega-cat-thumb" [alt]="menu.title" (error)="imageFailed($event)">
+                    } @else {
+                      <span class="mega-cat-icon">{{menu.icon}}</span>
+                    }
                     <div>
                       <h4 class="mega-cat-title">{{menu.title}}</h4>
                       <p class="mega-cat-summary">{{menu.description}}</p>
@@ -263,7 +271,7 @@
                   </button>
                 </div>
 
-                <div class="mega-grid-wrapper" [class.has-promo]="!!(menu.featuredPromo && (menu.featuredPromo.title || menu.featuredPromo.imageUrl))">
+                <div class="mega-grid-wrapper" [class.has-promo]="!!(menu.featuredPromo && (menu.featuredPromo.title || menu.featuredPromo.imageUrl || menu.imageUrl))">
                   <div class="mega-columns-area">
                     @for(col of menu.columns; track col.title) {
                       <div class="mega-col">
@@ -284,12 +292,12 @@
                     }
                   </div>
 
-                  @if(menu.featuredPromo && (menu.featuredPromo.title || menu.featuredPromo.imageUrl)) {
+                  @if(menu.featuredPromo && (menu.featuredPromo.title || menu.featuredPromo.imageUrl || menu.imageUrl)) {
                     <div class="mega-promo-col">
                       <div class="mega-promo-card" (click)="selectPromoCard(menu.featuredPromo, menu.category)" role="button" tabindex="0">
-                        @if(menu.featuredPromo.imageUrl) {
+                        @if(menu.featuredPromo.imageUrl || menu.imageUrl) {
                           <div class="mega-promo-img-wrap">
-                            <img [src]="menu.featuredPromo.imageUrl" [alt]="menu.featuredPromo.title || 'Featured Deal'" loading="lazy" />
+                            <img [src]="imageSrc(menu.featuredPromo.imageUrl || menu.imageUrl)" [alt]="menu.featuredPromo.title || menu.title || 'Featured Deal'" (error)="imageFailed($event)" loading="lazy" />
                             @if(menu.featuredPromo.tag) {
                               <span class="mega-promo-tag">{{menu.featuredPromo.tag}}</span>
                             }
@@ -393,11 +401,15 @@
         <span>→</span>
       </button>
 
-      @for(menu of navigationMenu; track menu.id) {
+      @for(menu of dynamicNavigationMenu(); track menu.id) {
         <div class="drawer-category-group">
           <div class="drawer-category-header">
             <button class="drawer-parent-btn" (click)="chooseParentCategory(menu.category)">
-              <span>{{menu.icon}}</span>
+              @if(menu.imageUrl) {
+                <img [src]="imageSrc(menu.imageUrl)" class="drawer-cat-thumb" [alt]="menu.title" (error)="imageFailed($event)">
+              } @else {
+                <span>{{menu.icon}}</span>
+              }
               <strong>{{menu.title}}</strong>
             </button>
             <button class="drawer-expand-btn" (click)="toggleMobileCategory(menu.id)">
@@ -491,11 +503,7 @@
           @for(p of sorted(); track p.id) {
             <article class="clean-product-card" (click)="select(p)">
               <div class="clean-card-img-wrap">
-                @if(p.image) {
-                  <img [src]="p.image" [alt]="p.name" loading="lazy" referrerpolicy="no-referrer">
-                } @else {
-                  <div class="clean-placeholder-icon">♨</div>
-                }
+                <img [src]="imageSrc(p.image)" (error)="imageFailed($event)" [alt]="p.name" loading="lazy" referrerpolicy="no-referrer">
                 <span class="clean-stock-badge">In Stock</span>
               </div>
               <div class="clean-card-info">
@@ -594,11 +602,7 @@
                   [class.active]="selectedSubcategory() === sub.query"
                   (click)="selectedSubcategory.set(selectedSubcategory() === sub.query ? '' : sub.query)">
                   <div class="visual-subcat-img-box">
-                    @if(sub.imageUrl) {
-                      <img [src]="imageSrc(sub.imageUrl)" (error)="imageFailed($event)" [alt]="sub.label" loading="lazy">
-                    } @else {
-                      <span class="visual-subcat-placeholder">🔥</span>
-                    }
+                    <img [src]="imageSrc(sub.imageUrl)" (error)="imageFailed($event)" [alt]="sub.label" loading="lazy">
                     @if(sub.badge) {
                       <span class="visual-subcat-badge">{{sub.badge}}</span>
                     }
@@ -924,11 +928,7 @@
                   </div>
 
                   <div class="clean-card-img-wrap">
-                    @if(p.image) {
-                      <img [src]="p.image" [alt]="p.name" loading="lazy" referrerpolicy="no-referrer">
-                    } @else {
-                      <div class="clean-placeholder-icon">♨</div>
-                    }
+                    <img [src]="imageSrc(p.image)" (error)="imageFailed($event)" [alt]="p.name" loading="lazy" referrerpolicy="no-referrer">
                   </div>
 
                   <div class="clean-card-info">
@@ -1207,11 +1207,7 @@
           @for(p of recentProducts(); track p.id) {
             <article class="clean-product-card" (click)="select(p)">
               <div class="clean-card-img-wrap">
-                @if(p.image) {
-                  <img [src]="p.image" [alt]="p.name" loading="lazy" referrerpolicy="no-referrer">
-                } @else {
-                  <div class="clean-placeholder-icon">♨</div>
-                }
+                <img [src]="imageSrc(p.image)" (error)="imageFailed($event)" [alt]="p.name" loading="lazy" referrerpolicy="no-referrer">
                 <span class="clean-stock-badge">In Stock</span>
               </div>
               <div class="clean-card-info">
@@ -3278,7 +3274,7 @@
 
               <!-- Sizing Calculator CTA Card -->
               <div class="blog-sidebar-widget p-4 rounded-3 text-center mb-4" style="background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%); border: 1px solid #fed7aa; border-left: 4px solid #e8760d;">
-                <span style="font-size: 2.2rem; display: block; margin-bottom: 8px;">🔥</span>
+                <span style="font-size: 2.2rem; display: block; margin-bottom: 8px;">📐</span>
                 <h4 class="h5 fw-bold text-dark mb-2">Need Help Sizing Your Radiator?</h4>
                 <p class="small text-muted mb-3">Calculate exact BTU & Watt requirements for any room size with our free online calculator tool.</p>
                 <button type="button" class="btn w-100 fw-bold shadow-sm" style="background-color: #e8760d; border-color: #e8760d; color: #fff;" (click)="scrollToBtu()">

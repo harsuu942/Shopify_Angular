@@ -14,7 +14,10 @@ const ADMIN_PATHS = [
   '/api/navigation',
   '/api/reports',
   '/api/companies',
-  '/api/admin'
+  '/api/admin',
+  '/api/banners',
+  '/api/products/images',
+  '/api/internal'
 ];
 
 const server = http.createServer((req, res) => {

@@ -10899,41 +10899,86 @@ a.primary:hover {
   color: #E47716 !important;
 }
 
-/* 6. TOP BANNER HEIGHT INCREASE (Wide Screen & Image Fitting) */
+/* 6. TOP BANNER HEIGHT & PROPORTIONS (Wide Screen & Crisp Banner Fitting) */
 .hero-banner {
-  min-height: 600px !important;
-  background-color: #E47716 !important;
+  min-height: 420px !important;
+  max-height: 540px !important;
+  background-color: #0f172a !important;
   background-size: cover !important;
-  background-position: center top !important;
+  background-position: center center !important;
   background-repeat: no-repeat !important;
+  display: flex !important;
+  align-items: center !important;
+  position: relative !important;
+  overflow: hidden !important;
 }
 
 .hero-banner-inner {
-  min-height: 580px !important;
-  padding: 72px 40px 80px 40px !important;
+  min-height: 400px !important;
+  padding: 40px clamp(20px, 4vw, 56px) !important;
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
+  width: 100% !important;
+}
+
+.hero-banner .hero-content h1 {
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.40) !important;
+}
+
+.hero-banner .hero-content p {
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.35) !important;
 }
 
 @media (min-width: 1600px) {
   .hero-banner {
-    min-height: 680px !important;
+    min-height: 480px !important;
+    max-height: 600px !important;
   }
   .hero-banner-inner {
-    min-height: 660px !important;
-    padding: 90px 48px 100px 48px !important;
+    min-height: 460px !important;
+    padding: 56px 48px !important;
   }
 }
 
-@media (min-width: 2200px) {
+@media (max-width: 768px) {
   .hero-banner {
-    min-height: 740px !important;
+    min-height: 340px !important;
+    max-height: none !important;
   }
   .hero-banner-inner {
-    min-height: 720px !important;
-    padding: 110px 56px 120px 56px !important;
+    min-height: 320px !important;
+    padding: 28px 16px !important;
   }
+}
+
+/* Category & Navigation Thumbnails */
+.mega-cat-thumb {
+  width: 54px;
+  height: 54px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  flex-shrink: 0;
+}
+
+.mega-mini-cat-thumb {
+  width: 24px;
+  height: 24px;
+  object-fit: cover;
+  border-radius: 4px;
+  flex-shrink: 0;
+  margin-right: 6px;
+}
+
+.drawer-cat-thumb {
+  width: 28px;
+  height: 28px;
+  object-fit: cover;
+  border-radius: 4px;
+  flex-shrink: 0;
+  margin-right: 8px;
 }
 
 /* 7. HERO SLIDER NAVIGATION (Point 7) */
