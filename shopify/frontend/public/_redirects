@@ -1,4 +1,4 @@
 # Cloudflare Pages Redirects & Reverse Proxy
-/api/*  https://RENDER_BACKEND_URL/api/:splat  200
-/actuator/*  https://RENDER_BACKEND_URL/actuator/:splat  200
+/api/*  https://hearth-backend-0bbo.onrender.com/api/:splat  200
+/actuator/*  https://hearth-backend-0bbo.onrender.com/actuator/:splat  200
 /*  /index.html  200
