@@ -10,5 +10,5 @@
     "build:backend": "mvn -f backend/pom.xml clean package",
     "build": "pnpm build:frontend && pnpm build:backend"
   },
-  "packageManager": "pnpm@11.9.0"
+  "packageManager": "pnpm@9.15.4"
 }
