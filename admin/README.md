@@ -58,4 +58,13 @@ Database settings can be overridden with `DB_URL`, `DB_USERNAME`, and `DB_PASSWO
 - Search, status filters, pagination-ready APIs, validation, responsive navigation, loading/empty/error feedback and confirmation dialogs
 - MySQL schema managed by JPA and practical seed data for local evaluation
 
+## Terma catalogue workflow
+
+1. Start the storefront (`shopify`) and admin (`admin`) applications.
+2. In **Admin → Products**, upload the original Terma `.xlsm`, `.xlsx`, or `.xls` workbook with **Bulk Excel / CSV**. Rows sharing a Terma product code become one product family; each EAN becomes a colour/height/width/panel variant.
+3. In Dropbox, download **1. IMAGE LIBRARY & MANUALS - UK STOCK MODELS** as a ZIP, then upload it with **Match image ZIP**. Image filenames beginning with `EAN <barcode>` are matched to the corresponding variant automatically.
+4. Manual product creation supports the same EAN-based variant structure.
+
+Admin writes synchronize to the storefront through `SHOPIFY_API_URL` (default `http://localhost:8080`). Both services must use the same strong `CATALOGUE_SYNC_SECRET`. Storefront image requests are proxied to the admin service, so set its `ADMIN_API_URL` when it is not running at `http://localhost:8081`.
+
 The document's explicitly excluded/conditional modules (promotions, returns, notifications, marketplaces, and advanced user/role settings) are not implemented. External payment, carrier, messaging, storage, malware scanning, 2FA provider and marketplace integrations require client-owned credentials and production infrastructure.

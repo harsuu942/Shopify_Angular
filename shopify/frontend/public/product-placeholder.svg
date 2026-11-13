@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 900" role="img" aria-labelledby="title desc">
+  <title id="title">Product image coming soon</title>
+  <desc id="desc">A simple decorative radiator placeholder.</desc>
+  <rect width="900" height="900" fill="#f2f2ee"/>
+  <g fill="none" stroke="#444a47" stroke-width="18" stroke-linecap="round">
+    <path d="M285 250v400M630 250v400"/>
+    <path d="M315 300h285M315 360h285M315 420h285M315 480h285M315 540h285M315 600h285"/>
+    <path d="M285 270h345M285 630h345"/>
+  </g>
+  <circle cx="650" cy="620" r="14" fill="#e55532"/>
+  <text x="450" y="740" text-anchor="middle" fill="#444a47" font-family="Arial, sans-serif" font-size="30" font-weight="700" letter-spacing="4">IMAGE COMING SOON</text>
+</svg>

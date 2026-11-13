@@ -21,6 +21,7 @@ server:
   shutdown: graceful
 app:
   upload-dir: ${ADMIN_UPLOAD_DIR:/var/lib/hearth-admin/product-images}
+  catalogue-sync-secret: ${CATALOGUE_SYNC_SECRET}
   jwt:
     secret: ${JWT_SECRET}
     expiration-minutes: ${JWT_EXPIRATION_MINUTES:30}

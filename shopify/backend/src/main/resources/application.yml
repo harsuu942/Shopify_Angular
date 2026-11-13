@@ -2,16 +2,17 @@ spring:
   application:
     name: hearth-shopify-api
   datasource:
-    url: jdbc:h2:mem:hearth;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
-    username: sa
-    password:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/hearth_shopify?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:}
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: update
     open-in-view: false
-  h2:
-    console:
-      enabled: false
+  servlet:
+    multipart:
+      max-request-size: 20MB
+      max-file-size: 20MB
 server:
   port: 8080
   error:
@@ -28,10 +29,17 @@ management:
       exposure:
         exclude: "*"
 app:
+  admin-api-url: ${ADMIN_API_URL:http://127.0.0.1:8081}
+  upload-dir: ${SHOP_UPLOAD_DIR:./data/product-images}
+  catalogue-sync-secret: ${CATALOGUE_SYNC_SECRET:local-catalogue-sync-secret}
   cors-origin: ${CORS_ORIGIN:http://localhost:4200}
   rate-limit:
     requests-per-minute: ${RATE_LIMIT_PER_MINUTE:300}
-    auth-per-minute: ${AUTH_RATE_LIMIT_PER_MINUTE:20}
+    auth-per-minute: ${AUTH_RATE_LIMIT_PER_MINUTE:120}
+  stripe:
+    publishable-key: ${STRIPE_PUBLISHABLE_KEY:pk_test_51ULcRRISETK50H4IRJKAgxMw7Ktuz0fm5ccnJrMXndcvWtf3qqsIpsbB7w8cUHRaq6XpyShgIHFgChbqHw5LXWlt00bvStm85m}
+    secret-key: ${STRIPE_SECRET_KEY:sk_test_51ULcRRISETK50H4I8dAp1gP7cgRfQeH21A9rCcMOEbB0svAkBBcB6EyWHFzyyLlu92vIUJbsUE4qL3vpnSYjuZ5s00biikadZL}
+    webhook-secret: ${STRIPE_WEBHOOK_SECRET:whsec_keFfE8jGDhZMiPcbtGtBHe2Xytlirqe2}
   auth:
     customer-email: customer@example.com
     customer-password: Customer123!
@@ -54,9 +62,25 @@ spring:
 server:
   shutdown: graceful
 app:
+  catalogue-sync-secret: ${CATALOGUE_SYNC_SECRET}
   cors-origin: ${SHOPIFY_PUBLIC_URL}
   auth:
     customer-email: ${CUSTOMER_EMAIL}
     customer-password: ${CUSTOMER_PASSWORD}
     admin-email: ${SHOP_ADMIN_EMAIL}
     admin-password: ${SHOP_ADMIN_PASSWORD}
+---
+spring:
+  config:
+    activate:
+      on-profile: h2
+  datasource:
+    url: jdbc:h2:file:./data/hearth_shopify;DB_CLOSE_DELAY=-1;MODE=MySQL
+    driver-class-name: org.h2.Driver
+    username: root
+    password: ''
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: update
+

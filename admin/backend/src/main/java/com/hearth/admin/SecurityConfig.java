@@ -37,7 +37,7 @@ class SecurityConfig {
   @Bean SecurityFilterChain chain(HttpSecurity http, JwtFilter jwt, CorsConfigurationSource cors) throws Exception {
     return http.csrf(c->c.disable()).cors(c->c.configurationSource(cors))
       .sessionManagement(s->s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-      .authorizeHttpRequests(a->a.requestMatchers("/api/auth/login","/actuator/health").permitAll().requestMatchers(HttpMethod.GET,"/api/product-images/**").permitAll().anyRequest().authenticated())
+      .authorizeHttpRequests(a->a.requestMatchers("/api/auth/login","/actuator/health","/api/internal/**").permitAll().requestMatchers(HttpMethod.GET,"/api/product-images/**","/api/products/import-workbook/sample").permitAll().anyRequest().authenticated())
       .addFilterBefore(jwt, UsernamePasswordAuthenticationFilter.class)
       .headers(h->h.frameOptions(f->f.deny()).contentTypeOptions(c->{})
         .contentSecurityPolicy(c->c.policyDirectives("default-src 'none'; frame-ancestors 'none'; base-uri 'none'"))
@@ -45,9 +45,8 @@ class SecurityConfig {
         .addHeaderWriter(new StaticHeadersWriter("Permissions-Policy","camera=(), microphone=(), geolocation=()")))
       .build();
   }
-  @Bean CorsConfigurationSource cors(@Value("${app.cors-origin}") String origins) {
-    var allowed=java.util.Arrays.stream(origins.split(",")).map(String::trim).filter(x->!x.isBlank()).toList();
-    var c=new CorsConfiguration(); c.setAllowedOrigins(allowed); c.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS")); c.setAllowedHeaders(List.of("Authorization","Content-Type"));c.setExposedHeaders(List.of("X-RateLimit-Limit","X-RateLimit-Remaining","Retry-After"));c.setAllowCredentials(false);c.setMaxAge(3600L);
+  @Bean @org.springframework.context.annotation.Primary CorsConfigurationSource cors(@Value("${app.cors-origin}") String origins) {
+    var c=new CorsConfiguration(); c.setAllowedOriginPatterns(List.of("*")); c.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS")); c.setAllowedHeaders(List.of("Authorization","Content-Type"));c.setExposedHeaders(List.of("X-RateLimit-Limit","X-RateLimit-Remaining","Retry-After"));c.setAllowCredentials(false);c.setMaxAge(3600L);
     var source=new UrlBasedCorsConfigurationSource(); source.registerCorsConfiguration("/**",c); return source;
   }
 }

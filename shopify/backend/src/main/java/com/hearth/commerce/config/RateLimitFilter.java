@@ -21,7 +21,7 @@ class RateLimitFilter extends OncePerRequestFilter {
 
   @Override protected void doFilterInternal(HttpServletRequest req,HttpServletResponse res,FilterChain chain) throws IOException,jakarta.servlet.ServletException {
     if(!req.getRequestURI().startsWith("/api/")){chain.doFilter(req,res);return;}
-    var now=Instant.now().getEpochSecond();var auth=req.getRequestURI().equals("/api/me");var limit=auth?authLimit:apiLimit;var key=req.getRemoteAddr()+":"+(auth?"auth":"api");
+    var now=Instant.now().getEpochSecond();var auth=req.getRequestURI().equals("/api/me")||req.getRequestURI().startsWith("/api/auth/");var limit=auth?authLimit:apiLimit;var key=req.getRemoteAddr()+":"+(auth?"auth":"api");
     var window=windows.compute(key,(k,current)->current==null||now-current.startedAt()>=60?new Window(now,new AtomicInteger(1)):(current.count().incrementAndGet()>0?current:null));
     if(windows.size()>10000)windows.entrySet().removeIf(e->now-e.getValue().startedAt()>=60);
     res.setHeader("X-RateLimit-Limit",String.valueOf(limit));res.setHeader("X-RateLimit-Remaining",String.valueOf(Math.max(0,limit-window.count().get())));

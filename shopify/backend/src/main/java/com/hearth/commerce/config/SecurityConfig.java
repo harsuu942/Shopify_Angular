@@ -9,7 +9,6 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.*;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.header.writers.StaticHeadersWriter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -17,19 +16,15 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.Arrays;
 import java.util.List;
+import com.hearth.commerce.repo.AppUserRepository;
 
 @Configuration
 public class SecurityConfig {
   @Bean PasswordEncoder passwordEncoder(){return new BCryptPasswordEncoder(12);}
-  @Bean UserDetailsService users(PasswordEncoder encoder,
-      @Value("${app.auth.customer-email:customer@example.com}") String customerEmail,
-      @Value("${app.auth.customer-password:Customer123!}") String customerPassword,
-      @Value("${app.auth.admin-email:admin@example.com}") String adminEmail,
-      @Value("${app.auth.admin-password:Admin123!}") String adminPassword){
-    return new InMemoryUserDetailsManager(
-      User.withUsername(customerEmail).password(encoder.encode(customerPassword)).roles("CUSTOMER").build(),
-      User.withUsername(adminEmail).password(encoder.encode(adminPassword)).roles("CUSTOMER","ADMIN").build()
-    );
+  @Bean UserDetailsService users(AppUserRepository users){
+    return username->{var account=users.findByEmailIgnoreCase(username).orElseThrow(()->new UsernameNotFoundException("Account not found"));
+      var builder=User.withUsername(account.getEmail()).password(account.getPasswordHash()).disabled(!account.isEnabled());
+      return "ADMIN".equals(account.getRole())?builder.roles("CUSTOMER","ADMIN").build():builder.roles("CUSTOMER").build();};
   }
   @Bean SecurityFilterChain filterChain(HttpSecurity http,CorsConfigurationSource cors) throws Exception {
     return http
@@ -40,15 +35,31 @@ public class SecurityConfig {
         .addHeaderWriter(new StaticHeadersWriter("Referrer-Policy","no-referrer"))
         .addHeaderWriter(new StaticHeadersWriter("Permissions-Policy","camera=(), microphone=(), geolocation=()")))
       .authorizeHttpRequests(a->a
-        .requestMatchers(HttpMethod.GET,"/api/products/**","/api/categories").permitAll()
+        .requestMatchers("/api/inquiries/my").authenticated()
+        .requestMatchers(HttpMethod.GET,"/api/products/**","/api/categories","/api/product-images/**","/api/cms/**","/api/blogs","/api/blogs/**","/api/orders/track/**","/api/reviews/**","/api/checkout/**","/api/inquiries/track/**","/api/settings/**").permitAll()
+        .requestMatchers(HttpMethod.HEAD,"/api/products/**","/api/categories","/api/product-images/**","/api/cms/**","/api/blogs","/api/blogs/**","/api/orders/track/**","/api/reviews/**","/api/checkout/**","/api/inquiries/track/**","/api/settings/**").permitAll()
+        .requestMatchers(HttpMethod.POST,"/api/reviews/*/helpful","/api/reviews").permitAll()
+        .requestMatchers(HttpMethod.POST,"/api/reviews/*/approve","/api/reviews/*/reject").hasRole("ADMIN")
+        .requestMatchers(HttpMethod.DELETE,"/api/reviews/**").hasRole("ADMIN")
+        .requestMatchers(HttpMethod.POST,"/api/auth/login","/api/auth/signup","/api/auth/forgot-password","/api/auth/reset-password","/api/promotions/validate","/api/inquiries","/api/inquiries/upload","/api/inquiries/upload-attachment","/api/orders","/api/checkout/**","/api/webhooks/**").permitAll()
+        .requestMatchers("/api/webhooks/**").permitAll()
+        .requestMatchers("/api/internal/**").permitAll()
         .requestMatchers("/api/admin/**").hasRole("ADMIN")
         .requestMatchers("/api/**").authenticated()
         .anyRequest().permitAll())
-      .httpBasic(Customizer.withDefaults()).build();
+      .exceptionHandling(e -> e.authenticationEntryPoint((request, response, authException) -> {
+        response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED);
+        response.setContentType("application/json");
+        response.getWriter().write("{\"error\":\"Unauthorized\",\"message\":\"Invalid email or password.\"}");
+      }))
+      .httpBasic(b -> b.authenticationEntryPoint((request, response, authException) -> {
+        response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED);
+        response.setContentType("application/json");
+        response.getWriter().write("{\"error\":\"Unauthorized\",\"message\":\"Invalid email or password.\"}");
+      })).build();
   }
-  @Bean CorsConfigurationSource cors(@Value("${app.cors-origin}") String origins){
-    var allowed=Arrays.stream(origins.split(",")).map(String::trim).filter(x->!x.isBlank()).toList();
-    var c=new CorsConfiguration();c.setAllowedOrigins(allowed);c.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS"));c.setAllowedHeaders(List.of("Authorization","Content-Type"));c.setExposedHeaders(List.of("X-RateLimit-Limit","X-RateLimit-Remaining","Retry-After"));c.setAllowCredentials(false);c.setMaxAge(3600L);
+  @Bean @Primary CorsConfigurationSource cors(@Value("${app.cors-origin}") String origins){
+    var c=new CorsConfiguration();c.setAllowedOriginPatterns(List.of("*"));c.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS"));c.setAllowedHeaders(List.of("Authorization","Content-Type"));c.setExposedHeaders(List.of("X-RateLimit-Limit","X-RateLimit-Remaining","Retry-After"));c.setAllowCredentials(false);c.setMaxAge(3600L);
     var source=new UrlBasedCorsConfigurationSource();source.registerCorsConfiguration("/**",c);return source;
   }
 }

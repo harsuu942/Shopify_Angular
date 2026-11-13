@@ -11,3 +11,13 @@ release/
 deploy/env/admin.env
 deploy/env/shopify.env
 .DS_Store
+*.mv.db
+*.trace.db
+scratch/
+shopify/admin/
+shopify/shopify/
+admin/data/
+shopify/data/
+data/
+admin/backend/data/
+shopify/backend/data/

@@ -18,8 +18,8 @@ spring:
     default-property-inclusion: non_null
   servlet:
     multipart:
-      max-file-size: 5MB
-      max-request-size: 6MB
+      max-request-size: ${MAX_UPLOAD_SIZE:2GB}
+      max-file-size: ${MAX_UPLOAD_SIZE:2GB}
 server:
   port: 8081
   error:
@@ -28,6 +28,8 @@ server:
     enabled: true
 app:
   upload-dir: ${ADMIN_UPLOAD_DIR:./data/product-images}
+  shopify-api-url: ${SHOPIFY_API_URL:http://localhost:8080}
+  catalogue-sync-secret: ${CATALOGUE_SYNC_SECRET:local-catalogue-sync-secret}
   jwt:
     secret: ${JWT_SECRET:local-development-signing-key-change-before-production-2026}
     expiration-minutes: 480
@@ -43,3 +45,18 @@ management:
     jmx:
       exposure:
         exclude: "*"
+---
+spring:
+  config:
+    activate:
+      on-profile: h2
+  datasource:
+    url: jdbc:h2:file:./data/hearth_admin;DB_CLOSE_DELAY=-1;MODE=MySQL
+    driver-class-name: org.h2.Driver
+    username: root
+    password: ''
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: update
+

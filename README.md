@@ -11,6 +11,8 @@ shopify/
 └── backend/
 ```
 
+The admin catalogue supports manual products, direct Terma Excel imports, EAN/barcode variants, and EAN-based image matching from a downloaded Dropbox image-library ZIP. Published changes synchronize to the customer storefront.
+
 For production deployment with Nginx and `systemd`, including security configuration, verification, backups and rollout steps, see [PRODUCTION.md](PRODUCTION.md).
 
 ## Run locally

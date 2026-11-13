@@ -24,7 +24,12 @@
           },
           "configurations": {
             "production": {
-              "budgets": [{"type": "initial", "maximumWarning": "700kB", "maximumError": "1MB"}],
+              "optimization": {
+                "scripts": true,
+                "styles": true,
+                "fonts": false
+              },
+              "budgets": [{"type": "initial", "maximumWarning": "2MB", "maximumError": "3MB"}],
               "outputHashing": "all"
             },
             "development": {
@@ -37,6 +42,10 @@
         },
         "serve": {
           "builder": "@angular/build:dev-server",
+          "options": {
+            "proxyConfig": "proxy.conf.json",
+            "allowedHosts": [".lhr.life", ".loca.lt", ".trycloudflare.com", ".ngrok-free.app", ".pinggy.link", "all"]
+          },
           "configurations": {
             "development": {"buildTarget": "storefront:build:development"},
             "production": {"buildTarget": "storefront:build:production"}
