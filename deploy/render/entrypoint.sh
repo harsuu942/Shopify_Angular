@@ -3,16 +3,14 @@ set -e
 
 echo "Starting The Heating & Plumbing Unified Cloud Backend..."
 
-export JAVA_HOME="/opt/java/openjdk"
-export PATH="$JAVA_HOME/bin:$PATH"
-
 mkdir -p /app/data/product-images
 
 # 1. Start Admin API (port 8081)
 java -Xmx192m -Xms64m \
   -Dspring.profiles.active=h2 \
   -Dserver.port=8081 \
-  -jar /app/admin-api.jar &
+  -cp "/app/admin/BOOT-INF/classes:/app/admin/BOOT-INF/lib/*" \
+  com.hearth.admin.AdminApplication &
 ADMIN_PID=$!
 echo "✓ Admin Backend started (PID $ADMIN_PID) on port 8081"
 
@@ -20,7 +18,8 @@ echo "✓ Admin Backend started (PID $ADMIN_PID) on port 8081"
 java -Xmx192m -Xms64m \
   -Dspring.profiles.active=h2 \
   -Dserver.port=8080 \
-  -jar /app/shopify-api.jar &
+  -cp "/app/shopify/BOOT-INF/classes:/app/shopify/BOOT-INF/lib/*" \
+  com.hearth.commerce.CommerceApplication &
 STORE_PID=$!
 echo "✓ Storefront Backend started (PID $STORE_PID) on port 8080"
 
