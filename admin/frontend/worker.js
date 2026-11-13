@@ -5,11 +5,18 @@ export default {
     // Forward API and actuator requests to Render Admin Backend
     if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/actuator/')) {
       const targetUrl = new URL(url.pathname + url.search, 'https://hearth-admin-backend.onrender.com');
-      const proxyRequest = new Request(targetUrl, {
+      const headers = new Headers(request.headers);
+      headers.set('host', targetUrl.host);
+      headers.set('x-forwarded-host', url.host);
+      headers.set('x-forwarded-proto', url.protocol.replace(':', ''));
+      headers.set('x-portal', 'admin');
+
+      const proxyRequest = new Request(targetUrl.toString(), {
         method: request.method,
-        headers: request.headers,
-        body: request.body,
-        redirect: 'manual'
+        headers: headers,
+        body: ['GET', 'HEAD'].includes(request.method) ? undefined : request.body,
+        redirect: 'follow',
+        duplex: 'half'
       });
       return fetch(proxyRequest);
     }

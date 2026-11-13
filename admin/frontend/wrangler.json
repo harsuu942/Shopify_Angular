@@ -3,7 +3,7 @@
   "main": "worker.js",
   "compatibility_date": "2026-11-13",
   "assets": {
-    "directory": "./dist/admin/browser",
+    "directory": "./dist/admin",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*", "/actuator/*"]
