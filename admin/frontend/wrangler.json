@@ -2,6 +2,9 @@
   "name": "theheatingandplumbing-admin",
   "main": "worker.js",
   "compatibility_date": "2026-11-13",
+  "build": {
+    "command": "pnpm run build"
+  },
   "assets": {
     "directory": "./dist/admin",
     "binding": "ASSETS",
