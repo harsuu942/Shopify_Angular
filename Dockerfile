@@ -1,5 +1,5 @@
-# Minimal Runtime with Java 21 & Node.js
-FROM eclipse-temurin:21-jre-alpine
+# Minimal Runtime with Java 22 & Node.js
+FROM eclipse-temurin:22-jre-alpine
 WORKDIR /app
 
 RUN apk add --no-cache nodejs curl bash

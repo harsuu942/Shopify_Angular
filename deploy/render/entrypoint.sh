@@ -3,6 +3,7 @@ set -e
 
 echo "Starting The Heating & Plumbing Unified Cloud Backend..."
 
+cd /app
 mkdir -p /app/data/product-images
 
 # 1. Start Admin API (port 8081)
