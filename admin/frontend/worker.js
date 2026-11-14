@@ -2,40 +2,45 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    // Forward API and actuator requests to Render Admin Backend (with automatic fallback to unified backend)
+    // Forward API and actuator requests directly to the live Render Backend
     if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/actuator/')) {
-      const primaryOrigin = 'https://hearth-admin-backend.onrender.com';
-      const fallbackOrigin = 'https://hearth-backend-0bbo.onrender.com';
+      const targetUrl = new URL(url.pathname + url.search, 'https://hearth-backend-0bbo.onrender.com');
+      const headers = new Headers(request.headers);
+      headers.set('host', targetUrl.host);
+      headers.set('x-forwarded-host', url.host);
+      headers.set('x-forwarded-proto', url.protocol.replace(':', ''));
+      headers.set('x-portal', 'admin');
 
-      const forwardRequest = async (origin) => {
-        const targetUrl = new URL(url.pathname + url.search, origin);
-        const headers = new Headers(request.headers);
-        headers.set('host', targetUrl.host);
-        headers.set('x-forwarded-host', url.host);
-        headers.set('x-forwarded-proto', url.protocol.replace(':', ''));
-        headers.set('x-portal', 'admin');
+      // Safely buffer request body for POST/PUT/PATCH to prevent stream-locking errors
+      let body = undefined;
+      if (!['GET', 'HEAD'].includes(request.method)) {
+        try {
+          body = await request.arrayBuffer();
+        } catch (_) {
+          body = undefined;
+        }
+      }
 
-        return fetch(targetUrl.toString(), {
-          method: request.method,
-          headers: headers,
-          body: ['GET', 'HEAD'].includes(request.method) ? undefined : request.body,
-          redirect: 'follow',
-          duplex: 'half'
-        });
-      };
+      const proxyRequest = new Request(targetUrl.toString(), {
+        method: request.method,
+        headers: headers,
+        body: body,
+        redirect: 'follow',
+        duplex: 'half'
+      });
 
       try {
-        let resp = await forwardRequest(primaryOrigin);
-        // If primary backend reports suspended or error, try the fallback backend
-        if (resp.status === 502 || resp.status === 503 || resp.status === 504 || (resp.status === 200 && resp.headers.get('content-type')?.includes('text/html') && !url.pathname.includes('/actuator/'))) {
-          const text = await resp.clone().text();
-          if (text.includes('Service Suspended') || text.includes('no-deploy')) {
-            resp = await forwardRequest(fallbackOrigin);
-          }
-        }
+        const resp = await fetch(proxyRequest);
         return resp;
       } catch (err) {
-        return forwardRequest(fallbackOrigin);
+        return new Response(JSON.stringify({ 
+          message: 'The backend service is waking up from cold start on Render. Please try again in a few seconds.',
+          error: 'Backend temporarily unreachable',
+          details: err.message 
+        }), {
+          status: 503,
+          headers: { 'Content-Type': 'application/json' }
+        });
       }
     }
 

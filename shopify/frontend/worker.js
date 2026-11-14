@@ -10,14 +10,35 @@ export default {
       headers.set('x-forwarded-host', url.host);
       headers.set('x-forwarded-proto', url.protocol.replace(':', ''));
 
+      let body = undefined;
+      if (!['GET', 'HEAD'].includes(request.method)) {
+        try {
+          body = await request.arrayBuffer();
+        } catch (_) {
+          body = undefined;
+        }
+      }
+
       const proxyRequest = new Request(targetUrl.toString(), {
         method: request.method,
         headers: headers,
-        body: ['GET', 'HEAD'].includes(request.method) ? undefined : request.body,
+        body: body,
         redirect: 'follow',
         duplex: 'half'
       });
-      return fetch(proxyRequest);
+
+      try {
+        return await fetch(proxyRequest);
+      } catch (err) {
+        return new Response(JSON.stringify({ 
+          message: 'The storefront backend is waking up from cold start on Render. Please refresh in a moment.',
+          error: 'Backend temporarily unreachable',
+          details: err.message 
+        }), {
+          status: 503,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
     }
 
     // Fallback to static assets
