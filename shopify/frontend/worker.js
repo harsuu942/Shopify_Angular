@@ -69,5 +69,14 @@ export default {
 
     // Fallback to static assets
     return env.ASSETS.fetch(request);
+  },
+
+  // Keep-alive cron trigger to prevent Render backend from sleeping
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(
+      fetch('https://hearth-backend-0bbo.onrender.com/actuator/health')
+        .then(res => console.log('Keep-alive ping sent to Render. Status:', res.status))
+        .catch(err => console.error('Keep-alive ping error:', err))
+    );
   }
 };

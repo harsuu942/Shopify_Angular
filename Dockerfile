@@ -12,6 +12,7 @@ COPY deploy/render/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
 # Pre-populate persistent storage folder with full catalogue H2 databases and product images
+COPY deploy/data /app/seed-data
 COPY deploy/data /app/data
 VOLUME /app/data
 

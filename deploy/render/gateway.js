@@ -4,8 +4,7 @@ const PORT = parseInt(process.env.PORT, 10) || 10000;
 const STOREFRONT_PORT = 8080;
 const ADMIN_PORT = 8081;
 
-const ADMIN_PATHS = [
-  '/api/auth',
+const ADMIN_PREFIXES = [
   '/api/quotations',
   '/api/customers',
   '/api/audits',
@@ -17,7 +16,8 @@ const ADMIN_PATHS = [
   '/api/admin',
   '/api/banners',
   '/api/products/images',
-  '/api/internal'
+  '/api/internal',
+  '/api/settings'
 ];
 
 const server = http.createServer((req, res) => {
@@ -52,8 +52,8 @@ const server = http.createServer((req, res) => {
   } else {
     const urlLower = targetPath.toLowerCase();
     const isPortalAdmin = req.headers['x-portal'] === 'admin';
-    const isAdminPath = ADMIN_PATHS.some(p => urlLower.startsWith(p));
-    if (isPortalAdmin || isAdminPath) {
+    const isAdminPrefix = ADMIN_PREFIXES.some(p => urlLower.startsWith(p));
+    if (isPortalAdmin || isAdminPrefix) {
       targetPort = ADMIN_PORT;
     }
   }
