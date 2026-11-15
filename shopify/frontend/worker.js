@@ -16,11 +16,9 @@ export default {
 
     // Forward API and actuator requests to Render Storefront Backend
     if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/actuator/')) {
-      const targetUrl = new URL(url.pathname + url.search, 'https://hearth-backend-0bbo.onrender.com');
-      const headers = new Headers(request.headers);
-      headers.set('host', targetUrl.host);
-      headers.set('x-forwarded-host', url.host);
-      headers.set('x-forwarded-proto', url.protocol.replace(':', ''));
+      const isCmsOrNav = url.pathname.startsWith('/api/cms/') || url.pathname.startsWith('/api/navigation');
+      const primaryOrigin = isCmsOrNav ? 'https://hearth-admin-backend.onrender.com' : 'https://hearth-backend-0bbo.onrender.com';
+      const fallbackOrigin = isCmsOrNav ? 'https://hearth-backend-0bbo.onrender.com' : 'https://hearth-admin-backend.onrender.com';
 
       let body = undefined;
       if (!['GET', 'HEAD'].includes(request.method)) {
@@ -31,16 +29,30 @@ export default {
         }
       }
 
-      const proxyRequest = new Request(targetUrl.toString(), {
-        method: request.method,
-        headers: headers,
-        body: body,
-        redirect: 'follow',
-        duplex: 'half'
-      });
+      const forwardRequest = async (origin) => {
+        const targetUrl = new URL(url.pathname + url.search, origin);
+        const headers = new Headers(request.headers);
+        headers.set('host', targetUrl.host);
+        headers.set('x-forwarded-host', url.host);
+        headers.set('x-forwarded-proto', url.protocol.replace(':', ''));
+
+        return fetch(targetUrl.toString(), {
+          method: request.method,
+          headers: headers,
+          body: body,
+          redirect: 'follow',
+          duplex: 'half'
+        });
+      };
 
       try {
-        const resp = await fetch(proxyRequest);
+        let resp = await forwardRequest(primaryOrigin);
+        if (resp.status === 502 || resp.status === 503 || resp.status === 504 || (resp.status === 200 && resp.headers.get('content-type')?.includes('text/html') && !url.pathname.includes('/actuator/'))) {
+          const text = await resp.clone().text();
+          if (text.includes('Service Suspended') || text.includes('no-deploy') || text.includes('Backend API unreachable')) {
+            resp = await forwardRequest(fallbackOrigin);
+          }
+        }
         if (resp.status >= 500) {
           const ct = resp.headers.get('content-type') || '';
           if (ct.includes('text/html')) {
@@ -56,14 +68,18 @@ export default {
         }
         return resp;
       } catch (err) {
-        return new Response(JSON.stringify({ 
-          message: 'The storefront backend is waking up from cold start on Render. Please refresh in a moment.',
-          error: 'Backend temporarily unreachable',
-          details: err.message 
-        }), {
-          status: 503,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        try {
+          return await forwardRequest(fallbackOrigin);
+        } catch (fallbackErr) {
+          return new Response(JSON.stringify({ 
+            message: 'The storefront backend is waking up from cold start on Render. Please refresh in a moment.',
+            error: 'Backend temporarily unreachable',
+            details: fallbackErr.message 
+          }), {
+            status: 503,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
       }
     }
 
@@ -71,12 +87,15 @@ export default {
     return env.ASSETS.fetch(request);
   },
 
-  // Keep-alive cron trigger to prevent Render backend from sleeping
+  // Keep-alive cron trigger to prevent Render backends from sleeping
   async scheduled(event, env, ctx) {
     ctx.waitUntil(
-      fetch('https://hearth-backend-0bbo.onrender.com/actuator/health')
-        .then(res => console.log('Keep-alive ping sent to Render. Status:', res.status))
-        .catch(err => console.error('Keep-alive ping error:', err))
+      Promise.allSettled([
+        fetch('https://hearth-backend-0bbo.onrender.com/actuator/health'),
+        fetch('https://hearth-admin-backend.onrender.com/actuator/health')
+      ]).then(results => {
+        console.log('Keep-alive pings sent to Render. Results:', results.map(r => r.status));
+      }).catch(err => console.error('Keep-alive ping error:', err))
     );
   }
 };
