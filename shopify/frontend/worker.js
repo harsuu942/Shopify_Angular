@@ -14,11 +14,11 @@ export default {
       } catch (_) {}
     }
 
-    // Forward API and actuator requests to Render Storefront Backend
+    // Forward API and actuator requests to Render Backends
     if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/actuator/')) {
-      const isCmsOrNav = url.pathname.startsWith('/api/cms/') || url.pathname.startsWith('/api/navigation');
-      const primaryOrigin = isCmsOrNav ? 'https://hearth-admin-backend.onrender.com' : 'https://hearth-backend-0bbo.onrender.com';
-      const fallbackOrigin = isCmsOrNav ? 'https://hearth-backend-0bbo.onrender.com' : 'https://hearth-admin-backend.onrender.com';
+      const isNavRequest = url.pathname === '/api/cms/navigation' || url.pathname === '/api/navigation';
+      const targetOrigin = isNavRequest ? 'https://hearth-admin-backend.onrender.com' : 'https://hearth-backend-0bbo.onrender.com';
+      const targetPath = isNavRequest ? '/api/internal/navigation' : (url.pathname + url.search);
 
       let body = undefined;
       if (!['GET', 'HEAD'].includes(request.method)) {
@@ -29,8 +29,8 @@ export default {
         }
       }
 
-      const forwardRequest = async (origin) => {
-        const targetUrl = new URL(url.pathname + url.search, origin);
+      const forwardRequest = async (origin, path) => {
+        const targetUrl = new URL(path, origin);
         const headers = new Headers(request.headers);
         headers.set('host', targetUrl.host);
         headers.set('x-forwarded-host', url.host);
@@ -46,13 +46,7 @@ export default {
       };
 
       try {
-        let resp = await forwardRequest(primaryOrigin);
-        if (resp.status === 502 || resp.status === 503 || resp.status === 504 || (resp.status === 200 && resp.headers.get('content-type')?.includes('text/html') && !url.pathname.includes('/actuator/'))) {
-          const text = await resp.clone().text();
-          if (text.includes('Service Suspended') || text.includes('no-deploy') || text.includes('Backend API unreachable')) {
-            resp = await forwardRequest(fallbackOrigin);
-          }
-        }
+        let resp = await forwardRequest(targetOrigin, targetPath);
         if (resp.status >= 500) {
           const ct = resp.headers.get('content-type') || '';
           if (ct.includes('text/html')) {
@@ -68,18 +62,14 @@ export default {
         }
         return resp;
       } catch (err) {
-        try {
-          return await forwardRequest(fallbackOrigin);
-        } catch (fallbackErr) {
-          return new Response(JSON.stringify({ 
-            message: 'The storefront backend is waking up from cold start on Render. Please refresh in a moment.',
-            error: 'Backend temporarily unreachable',
-            details: fallbackErr.message 
-          }), {
-            status: 503,
-            headers: { 'Content-Type': 'application/json' }
-          });
-        }
+        return new Response(JSON.stringify({ 
+          message: 'The storefront backend is waking up from cold start on Render. Please refresh in a moment.',
+          error: 'Backend temporarily unreachable',
+          details: err.message 
+        }), {
+          status: 503,
+          headers: { 'Content-Type': 'application/json' }
+        });
       }
     }
 
