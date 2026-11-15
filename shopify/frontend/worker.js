@@ -40,7 +40,21 @@ export default {
       });
 
       try {
-        return await fetch(proxyRequest);
+        const resp = await fetch(proxyRequest);
+        if (resp.status >= 500) {
+          const ct = resp.headers.get('content-type') || '';
+          if (ct.includes('text/html')) {
+            return new Response(JSON.stringify({
+              message: 'The storefront backend is waking up or deploying on Render. Please refresh in a moment.',
+              error: 'Backend service unavailable',
+              status: resp.status
+            }), {
+              status: 503,
+              headers: { 'Content-Type': 'application/json' }
+            });
+          }
+        }
+        return resp;
       } catch (err) {
         return new Response(JSON.stringify({ 
           message: 'The storefront backend is waking up from cold start on Render. Please refresh in a moment.',

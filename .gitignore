@@ -1,5 +1,7 @@
 node_modules/
-dist/
+dist/*
+!admin/frontend/dist/
+!admin/frontend/dist/admin/
 target/
 out-tsc/
 .pnpm-store/
@@ -12,12 +14,13 @@ deploy/env/admin.env
 deploy/env/shopify.env
 .DS_Store
 *.mv.db
+!deploy/data/*.mv.db
 *.trace.db
 scratch/
 shopify/admin/
 shopify/shopify/
 admin/data/
 shopify/data/
-data/
+/data/
 admin/backend/data/
 shopify/backend/data/

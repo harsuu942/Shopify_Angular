@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 680" width="100%" height="100%" style="background:#0b132b;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <defs>
+    <pattern id="grid_vert" width="20" height="20" patternUnits="userSpaceOnUse">
+      <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1c2d5a" stroke-width="0.75"/>
+    </pattern>
+  </defs>
+
+  <rect width="960" height="680" fill="#090e1f"/>
+  <rect width="960" height="680" fill="url(#grid_vert)"/>
+  <rect x="18" y="18" width="924" height="644" fill="none" stroke="#38bdf8" stroke-width="1.5" opacity="0.8"/>
+
+  <!-- HEADER -->
+  <g id="header">
+    <rect x="36" y="34" width="888" height="52" fill="#0f172a" stroke="#38bdf8" stroke-width="1.2" rx="4"/>
+    <text x="50" y="58" fill="#38bdf8" font-size="11" font-weight="700" letter-spacing="2">ULTRAHEAT® DESIGNER VERTICAL RADIATORS · SCHEMATIC</text>
+    <text x="50" y="76" fill="#ffffff" font-size="16" font-weight="800" letter-spacing="1">PLANAL / LANNER VERTICAL — DOUBLE PANEL (HEIGHT: 1800mm)</text>
+    <rect x="740" y="44" width="170" height="32" fill="#0284c7" rx="3"/>
+    <text x="825" y="65" fill="#ffffff" font-size="12" font-weight="800" text-anchor="middle" letter-spacing="0.5">SPACE-SAVING VERTICAL</text>
+  </g>
+
+  <!-- FRONT ELEVATION -->
+  <g id="front_elevation">
+    <rect x="46" y="105" width="240" height="26" fill="#1e293b" stroke="#64748b" stroke-width="0.8" rx="3"/>
+    <text x="56" y="122" fill="#38bdf8" font-size="12" font-weight="700">1. VERTICAL ELEVATION VIEW</text>
+
+    <!-- Tall Vertical Body -->
+    <rect x="160" y="145" width="140" height="290" fill="#1e293b" stroke="#e2e8f0" stroke-width="2" rx="3"/>
+    <!-- Vertical decorative grooves -->
+    <line x1="185" y1="150" x2="185" y2="430" stroke="#475569" stroke-width="1.5"/>
+    <line x1="210" y1="150" x2="210" y2="430" stroke="#475569" stroke-width="1.5"/>
+    <line x1="235" y1="150" x2="235" y2="430" stroke="#475569" stroke-width="1.5"/>
+    <line x1="260" y1="150" x2="260" y2="430" stroke="#475569" stroke-width="1.5"/>
+    <line x1="285" y1="150" x2="285" y2="430" stroke="#475569" stroke-width="1.5"/>
+
+    <!-- Top Air Vent -->
+    <rect x="146" y="155" width="14" height="18" fill="#10b981" stroke="#ffffff"/>
+    <text x="65" y="167" fill="#34d399" font-size="10" font-weight="700">AIR VENT (1/2")</text>
+
+    <!-- Bottom Tappings -->
+    <rect x="146" y="410" width="14" height="20" fill="#0284c7" stroke="#ffffff"/>
+    <rect x="300" y="410" width="14" height="20" fill="#0284c7" stroke="#ffffff"/>
+    <text x="75" y="424" fill="#38bdf8" font-size="10" font-weight="700">FLOW (1/2")</text>
+    <text x="325" y="424" fill="#38bdf8" font-size="10" font-weight="700">RETURN (1/2")</text>
+
+    <!-- Height Dimension Line -->
+    <line x1="125" y1="145" x2="125" y2="435" stroke="#ef4444" stroke-width="1.8"/>
+    <line x1="115" y1="145" x2="135" y2="145" stroke="#ef4444" stroke-width="1.5"/>
+    <line x1="115" y1="435" x2="135" y2="435" stroke="#ef4444" stroke-width="1.5"/>
+    <polygon points="125,145 121,153 129,153" fill="#ef4444"/>
+    <polygon points="125,435 121,427 129,427" fill="#ef4444"/>
+    <rect x="55" y="275" width="105" height="24" fill="#0f172a" stroke="#ef4444" stroke-width="1" rx="3"/>
+    <text x="107" y="291" fill="#fca5a5" font-size="11" font-weight="800" text-anchor="middle">HEIGHT = 1800 mm</text>
+
+    <!-- Width Dimension Line -->
+    <line x1="160" y1="130" x2="300" y2="130" stroke="#ef4444" stroke-width="1.8"/>
+    <line x1="160" y1="122" x2="160" y2="138" stroke="#ef4444" stroke-width="1.5"/>
+    <line x1="300" y1="122" x2="300" y2="138" stroke="#ef4444" stroke-width="1.5"/>
+    <text x="230" y="124" fill="#fca5a5" font-size="10.5" font-weight="800" text-anchor="middle">WIDTH = 400 / 500 / 600 mm</text>
+  </g>
+
+  <!-- SIDE PROFILE & CLEARANCES -->
+  <g id="side_profile">
+    <rect x="520" y="105" width="260" height="26" fill="#1e293b" stroke="#64748b" stroke-width="0.8" rx="3"/>
+    <text x="530" y="122" fill="#38bdf8" font-size="12" font-weight="700">2. SIDE SECTION &amp; MOUNTING</text>
+
+    <!-- Wall -->
+    <rect x="800" y="140" width="16" height="300" fill="#334155" stroke="#64748b" stroke-width="1"/>
+    <!-- Brackets 4-point wall anchors -->
+    <rect x="730" y="170" width="70" height="18" fill="#f59e0b" stroke="#ffffff"/>
+    <rect x="730" y="260" width="70" height="18" fill="#f59e0b" stroke="#ffffff"/>
+    <rect x="730" y="380" width="70" height="18" fill="#f59e0b" stroke="#ffffff"/>
+    <text x="765" y="183" fill="#000000" font-size="8.5" font-weight="800" text-anchor="middle">TOP ANCHOR</text>
+    <text x="765" y="393" fill="#000000" font-size="8.5" font-weight="800" text-anchor="middle">BOTTOM ANCHOR</text>
+
+    <!-- Radiator Body Profile -->
+    <rect x="660" y="145" width="70" height="290" fill="#1e293b" stroke="#e2e8f0" stroke-width="2" rx="3"/>
+    <text x="660" y="455" fill="#ffffff" font-size="11" font-weight="700">DEPTH: 70 mm (Double Panel)</text>
+    <text x="660" y="470" fill="#38bdf8" font-size="10">WALL TO PIPE CENTRE: 65 mm</text>
+  </g>
+
+  <!-- TECHNICAL DATA -->
+  <g id="spec_table">
+    <rect x="36" y="490" width="888" height="155" fill="#0f172a" stroke="#38bdf8" stroke-width="1.2" rx="4"/>
+    <rect x="36" y="490" width="888" height="26" fill="#1e293b" rx="4"/>
+    <text x="50" y="508" fill="#38bdf8" font-size="11" font-weight="800">VERTICAL ARCHITECTURAL SPECIFICATIONS</text>
+
+    <text x="50" y="535" fill="#94a3b8" font-size="10">CONNECTIONS:</text>
+    <text x="50" y="552" fill="#ffffff" font-size="12" font-weight="700">4 × 1/2" BSP Female Underside / Side</text>
+
+    <text x="50" y="585" fill="#94a3b8" font-size="10">PIPE CENTRES:</text>
+    <text x="50" y="602" fill="#38bdf8" font-size="12" font-weight="800">Width (W) + 90mm with angled valves</text>
+
+    <text x="350" y="535" fill="#94a3b8" font-size="10">OPERATING PRESSURE:</text>
+    <text x="350" y="552" fill="#38bdf8" font-size="12" font-weight="800">10 BAR Tested / 110°C Max Temp</text>
+
+    <text x="350" y="585" fill="#94a3b8" font-size="10">MOUNTING BRACKETS:</text>
+    <text x="350" y="602" fill="#ffffff" font-size="12" font-weight="700">4 × Heavy Duty Safety Wall Clamps Included</text>
+
+    <text x="640" y="535" fill="#94a3b8" font-size="10">STANDARD &amp; WARRANTY:</text>
+    <text x="640" y="552" fill="#ffffff" font-size="12" font-weight="700">BS EN 442 Compliant · 10 Year Warranty</text>
+
+    <text x="640" y="585" fill="#94a3b8" font-size="10">FINISH:</text>
+    <text x="640" y="602" fill="#ffffff" font-size="12" font-weight="700">RAL 9016 White / Anthracite Grey</text>
+  </g>
+</svg>

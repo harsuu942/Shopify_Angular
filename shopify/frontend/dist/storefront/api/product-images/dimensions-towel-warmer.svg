@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 680" width="100%" height="100%" style="background:#0b132b;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <defs>
+    <pattern id="grid_towel" width="20" height="20" patternUnits="userSpaceOnUse">
+      <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1c2d5a" stroke-width="0.75"/>
+    </pattern>
+  </defs>
+
+  <rect width="960" height="680" fill="#090e1f"/>
+  <rect width="960" height="680" fill="url(#grid_towel)"/>
+  <rect x="18" y="18" width="924" height="644" fill="none" stroke="#38bdf8" stroke-width="1.5" opacity="0.8"/>
+
+  <!-- HEADER -->
+  <g id="header">
+    <rect x="36" y="34" width="888" height="52" fill="#0f172a" stroke="#38bdf8" stroke-width="1.2" rx="4"/>
+    <text x="50" y="58" fill="#38bdf8" font-size="11" font-weight="700" letter-spacing="2">ULTRAHEAT® BATHROOM COLLECTION · TECHNICAL DRAWING</text>
+    <text x="50" y="76" fill="#ffffff" font-size="16" font-weight="800" letter-spacing="1">HEATED TOWEL WARMER — BANIO / BUCKINGHAM / CHELMSFORD</text>
+    <rect x="740" y="44" width="170" height="32" fill="#0284c7" rx="3"/>
+    <text x="825" y="65" fill="#ffffff" font-size="12" font-weight="800" text-anchor="middle" letter-spacing="0.5">DUAL FUEL READY</text>
+  </g>
+
+  <!-- LADDER ELEVATION -->
+  <g id="front_elevation">
+    <rect x="46" y="105" width="220" height="26" fill="#1e293b" stroke="#64748b" stroke-width="0.8" rx="3"/>
+    <text x="56" y="122" fill="#38bdf8" font-size="12" font-weight="700">1. LADDER ELEVATION VIEW</text>
+
+    <!-- Vertical Collectors -->
+    <rect x="160" y="150" width="26" height="280" fill="#334155" stroke="#e2e8f0" stroke-width="2" rx="4"/>
+    <rect x="320" y="150" width="26" height="280" fill="#334155" stroke="#e2e8f0" stroke-width="2" rx="4"/>
+
+    <!-- Horizontal Crossbars (Towel rails grouped) -->
+    <!-- Group 1 -->
+    <rect x="186" y="165" width="134" height="12" fill="#475569" stroke="#cbd5e1" stroke-width="1" rx="2"/>
+    <rect x="186" y="190" width="134" height="12" fill="#475569" stroke="#cbd5e1" stroke-width="1" rx="2"/>
+    <rect x="186" y="215" width="134" height="12" fill="#475569" stroke="#cbd5e1" stroke-width="1" rx="2"/>
+    <!-- Group 2 -->
+    <rect x="186" y="255" width="134" height="12" fill="#475569" stroke="#cbd5e1" stroke-width="1" rx="2"/>
+    <rect x="186" y="280" width="134" height="12" fill="#475569" stroke="#cbd5e1" stroke-width="1" rx="2"/>
+    <rect x="186" y="305" width="134" height="12" fill="#475569" stroke="#cbd5e1" stroke-width="1" rx="2"/>
+    <!-- Group 3 -->
+    <rect x="186" y="345" width="134" height="12" fill="#475569" stroke="#cbd5e1" stroke-width="1" rx="2"/>
+    <rect x="186" y="370" width="134" height="12" fill="#475569" stroke="#cbd5e1" stroke-width="1" rx="2"/>
+    <rect x="186" y="395" width="134" height="12" fill="#475569" stroke="#cbd5e1" stroke-width="1" rx="2"/>
+
+    <!-- Air Bleed Vent at top -->
+    <rect x="166" y="138" width="14" height="12" fill="#10b981" stroke="#ffffff"/>
+    <text x="110" y="142" fill="#34d399" font-size="9" font-weight="700">BLEED VENT</text>
+
+    <!-- Bottom Tappings (1/2" BSP) -->
+    <rect x="166" y="430" width="14" height="16" fill="#0284c7" stroke="#ffffff"/>
+    <rect x="326" y="430" width="14" height="16" fill="#0284c7" stroke="#ffffff"/>
+
+    <!-- Pipe Centres Callout -->
+    <line x1="173" y1="460" x2="333" y2="460" stroke="#38bdf8" stroke-width="1.6"/>
+    <line x1="173" y1="452" x2="173" y2="468" stroke="#38bdf8" stroke-width="1.2"/>
+    <line x1="333" y1="452" x2="333" y2="468" stroke="#38bdf8" stroke-width="1.2"/>
+    <polygon points="173,460 181,456 181,464" fill="#38bdf8"/>
+    <polygon points="333,460 325,456 325,464" fill="#38bdf8"/>
+    <text x="253" y="475" fill="#7dd3fc" font-size="10" font-weight="800" text-anchor="middle">PIPE CENTRES (C/C) = WIDTH − 45 mm</text>
+
+    <!-- Height & Width callouts -->
+    <line x1="120" y1="150" x2="120" y2="430" stroke="#ef4444" stroke-width="1.6"/>
+    <polygon points="120,150 116,158 124,158" fill="#ef4444"/>
+    <polygon points="120,430 116,422 124,422" fill="#ef4444"/>
+    <text x="110" y="290" fill="#fca5a5" font-size="10" font-weight="800" text-anchor="middle" transform="rotate(-90,110,290)">HEIGHT = 800 - 1800 mm</text>
+  </g>
+
+  <!-- SIDE SECTION -->
+  <g id="side_profile">
+    <rect x="520" y="105" width="260" height="26" fill="#1e293b" stroke="#64748b" stroke-width="0.8" rx="3"/>
+    <text x="530" y="122" fill="#38bdf8" font-size="12" font-weight="700">2. WALL BRACKET PROJECTION</text>
+
+    <rect x="780" y="140" width="16" height="300" fill="#334155" stroke="#64748b" stroke-width="1"/>
+    <!-- Adjustable Brackets -->
+    <rect x="680" y="180" width="100" height="16" fill="#f59e0b" stroke="#ffffff"/>
+    <rect x="680" y="380" width="100" height="16" fill="#f59e0b" stroke="#ffffff"/>
+    <text x="730" y="175" fill="#fcd34d" font-size="9" font-weight="700" text-anchor="middle">WALL-TO-CENTRE: 65 - 80 mm</text>
+
+    <!-- Towel Rail Collector Profile -->
+    <circle cx="680" cy="188" r="14" fill="#38bdf8" stroke="#ffffff" stroke-width="1.5"/>
+    <circle cx="680" cy="388" r="14" fill="#38bdf8" stroke="#ffffff" stroke-width="1.5"/>
+    <rect x="666" y="188" width="28" height="200" fill="#334155" stroke="#cbd5e1" stroke-width="1"/>
+    <text x="680" y="425" fill="#ffffff" font-size="11" font-weight="700" text-anchor="middle">TOTAL PROJECTION: 80 - 95 mm</text>
+  </g>
+
+  <!-- SPEC TABLE -->
+  <g id="spec_table">
+    <rect x="36" y="495" width="888" height="150" fill="#0f172a" stroke="#38bdf8" stroke-width="1.2" rx="4"/>
+    <rect x="36" y="495" width="888" height="26" fill="#1e293b" rx="4"/>
+    <text x="50" y="513" fill="#38bdf8" font-size="11" font-weight="800">TOWEL WARMER TECHNICAL SPECIFICATION</text>
+
+    <text x="50" y="540" fill="#94a3b8" font-size="10">TAPPINGS:</text>
+    <text x="50" y="557" fill="#ffffff" font-size="12" font-weight="700">1/2" BSP Bottom Female Connection</text>
+
+    <text x="50" y="590" fill="#94a3b8" font-size="10">HEATING COMPATIBILITY:</text>
+    <text x="50" y="607" fill="#38bdf8" font-size="12" font-weight="800">Central Heating / Electric Element / Dual Fuel</text>
+
+    <text x="350" y="540" fill="#94a3b8" font-size="10">PRESSURE &amp; TESTING:</text>
+    <text x="350" y="557" fill="#38bdf8" font-size="12" font-weight="800">10 BAR Operating Pressure · BS EN 442</text>
+
+    <text x="350" y="590" fill="#94a3b8" font-size="10">WALL BRACKETS:</text>
+    <text x="350" y="607" fill="#ffffff" font-size="12" font-weight="700">4 × Matching Adjustable Heavy-Duty Brackets Included</text>
+
+    <text x="650" y="540" fill="#94a3b8" font-size="10">WARRANTY:</text>
+    <text x="650" y="557" fill="#ffffff" font-size="12" font-weight="700">5-10 Year Manufacturer Guarantee</text>
+
+    <text x="650" y="590" fill="#94a3b8" font-size="10">FINISHES AVAILABLE:</text>
+    <text x="650" y="607" fill="#ffffff" font-size="12" font-weight="700">Polished Chrome / Matt Black / White</text>
+  </g>
+</svg>

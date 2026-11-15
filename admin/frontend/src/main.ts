@@ -1222,7 +1222,7 @@ class App {
  copyToClipboard(text:string){if(navigator.clipboard){navigator.clipboard.writeText(text).then(()=>this.notify('Copied URL: '+text)).catch(()=>this.notify(text))}else this.notify(text)}
  importProducts(event:Event){const input=event.target as HTMLInputElement;const file=input.files?.[0];if(!file)return;if(file.name.toLowerCase().endsWith('.csv')){this.importProductsCsv(event);return}this.importingProducts.set(true);const form=new FormData();form.append('file',file);this.http.post<any>('/api/products/import-workbook',form).pipe(finalize(()=>{this.importingProducts.set(false);input.value=''}),catchError(e=>{this.notify(e.error?.message||'Workbook import failed');return of(null)})).subscribe(result=>{if(result){this.productPage.set(0);const skipped=result.skipped?` · ${result.skipped} rows skipped`:'';this.notify(`Imported ${result.created} new products, updated ${result.updated}, ${result.variants} variants${skipped}`);this.loadProducts()}})}
  importImageLibrary(event:Event){const input=event.target as HTMLInputElement;const file=input.files?.[0];if(!file)return;this.importingImages.set(true);const form=new FormData();form.append('file',file);this.http.post<any>('/api/products/import-images',form).pipe(finalize(()=>{this.importingImages.set(false);input.value=''}),catchError(e=>{this.notify(e.error?.message||'Image matching failed');return of(null)})).subscribe(result=>{if(result){this.notify(`Matched ${result.matched} EAN images · ${result.unmatched} unmatched`);this.loadProducts();this.loadImageCoverage()}})}
- login(){this.loading.set(true);this.error.set('');this.http.post<any>('/api/auth/login',{email:this.email,password:this.password}).pipe(finalize(()=>this.loading.set(false)),catchError(e=>{this.error.set(e.error?.message||'Unable to sign in. Is the backend running?');return of(null)})).subscribe(r=>{if(!r)return;sessionStorage.setItem('hearth_admin_token',r.token);const displayName=r.fullName||r.name||r.email?.split('@')[0]||'Store Administrator';const u={name:displayName,email:r.email,role:r.role||'ADMIN'};sessionStorage.setItem('hearth_admin_user',JSON.stringify(u));this.user.set(u);this.loadDashboard();this.loadProducts();this.loadNavigationMenus();})}
+ login(){this.loading.set(true);this.error.set('');this.http.post<any>('/api/auth/login',{email:this.email,password:this.password}).pipe(finalize(()=>this.loading.set(false)),catchError(e=>{const msg=e.error?.message||(typeof e.error==='string'&&e.error.length<120?e.error:'')||'Backend service is waking up on Render. Please retry in a few moments.';this.error.set(msg);return of(null)})).subscribe(r=>{if(!r)return;sessionStorage.setItem('hearth_admin_token',r.token);const displayName=r.fullName||r.name||(r.email?r.email.split('@')[0]:'')||'Store Administrator';const u={name:displayName,email:r.email||this.email,role:r.role||'ADMIN'};sessionStorage.setItem('hearth_admin_user',JSON.stringify(u));this.user.set(u);this.loadDashboard();this.loadProducts();this.loadNavigationMenus();})}
  logout(){this.http.post('/api/auth/logout',{}).pipe(catchError(()=>of(null)),finalize(()=>this.clearAdminSession())).subscribe()}
  clearAdminSession(){sessionStorage.removeItem('hearth_admin_token');sessionStorage.removeItem('hearth_admin_user');this.closeHeaderMenus();this.user.set(null)}
   go(v:View){this.view.set(v);this.navOpen.set(false);this.closeHeaderMenus();this.query='';if(v==='dashboard')this.loadDashboard();if(v==='navigation')this.loadNavigationMenus();if(v==='companies'){this.loadCompanies();this.loadBrands();}if(v==='products'){this.loadCompanies();this.loadProducts();}if(v==='customers')this.loadCustomers();if(v==='quotes'){this.loadQuotes();this.loadAllProductsForAssignment();}if(v==='orders')this.loadOrders();if(v==='promotions')this.loadPromotions();if(v==='inventory'){this.loadProducts();this.loadInventory();this.loadAllProductsForAssignment();}if(v==='inquiries')this.loadInquiries();if(v==='reviews')this.loadAdminReviews();if(v==='content')this.loadContent();if(v==='banners')this.loadBanners();if(v==='blogs')this.loadBlogs();if(v==='audit')this.loadAudit()}
@@ -2019,7 +2019,7 @@ exportMediaManifestCsv(){
           showHeightFilter: false,
           showFuelTypeFilter: false,
           subcategories: [
-            { label: 'Alex Multi-Rail Heated Warmer', query: 'Alex', imageUrl: '/product-images/325c65f7-c7eb-4da9-b4e1-8a150483c9e5.jpg', badge: 'BESTSELLER' },
+            { label: 'Alex Multi-Rail Heated Warmer', query: 'Alex', imageUrl: '/product-images/2a19631f-69b4-404a-8fa2-49cdc0dbed53.jpg', badge: 'BESTSELLER' },
             { label: 'Rolo-Mirror Integrated Radiators', query: 'Rolo-Mirror', imageUrl: '/product-images/fc274807-bc10-4063-b29c-c8bde1f7dd00.png', badge: 'WITH MIRROR' },
             { label: 'Dual Fuel Conversion Kits', query: 'Dual Fuel', imageUrl: '/product-images/65301fc2-1bf1-4cff-b046-589de5422312.jpg', badge: 'ALL-SEASON' },
             { label: 'Retro Period Warmers', query: 'Retro', imageUrl: '/product-images/0c7612a1-4309-4372-9466-c61cf478f0af.jpg', badge: 'VINTAGE' },
@@ -2148,7 +2148,7 @@ exportMediaManifestCsv(){
         category: 'Heated Towel Rails',
         icon: '🛁',
         badge: '',
-        imageUrl: '/product-images/325c65f7-c7eb-4da9-b4e1-8a150483c9e5.jpg',
+        imageUrl: '/product-images/2a19631f-69b4-404a-8fa2-49cdc0dbed53.jpg',
         description: 'Enhance your bathroom with our premium heated towel rails and ladder warmers. Designed for optimal heat output, cozy warm towels, and corrosion-resistant finishes.',
         sortOrder: 3,
         status: 'PUBLISHED',
@@ -2162,10 +2162,10 @@ exportMediaManifestCsv(){
           showHeightFilter: true,
           showFuelTypeFilter: true,
           subcategories: [
-            { label: 'Alex Classic Multi-Rail', query: 'Alex', imageUrl: '/product-images/325c65f7-c7eb-4da9-b4e1-8a150483c9e5.jpg', badge: 'POPULAR' },
+            { label: 'Alex Classic Multi-Rail', query: 'Alex', imageUrl: '/product-images/2a19631f-69b4-404a-8fa2-49cdc0dbed53.jpg', badge: 'POPULAR' },
             { label: 'Easy Slimline Compact', query: 'Easy', imageUrl: '/product-images/56dd11ba-f583-4cc8-8918-66dc45078c3b.jpg' },
             { label: 'Fiona Pristine Rails', query: 'Fiona', imageUrl: '/product-images/2a19631f-69b4-404a-8fa2-49cdc0dbed53.jpg' },
-            { label: 'Dexter Modern Warmers', query: 'Dexter', imageUrl: '/product-images/325c65f7-c7eb-4da9-b4e1-8a150483c9e5.jpg' },
+            { label: 'Dexter Modern Warmers', query: 'Dexter', imageUrl: '/product-images/2a19631f-69b4-404a-8fa2-49cdc0dbed53.jpg' },
             { label: 'Zig Zag Statement Rails', query: 'Zig Zag', imageUrl: '/product-images/0c7612a1-4309-4372-9466-c61cf478f0af.jpg' },
             { label: 'Retro Period Rails', query: 'Retro', imageUrl: '/product-images/0c7612a1-4309-4372-9466-c61cf478f0af.jpg' }
           ]
@@ -2209,7 +2209,7 @@ exportMediaManifestCsv(){
           cta: 'Explore Towel Rails →',
           category: 'Heated Towel Rails',
           query: 'Alex',
-          imageUrl: '/product-images/325c65f7-c7eb-4da9-b4e1-8a150483c9e5.jpg'
+          imageUrl: '/product-images/2a19631f-69b4-404a-8fa2-49cdc0dbed53.jpg'
         }
       },
       {
@@ -2233,7 +2233,7 @@ exportMediaManifestCsv(){
           showFuelTypeFilter: false,
           subcategories: [
             { label: 'Colorado WiFi Smart Radiators', query: 'Colorado', imageUrl: '/product-images/fc274807-bc10-4063-b29c-c8bde1f7dd00.png', badge: 'SMART APP' },
-            { label: 'Alex One Electric Towel Rails', query: 'Alex One', imageUrl: '/product-images/325c65f7-c7eb-4da9-b4e1-8a150483c9e5.jpg', badge: 'PRE-FILLED' },
+            { label: 'Alex One Electric Towel Rails', query: 'Alex One', imageUrl: '/product-images/2a19631f-69b4-404a-8fa2-49cdc0dbed53.jpg', badge: 'PRE-FILLED' },
             { label: 'KTX-4 Smart WiFi Elements', query: 'KTX', imageUrl: '/product-images/65301fc2-1bf1-4cff-b046-589de5422312.jpg' },
             { label: 'MOA Digital Elements', query: 'MOA', imageUrl: '/product-images/65301fc2-1bf1-4cff-b046-589de5422312.jpg' },
             { label: 'Terma SS1 Split Probes', query: 'Probe', imageUrl: '/product-images/65301fc2-1bf1-4cff-b046-589de5422312.jpg' }
@@ -2369,7 +2369,7 @@ exportMediaManifestCsv(){
           subcategories: [
             { label: 'Convector Radiator Deals', query: 'DF', imageUrl: '/product-images/610be977-0784-40d1-a857-edc5e78bc884.png', badge: 'UP TO 40% OFF' },
             { label: 'Colorado Column Reductions', query: 'Colorado', imageUrl: '/product-images/fc274807-bc10-4063-b29c-c8bde1f7dd00.png', badge: 'SAVE 20%' },
-            { label: 'Towel Rail Clearance', query: 'Alex', imageUrl: '/product-images/325c65f7-c7eb-4da9-b4e1-8a150483c9e5.jpg' },
+            { label: 'Towel Rail Clearance', query: 'Alex', imageUrl: '/product-images/2a19631f-69b4-404a-8fa2-49cdc0dbed53.jpg' },
             { label: 'TRV Valve Deals', query: 'Cylindrical', imageUrl: '/product-images/65301fc2-1bf1-4cff-b046-589de5422312.jpg' },
             { label: 'Under £150 Specials', query: 'Compact', imageUrl: '/product-images/610be977-0784-40d1-a857-edc5e78bc884.png' }
           ]

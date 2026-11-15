@@ -993,7 +993,7 @@ public class StoreController {
       Map.of(
         "id", 3, "menuId", "towel-rails", "title", "Heated Towel Rails", "category", "Heated Towel Rails",
         "icon", "🛁", "badge", "", "sortOrder", 3, "status", "PUBLISHED",
-        "imageUrl", "/product-images/325c65f7-c7eb-4da9-b4e1-8a150483c9e5.jpg",
+        "imageUrl", "/product-images/2a19631f-69b4-404a-8fa2-49cdc0dbed53.jpg",
         "description", "Premium heated towel rails and ladder warmers designed for optimal heat output and cozy warm towels."
       ),
       Map.of(

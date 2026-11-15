@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 120" width="460" height="120" fill="none">
+  <!-- Brand Icon Badge -->
+  <rect x="6" y="8" width="168" height="104" rx="20" stroke="#E47716" stroke-width="6" fill="#E47716" />
+  <text x="90" y="78" font-family="'Manrope', 'Inter', -apple-system, sans-serif" font-weight="900" font-size="62" fill="#FFFFFF" text-anchor="middle" letter-spacing="-1.5">THP</text>
+  
+  <!-- Brand Name Typography in Crisp White -->
+  <g fill="#FFFFFF" font-family="'Manrope', 'Inter', -apple-system, sans-serif">
+    <text x="198" y="44" font-weight="800" font-size="28" letter-spacing="1.5">THE</text>
+    <text x="198" y="77" font-weight="800" font-size="28" letter-spacing="1.5">HEATING AND</text>
+    <text x="198" y="110" font-weight="800" font-size="28" letter-spacing="1.5">PLUMBING</text>
+  </g>
+</svg>

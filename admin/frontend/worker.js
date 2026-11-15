@@ -54,6 +54,19 @@ export default {
             if (cmsResp.status === 200) return cmsResp;
           } catch (_) {}
         }
+        if (resp.status >= 500) {
+          const ct = resp.headers.get('content-type') || '';
+          if (ct.includes('text/html')) {
+            return new Response(JSON.stringify({
+              message: 'The backend service is waking up or deploying on Render. Please try again in a few moments.',
+              error: 'Backend service unavailable',
+              status: resp.status
+            }), {
+              status: 503,
+              headers: { 'Content-Type': 'application/json' }
+            });
+          }
+        }
         return resp;
       } catch (err) {
         return new Response(JSON.stringify({ 

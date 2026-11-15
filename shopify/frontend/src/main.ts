@@ -1616,7 +1616,7 @@ export class App {
         showFuelTypeFilter: false,
         subcategoryHeading: 'Bathroom Styles & Types',
         subcategories: [
-          { label: 'Alex Multi-Rail Heated Warmer', query: 'Alex', imageUrl: '/product-images/325c65f7-c7eb-4da9-b4e1-8a150483c9e5.jpg', badge: 'BESTSELLER' },
+          { label: 'Alex Multi-Rail Heated Warmer', query: 'Alex', imageUrl: '/product-images/2a19631f-69b4-404a-8fa2-49cdc0dbed53.jpg', badge: 'BESTSELLER' },
           { label: 'Rolo-Mirror Integrated Radiators', query: 'Rolo-Mirror', imageUrl: '/product-images/fc274807-bc10-4063-b29c-c8bde1f7dd00.png', badge: 'WITH MIRROR' },
           { label: 'Dual Fuel Conversion Kits', query: 'Dual Fuel', imageUrl: '/product-images/65301fc2-1bf1-4cff-b046-589de5422312.jpg', badge: 'ALL-SEASON' },
           { label: 'Retro Period Warmers', query: 'Retro', imageUrl: '/product-images/0c7612a1-4309-4372-9466-c61cf478f0af.jpg', badge: 'VINTAGE' },
@@ -1755,10 +1755,10 @@ export class App {
         showFuelTypeFilter: true,
         subcategoryHeading: 'Towel Rail Styles',
         subcategories: [
-          { label: 'Alex Classic Multi-Rail', query: 'Alex', imageUrl: '/product-images/325c65f7-c7eb-4da9-b4e1-8a150483c9e5.jpg', badge: 'POPULAR' },
+          { label: 'Alex Classic Multi-Rail', query: 'Alex', imageUrl: '/product-images/2a19631f-69b4-404a-8fa2-49cdc0dbed53.jpg', badge: 'POPULAR' },
           { label: 'Easy Slimline Compact', query: 'Easy', imageUrl: '/product-images/56dd11ba-f583-4cc8-8918-66dc45078c3b.jpg' },
           { label: 'Fiona Pristine Rails', query: 'Fiona', imageUrl: '/product-images/2a19631f-69b4-404a-8fa2-49cdc0dbed53.jpg' },
-          { label: 'Dexter Modern Warmers', query: 'Dexter', imageUrl: '/product-images/325c65f7-c7eb-4da9-b4e1-8a150483c9e5.jpg' },
+          { label: 'Dexter Modern Warmers', query: 'Dexter', imageUrl: '/product-images/2a19631f-69b4-404a-8fa2-49cdc0dbed53.jpg' },
           { label: 'Zig Zag Statement Rails', query: 'Zig Zag', imageUrl: '/product-images/0c7612a1-4309-4372-9466-c61cf478f0af.jpg' },
           { label: 'Retro Period Rails', query: 'Retro', imageUrl: '/product-images/0c7612a1-4309-4372-9466-c61cf478f0af.jpg' }
         ]
@@ -1802,7 +1802,7 @@ export class App {
         cta: 'Explore Towel Rails →',
         category: 'Heated Towel Rails',
         query: 'Alex',
-        imageUrl: '/product-images/325c65f7-c7eb-4da9-b4e1-8a150483c9e5.jpg'
+        imageUrl: '/product-images/2a19631f-69b4-404a-8fa2-49cdc0dbed53.jpg'
       }
     },
     {
@@ -1824,7 +1824,7 @@ export class App {
         subcategoryHeading: 'Electric Heating Types',
         subcategories: [
           { label: 'Colorado WiFi Smart Radiators', query: 'Colorado', imageUrl: '/product-images/fc274807-bc10-4063-b29c-c8bde1f7dd00.png', badge: 'SMART APP' },
-          { label: 'Alex One Electric Towel Rails', query: 'Alex One', imageUrl: '/product-images/325c65f7-c7eb-4da9-b4e1-8a150483c9e5.jpg', badge: 'PRE-FILLED' },
+          { label: 'Alex One Electric Towel Rails', query: 'Alex One', imageUrl: '/product-images/2a19631f-69b4-404a-8fa2-49cdc0dbed53.jpg', badge: 'PRE-FILLED' },
           { label: 'KTX-4 Smart WiFi Elements', query: 'KTX', imageUrl: '/product-images/65301fc2-1bf1-4cff-b046-589de5422312.jpg' },
           { label: 'MOA Digital Elements', query: 'MOA', imageUrl: '/product-images/65301fc2-1bf1-4cff-b046-589de5422312.jpg' },
           { label: 'Terma SS1 Split Probes', query: 'Probe', imageUrl: '/product-images/65301fc2-1bf1-4cff-b046-589de5422312.jpg' }
@@ -1956,7 +1956,7 @@ export class App {
         subcategories: [
           { label: 'Convector Radiator Deals', query: 'DF', imageUrl: '/product-images/610be977-0784-40d1-a857-edc5e78bc884.png', badge: 'UP TO 40% OFF' },
           { label: 'Colorado Column Reductions', query: 'Colorado', imageUrl: '/product-images/fc274807-bc10-4063-b29c-c8bde1f7dd00.png', badge: 'SAVE 20%' },
-          { label: 'Towel Rail Clearance', query: 'Alex', imageUrl: '/product-images/325c65f7-c7eb-4da9-b4e1-8a150483c9e5.jpg' },
+          { label: 'Towel Rail Clearance', query: 'Alex', imageUrl: '/product-images/2a19631f-69b4-404a-8fa2-49cdc0dbed53.jpg' },
           { label: 'TRV Valve Deals', query: 'Cylindrical', imageUrl: '/product-images/65301fc2-1bf1-4cff-b046-589de5422312.jpg' },
           { label: 'Under £150 Specials', query: 'Compact', imageUrl: '/product-images/610be977-0784-40d1-a857-edc5e78bc884.png' }
         ]
@@ -3550,7 +3550,7 @@ export class App {
     // Banio Heated Towel Warmer
     else if (name.includes('BANIO')) {
       list.push(
-        '/api/product-images/325c65f7-c7eb-4da9-b4e1-8a150483c9e5.jpg',
+        '/api/product-images/2a19631f-69b4-404a-8fa2-49cdc0dbed53.jpg',
         dimImg,
         '/api/product-images/00b4dabb-b31d-4624-a139-5ac57bdab052.jpg'
       );
@@ -3560,7 +3560,7 @@ export class App {
       list.push(
         '/api/product-images/54f742c6-4f7b-4fb3-8cbf-891147ac4b5e.jpg',
         dimImg,
-        '/api/product-images/325c65f7-c7eb-4da9-b4e1-8a150483c9e5.jpg'
+        '/api/product-images/2a19631f-69b4-404a-8fa2-49cdc0dbed53.jpg'
       );
     }
     // Chelmsford Towel Warmer
@@ -5057,6 +5057,12 @@ export class App {
         ...defaultFilterOptions,
         ...(filterOptions || {})
       };
+      if (Array.isArray(mergedFilterOptions.subcategories)) {
+        mergedFilterOptions.subcategories = mergedFilterOptions.subcategories.map((sub: any) => ({
+          ...sub,
+          imageUrl: this.imageSrc(sub.imageUrl)
+        }));
+      }
       if (Array.isArray(mergedFilterOptions.customFilters)) {
         mergedFilterOptions.customFilters = mergedFilterOptions.customFilters.map((cf: any) => ({
           name: cf.name,
@@ -5072,13 +5078,16 @@ export class App {
       if (!featuredPromo && m.featuredPromoJson) {
         try { featuredPromo = JSON.parse(m.featuredPromoJson); } catch(e){}
       }
+      if (featuredPromo && featuredPromo.imageUrl) {
+        featuredPromo.imageUrl = this.imageSrc(featuredPromo.imageUrl);
+      }
       return {
         id: m.menuId || m.id,
         title: m.title,
         category: m.category,
         icon: m.icon || '📁',
         badge: m.badge || '',
-        imageUrl: m.imageUrl || '',
+        imageUrl: this.imageSrc(m.imageUrl),
         description: m.description || '',
         filterOptions: mergedFilterOptions,
         columns: columns || [],

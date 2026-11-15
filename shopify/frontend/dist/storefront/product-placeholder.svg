@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f8fafc"/>
+      <stop offset="100%" stop-color="#edf2f7"/>
+    </linearGradient>
+
+    <!-- Radiator Column Anthracite Gradient -->
+    <linearGradient id="radColumn" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#1e293b"/>
+      <stop offset="35%" stop-color="#334155"/>
+      <stop offset="65%" stop-color="#475569"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+
+    <!-- Chrome Valve & Pipe Gradient -->
+    <linearGradient id="chromeGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="25%" stop-color="#cbd5e1"/>
+      <stop offset="50%" stop-color="#94a3b8"/>
+      <stop offset="75%" stop-color="#cbd5e1"/>
+      <stop offset="100%" stop-color="#64748b"/>
+    </linearGradient>
+
+    <!-- Warm Heating Accent Glow -->
+    <linearGradient id="warmthGlow" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#E47716" stop-opacity="0.35"/>
+      <stop offset="60%" stop-color="#f97316" stop-opacity="0.10"/>
+      <stop offset="100%" stop-color="#f97316" stop-opacity="0"/>
+    </linearGradient>
+
+    <filter id="softShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#0f172a" flood-opacity="0.08"/>
+    </filter>
+  </defs>
+
+  <!-- Canvas Studio Background -->
+  <rect width="600" height="600" fill="url(#bgGrad)"/>
+  <rect x="16" y="16" width="568" height="568" rx="16" fill="none" stroke="#e2e8f0" stroke-width="2"/>
+
+  <!-- THP Brand Monogram / Badge -->
+  <g transform="translate(36, 36)">
+    <rect width="52" height="26" rx="5" fill="#E47716"/>
+    <text x="26" y="18" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12" font-weight="900" letter-spacing="1.5" text-anchor="middle">THP</text>
+  </g>
+
+  <!-- Technical Spec Grid Watermark -->
+  <g opacity="0.15" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4 4">
+    <line x1="80" y1="360" x2="520" y2="360"/>
+    <line x1="80" y1="120" x2="520" y2="120"/>
+    <line x1="160" y1="80" x2="160" y2="400"/>
+    <line x1="440" y1="80" x2="440" y2="400"/>
+  </g>
+
+  <!-- Designer Radiator Illustration with Warmth Effect -->
+  <g filter="url(#softShadow)" transform="translate(0, 0)">
+    <!-- Heating Warmth Underglow -->
+    <rect x="180" y="120" width="240" height="220" rx="12" fill="url(#warmthGlow)"/>
+
+    <!-- Top & Bottom Collector Pipes (Horizontal Rails) -->
+    <rect x="185" y="122" width="230" height="14" rx="7" fill="url(#radColumn)"/>
+    <rect x="185" y="324" width="230" height="14" rx="7" fill="url(#radColumn)"/>
+
+    <!-- Anthracite Designer Columns (6 Triple-Tube Vertical Columns) -->
+    <rect x="200" y="128" width="22" height="204" rx="8" fill="url(#radColumn)"/>
+    <rect x="236" y="128" width="22" height="204" rx="8" fill="url(#radColumn)"/>
+    <rect x="272" y="128" width="22" height="204" rx="8" fill="url(#radColumn)"/>
+    <rect x="308" y="128" width="22" height="204" rx="8" fill="url(#radColumn)"/>
+    <rect x="344" y="128" width="22" height="204" rx="8" fill="url(#radColumn)"/>
+    <rect x="380" y="128" width="22" height="204" rx="8" fill="url(#radColumn)"/>
+
+    <!-- Chrome Heated Towel Bar Overlay (Luxury Towel Warmer integration) -->
+    <rect x="170" y="200" width="260" height="10" rx="5" fill="url(#chromeGrad)" filter="url(#softShadow)"/>
+    <circle cx="175" cy="205" r="7" fill="url(#chromeGrad)"/>
+    <circle cx="425" cy="205" r="7" fill="url(#chromeGrad)"/>
+
+    <!-- Bottom Thermostatic Chrome Radiator Valves (TRVs) -->
+    <!-- Left Inflow Valve -->
+    <rect x="195" y="338" width="8" height="28" fill="url(#chromeGrad)"/>
+    <rect x="182" y="360" width="26" height="14" rx="4" fill="url(#chromeGrad)"/>
+    <circle cx="195" cy="367" r="5" fill="#E47716"/>
+
+    <!-- Right Lockshield Valve -->
+    <rect x="397" y="338" width="8" height="28" fill="url(#chromeGrad)"/>
+    <rect x="392" y="360" width="26" height="14" rx="4" fill="url(#chromeGrad)"/>
+  </g>
+
+  <!-- Informative, High-End UK Designer Heating Copy -->
+  <g text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+    <!-- Brand Title -->
+    <text x="300" y="445" font-size="13" font-weight="800" fill="#E47716" letter-spacing="3">THE HEATING &amp; PLUMBING</text>
+    
+    <!-- Status Heading -->
+    <text x="300" y="475" font-size="18" font-weight="700" fill="#0f172a" letter-spacing="0.5">Product Image Coming Soon</text>
+    
+    <!-- Subtitle / Spec Note -->
+    <text x="300" y="502" font-size="12" font-weight="500" fill="#64748b" letter-spacing="0.3">
+      British Designer Radiators &amp; Luxury Bathroom Suites
+    </text>
+    <text x="300" y="522" font-size="11" font-weight="500" fill="#94a3b8" letter-spacing="0.2">
+      High Thermal Efficiency · Certified EN442 / CE / UKCA
+    </text>
+  </g>
+</svg>
