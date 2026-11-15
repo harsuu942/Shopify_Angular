@@ -9,17 +9,8 @@ echo "Starting The Heating & Plumbing Backend (Role: $APP_ROLE on port $PORT)...
 mkdir -p /app/data/product-images
 cd /app
 
-# Ensure persistent database and product images are populated from seed data
-if [ ! -f /app/data/hearth_admin.mv.db ] || [ $(wc -c < /app/data/hearth_admin.mv.db 2>/dev/null || echo 0) -le 20480 ]; then
-  echo "Seeding Admin database from /app/seed-data..."
-  cp /app/seed-data/hearth_admin.mv.db /app/data/hearth_admin.mv.db 2>/dev/null || true
-fi
-
-if [ ! -f /app/data/hearth_shopify.mv.db ] || [ $(wc -c < /app/data/hearth_shopify.mv.db 2>/dev/null || echo 0) -le 20480 ]; then
-  echo "Seeding Storefront database from /app/seed-data..."
-  cp /app/seed-data/hearth_shopify.mv.db /app/data/hearth_shopify.mv.db 2>/dev/null || true
-fi
-
+# Safely seed database if missing or empty using node
+node -e "const fs = require('fs'); ['hearth_admin.mv.db', 'hearth_shopify.mv.db'].forEach(f => { const target = '/app/data/' + f; const seed = '/app/seed-data/' + f; if (!fs.existsSync(target) || fs.statSync(target).size <= 20480) { if (fs.existsSync(seed)) { fs.copyFileSync(seed, target); console.log('Successfully seeded ' + f + ' (' + fs.statSync(target).size + ' bytes)'); } } });" 2>/dev/null || true
 cp -rn /app/seed-data/product-images/* /app/data/product-images/ 2>/dev/null || true
 
 if [ "$APP_ROLE" = "admin" ]; then
@@ -38,18 +29,18 @@ elif [ "$APP_ROLE" = "storefront" ]; then
     com.hearth.commerce.CommerceApplication
 else
   echo "Launching Unified Backend (Storefront :8080 + Admin :8081 via Gateway :$PORT)..."
-  java -Xmx110m -Xms32m -XX:MaxMetaspaceSize=64m -XX:+UseSerialGC -Xss256k \
+  java -Xmx160m -Xms48m \
     -Dspring.profiles.active=h2 \
     -Dserver.port=8081 \
     -cp "/app/admin/BOOT-INF/classes:/app/admin/BOOT-INF/lib/*" \
-    com.hearth.admin.AdminApplication &
+    com.hearth.admin.AdminApplication > /tmp/admin.log 2>&1 &
   ADMIN_PID=$!
 
-  java -Xmx130m -Xms32m -XX:MaxMetaspaceSize=72m -XX:+UseSerialGC -Xss256k \
+  java -Xmx160m -Xms48m \
     -Dspring.profiles.active=h2 \
     -Dserver.port=8080 \
     -cp "/app/shopify/BOOT-INF/classes:/app/shopify/BOOT-INF/lib/*" \
-    com.hearth.commerce.CommerceApplication &
+    com.hearth.commerce.CommerceApplication > /tmp/store.log 2>&1 &
   STORE_PID=$!
 
   cleanup() {

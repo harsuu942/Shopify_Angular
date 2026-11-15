@@ -35,7 +35,21 @@ const server = http.createServer((req, res) => {
   // Healthcheck for Render & UptimeRobot
   if (req.url === '/healthz' || req.url === '/actuator/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ status: 'UP', timestamp: new Date().toISOString() }));
+    res.end(JSON.stringify({ status: 'UP', service: 'unified-gateway', timestamp: new Date().toISOString() }));
+    return;
+  }
+
+  // Debug status for process diagnostics
+  if (req.url === '/api/internal/debug-status') {
+    const { execSync } = require('child_process');
+    let ps = '';
+    let adminLog = '';
+    let storeLog = '';
+    try { ps = execSync('ps aux', { encoding: 'utf8' }); } catch(e){ ps = e.message; }
+    try { adminLog = require('fs').readFileSync('/tmp/admin.log', 'utf8').slice(-3000); } catch(e){ adminLog = e.message; }
+    try { storeLog = require('fs').readFileSync('/tmp/store.log', 'utf8').slice(-3000); } catch(e){ storeLog = e.message; }
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ status: 'OK', ps, adminLog, storeLog }));
     return;
   }
 
