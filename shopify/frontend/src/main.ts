@@ -258,7 +258,8 @@ export class App {
       tag: 'EXCLUSIVE',
       buttonText: 'Shop Now',
       offerNotice: 'Offer ends 23:59pm Tuesday',
-      linkUrl: '#new-arrivals'
+      linkUrl: '#new-arrivals',
+      imageUrl: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=1600&q=80'
     },
     {
       title: 'ARCHITECTURAL DESIGNER RADIATORS',
@@ -266,7 +267,8 @@ export class App {
       tag: 'EXCLUSIVE',
       buttonText: 'Shop Radiators',
       offerNotice: 'Offer ends 23:59pm Tuesday',
-      linkUrl: '#new-arrivals'
+      linkUrl: '#new-arrivals',
+      imageUrl: 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1600&q=80'
     },
     {
       title: 'LUXURY HEATED TOWEL RAILS',
@@ -274,7 +276,8 @@ export class App {
       tag: 'EXCLUSIVE',
       buttonText: 'Shop Towel Rails',
       offerNotice: 'Offer ends 23:59pm Tuesday',
-      linkUrl: '#new-arrivals'
+      linkUrl: '#new-arrivals',
+      imageUrl: 'https://images.unsplash.com/photo-1507652313519-d4e9174996dd?auto=format&fit=crop&w=1600&q=80'
     }
   ]);
   campaignBanners = signal<any[]>([
@@ -1600,7 +1603,7 @@ export class App {
       category: 'Bathrooms',
       icon: '🛁',
       badge: '',
-      imageUrl: '/api/product-images/2a19631f-69b4-404a-8fa2-49cdc0dbed53.jpg',
+      imageUrl: '/product-images/2a19631f-69b4-404a-8fa2-49cdc0dbed53.jpg',
       description: 'Transform your bathroom with luxury heated towel warmers, mirror radiators, dual fuel all-season heating kits, and precision chrome & black valves.',
       filterOptions: {
         showPriceFilter: true,
@@ -1613,11 +1616,11 @@ export class App {
         showFuelTypeFilter: false,
         subcategoryHeading: 'Bathroom Styles & Types',
         subcategories: [
-          { label: 'Alex Multi-Rail Heated Warmer', query: 'Alex' },
-          { label: 'Rolo-Mirror Integrated Radiators', query: 'Rolo-Mirror' },
-          { label: 'Dual Fuel Conversion Kits', query: 'Dual Fuel' },
-          { label: 'Retro Period Warmers', query: 'Retro' },
-          { label: 'All Bathroom Towel Rails', query: 'Heated Towel Rails' }
+          { label: 'Alex Multi-Rail Heated Warmer', query: 'Alex', imageUrl: '/product-images/325c65f7-c7eb-4da9-b4e1-8a150483c9e5.jpg', badge: 'BESTSELLER' },
+          { label: 'Rolo-Mirror Integrated Radiators', query: 'Rolo-Mirror', imageUrl: '/product-images/fc274807-bc10-4063-b29c-c8bde1f7dd00.png', badge: 'WITH MIRROR' },
+          { label: 'Dual Fuel Conversion Kits', query: 'Dual Fuel', imageUrl: '/product-images/65301fc2-1bf1-4cff-b046-589de5422312.jpg', badge: 'ALL-SEASON' },
+          { label: 'Retro Period Warmers', query: 'Retro', imageUrl: '/product-images/0c7612a1-4309-4372-9466-c61cf478f0af.jpg', badge: 'VINTAGE' },
+          { label: 'All Bathroom Towel Rails', query: 'Heated Towel Rails', imageUrl: '/product-images/2a19631f-69b4-404a-8fa2-49cdc0dbed53.jpg' }
         ]
       },
       columns: [
@@ -1659,7 +1662,7 @@ export class App {
         cta: 'Explore Bathroom Warmers →',
         category: 'Bathrooms',
         query: 'Alex',
-        imageUrl: '/api/product-images/2a19631f-69b4-404a-8fa2-49cdc0dbed53.jpg'
+        imageUrl: '/product-images/2a19631f-69b4-404a-8fa2-49cdc0dbed53.jpg'
       }
     },
     {
@@ -1680,13 +1683,13 @@ export class App {
         showFuelTypeFilter: false,
         subcategoryHeading: 'Panel Types & Styles',
         subcategories: [
-          { label: 'Type 22 Double Convector (DF)', query: 'DF' },
-          { label: 'Type 11 Single Convector (SF)', query: 'SF' },
-          { label: 'Type 21 Double-Single (HF)', query: 'HF' },
-          { label: 'Compact 6 DS (Multi-Port)', query: 'DS' },
-          { label: 'Compact 6 TS (Triple Panel)', query: 'TS' },
-          { label: 'Colorado Column Radiators', query: 'Colorado' },
-          { label: 'Bergamo Sectional Radiators', query: 'Bergamo' }
+          { label: 'Type 22 Double Convector (DF)', query: 'DF', imageUrl: '/product-images/610be977-0784-40d1-a857-edc5e78bc884.png', badge: 'BESTSELLER' },
+          { label: 'Type 11 Single Convector (SF)', query: 'SF', imageUrl: '/product-images/610be977-0784-40d1-a857-edc5e78bc884.png', badge: 'SLIMLINE' },
+          { label: 'Type 21 Double-Single (HF)', query: 'HF', imageUrl: '/product-images/610be977-0784-40d1-a857-edc5e78bc884.png' },
+          { label: 'Compact 6 DS (Multi-Port)', query: 'DS', imageUrl: '/product-images/610be977-0784-40d1-a857-edc5e78bc884.png' },
+          { label: 'Compact 6 TS (Triple Panel)', query: 'TS', imageUrl: '/product-images/610be977-0784-40d1-a857-edc5e78bc884.png' },
+          { label: 'Colorado Column Radiators', query: 'Colorado', imageUrl: '/product-images/fc274807-bc10-4063-b29c-c8bde1f7dd00.png', badge: 'TRADITIONAL' },
+          { label: 'Bergamo Sectional Radiators', query: 'Bergamo', imageUrl: '/product-images/56dd11ba-f583-4cc8-8918-66dc45078c3b.jpg' }
         ]
       },
       columns: [
@@ -1731,7 +1734,7 @@ export class App {
         cta: 'Shop Compact 4 Series →',
         category: 'Radiators',
         query: 'DF',
-        imageUrl: '/api/product-images/610be977-0784-40d1-a857-edc5e78bc884.png'
+        imageUrl: '/product-images/610be977-0784-40d1-a857-edc5e78bc884.png'
       }
     },
     {
@@ -1752,12 +1755,12 @@ export class App {
         showFuelTypeFilter: true,
         subcategoryHeading: 'Towel Rail Styles',
         subcategories: [
-          { label: 'Alex Classic Multi-Rail', query: 'Alex' },
-          { label: 'Easy Slimline Compact', query: 'Easy' },
-          { label: 'Fiona Pristine Rails', query: 'Fiona' },
-          { label: 'Dexter Modern Warmers', query: 'Dexter' },
-          { label: 'Zig Zag Statement Rails', query: 'Zig Zag' },
-          { label: 'Retro Period Rails', query: 'Retro' }
+          { label: 'Alex Classic Multi-Rail', query: 'Alex', imageUrl: '/product-images/325c65f7-c7eb-4da9-b4e1-8a150483c9e5.jpg', badge: 'POPULAR' },
+          { label: 'Easy Slimline Compact', query: 'Easy', imageUrl: '/product-images/56dd11ba-f583-4cc8-8918-66dc45078c3b.jpg' },
+          { label: 'Fiona Pristine Rails', query: 'Fiona', imageUrl: '/product-images/2a19631f-69b4-404a-8fa2-49cdc0dbed53.jpg' },
+          { label: 'Dexter Modern Warmers', query: 'Dexter', imageUrl: '/product-images/325c65f7-c7eb-4da9-b4e1-8a150483c9e5.jpg' },
+          { label: 'Zig Zag Statement Rails', query: 'Zig Zag', imageUrl: '/product-images/0c7612a1-4309-4372-9466-c61cf478f0af.jpg' },
+          { label: 'Retro Period Rails', query: 'Retro', imageUrl: '/product-images/0c7612a1-4309-4372-9466-c61cf478f0af.jpg' }
         ]
       },
       columns: [
@@ -1799,7 +1802,7 @@ export class App {
         cta: 'Explore Towel Rails →',
         category: 'Heated Towel Rails',
         query: 'Alex',
-        imageUrl: '/api/product-images/325c65f7-c7eb-4da9-b4e1-8a150483c9e5.jpg'
+        imageUrl: '/product-images/325c65f7-c7eb-4da9-b4e1-8a150483c9e5.jpg'
       }
     },
     {
@@ -1820,11 +1823,11 @@ export class App {
         showFuelTypeFilter: false,
         subcategoryHeading: 'Electric Heating Types',
         subcategories: [
-          { label: 'Colorado WiFi Smart Radiators', query: 'Colorado' },
-          { label: 'Alex One Electric Towel Rails', query: 'Alex One' },
-          { label: 'KTX-4 Smart WiFi Elements', query: 'KTX' },
-          { label: 'MOA Digital Elements', query: 'MOA' },
-          { label: 'Terma SS1 Split Probes', query: 'Probe' }
+          { label: 'Colorado WiFi Smart Radiators', query: 'Colorado', imageUrl: '/product-images/fc274807-bc10-4063-b29c-c8bde1f7dd00.png', badge: 'SMART APP' },
+          { label: 'Alex One Electric Towel Rails', query: 'Alex One', imageUrl: '/product-images/325c65f7-c7eb-4da9-b4e1-8a150483c9e5.jpg', badge: 'PRE-FILLED' },
+          { label: 'KTX-4 Smart WiFi Elements', query: 'KTX', imageUrl: '/product-images/65301fc2-1bf1-4cff-b046-589de5422312.jpg' },
+          { label: 'MOA Digital Elements', query: 'MOA', imageUrl: '/product-images/65301fc2-1bf1-4cff-b046-589de5422312.jpg' },
+          { label: 'Terma SS1 Split Probes', query: 'Probe', imageUrl: '/product-images/65301fc2-1bf1-4cff-b046-589de5422312.jpg' }
         ]
       },
       columns: [
@@ -1865,7 +1868,7 @@ export class App {
         cta: 'Shop Electric Heating →',
         category: 'Electric Heating',
         query: 'Colorado',
-        imageUrl: '/api/product-images/fc274807-bc10-4063-b29c-c8bde1f7dd00.png'
+        imageUrl: '/product-images/fc274807-bc10-4063-b29c-c8bde1f7dd00.png'
       }
     },
     {
@@ -1886,11 +1889,11 @@ export class App {
         showFuelTypeFilter: false,
         subcategoryHeading: 'Valve & Fitting Types',
         subcategories: [
-          { label: 'Corner 3-Axis TRV Sets', query: 'Corner' },
-          { label: 'Traditional Vintage TRVs', query: 'Traditional' },
-          { label: '50mm Twin Valve Sets', query: 'Twins' },
-          { label: 'Solid Brass Pipe Sleeves', query: 'Pipe Masking' },
-          { label: 'Dual Fuel T-Piece Kits', query: 'T-Piece' }
+          { label: 'Corner 3-Axis TRV Sets', query: 'Corner', imageUrl: '/product-images/65301fc2-1bf1-4cff-b046-589de5422312.jpg', badge: 'BESTSELLER' },
+          { label: 'Traditional Vintage TRVs', query: 'Traditional', imageUrl: '/product-images/65301fc2-1bf1-4cff-b046-589de5422312.jpg' },
+          { label: '50mm Twin Valve Sets', query: 'Twins', imageUrl: '/product-images/65301fc2-1bf1-4cff-b046-589de5422312.jpg' },
+          { label: 'Solid Brass Pipe Sleeves', query: 'Pipe Masking', imageUrl: '/product-images/65301fc2-1bf1-4cff-b046-589de5422312.jpg' },
+          { label: 'Dual Fuel T-Piece Kits', query: 'T-Piece', imageUrl: '/product-images/65301fc2-1bf1-4cff-b046-589de5422312.jpg' }
         ]
       },
       columns: [
@@ -1930,7 +1933,7 @@ export class App {
         cta: 'Browse Valves & Kits →',
         category: 'Valves & Accessories',
         query: 'Corner',
-        imageUrl: '/api/product-images/65301fc2-1bf1-4cff-b046-589de5422312.jpg'
+        imageUrl: '/product-images/65301fc2-1bf1-4cff-b046-589de5422312.jpg'
       }
     },
     {
@@ -1951,11 +1954,11 @@ export class App {
         showFuelTypeFilter: false,
         subcategoryHeading: 'Clearance Categories',
         subcategories: [
-          { label: 'Convector Radiator Deals', query: 'DF' },
-          { label: 'Colorado Column Reductions', query: 'Colorado' },
-          { label: 'Towel Rail Clearance', query: 'Alex' },
-          { label: 'TRV Valve Deals', query: 'Cylindrical' },
-          { label: 'Under £150 Specials', query: 'Compact' }
+          { label: 'Convector Radiator Deals', query: 'DF', imageUrl: '/product-images/610be977-0784-40d1-a857-edc5e78bc884.png', badge: 'UP TO 40% OFF' },
+          { label: 'Colorado Column Reductions', query: 'Colorado', imageUrl: '/product-images/fc274807-bc10-4063-b29c-c8bde1f7dd00.png', badge: 'SAVE 20%' },
+          { label: 'Towel Rail Clearance', query: 'Alex', imageUrl: '/product-images/325c65f7-c7eb-4da9-b4e1-8a150483c9e5.jpg' },
+          { label: 'TRV Valve Deals', query: 'Cylindrical', imageUrl: '/product-images/65301fc2-1bf1-4cff-b046-589de5422312.jpg' },
+          { label: 'Under £150 Specials', query: 'Compact', imageUrl: '/product-images/610be977-0784-40d1-a857-edc5e78bc884.png' }
         ]
       },
       columns: [
@@ -1990,7 +1993,8 @@ export class App {
         subtitle: 'Factory-direct overstock discounts on premium British and European central heating and towel warmers.',
         cta: 'Shop All Sale Items →',
         category: 'SALE',
-        imageUrl: '/api/product-images/610be977-0784-40d1-a857-edc5e78bc884.png'
+        query: 'SALE',
+        imageUrl: '/product-images/610be977-0784-40d1-a857-edc5e78bc884.png'
       }
     }
   ];
@@ -3781,7 +3785,12 @@ export class App {
   }
 
   imageSrc(value?: string | null): string {
-    return value?.trim() || '/product-placeholder.svg';
+    if (!value || !value.trim()) return '/product-placeholder.svg';
+    let clean = value.trim();
+    if (clean.startsWith('/api/product-images/')) {
+      clean = clean.replace('/api/product-images/', '/product-images/');
+    }
+    return clean;
   }
 
   hasImage(p: Product): boolean {

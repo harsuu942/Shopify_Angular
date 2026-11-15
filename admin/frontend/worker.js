@@ -2,6 +2,18 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
+    // First try serving product images directly from Cloudflare Assets
+    if (url.pathname.startsWith('/api/product-images/') || url.pathname.startsWith('/product-images/')) {
+      const filename = url.pathname.replace(/^\/api\/product-images\//, '').replace(/^\/product-images\//, '');
+      const assetUrl = new URL(`/product-images/${filename}`, request.url);
+      try {
+        const assetResp = await env.ASSETS.fetch(new Request(assetUrl, request));
+        if (assetResp && assetResp.status === 200) {
+          return assetResp;
+        }
+      } catch (_) {}
+    }
+
     // Forward API and actuator requests directly to the live Render Backend
     if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/actuator/')) {
       const targetUrl = new URL(url.pathname + url.search, 'https://hearth-backend-0bbo.onrender.com');
@@ -31,6 +43,17 @@ export default {
 
       try {
         const resp = await fetch(proxyRequest);
+        if (resp.status === 404 && targetUrl.pathname === '/api/navigation') {
+          // If admin /api/navigation returns 404, fallback to /api/cms/navigation
+          const cmsReq = new Request('https://hearth-backend-0bbo.onrender.com/api/cms/navigation', {
+            method: 'GET',
+            headers: headers
+          });
+          try {
+            const cmsResp = await fetch(cmsReq);
+            if (cmsResp.status === 200) return cmsResp;
+          } catch (_) {}
+        }
         return resp;
       } catch (err) {
         return new Response(JSON.stringify({ 

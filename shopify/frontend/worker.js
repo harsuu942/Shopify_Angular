@@ -2,6 +2,18 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
+    // First try serving product images directly from Cloudflare Assets
+    if (url.pathname.startsWith('/api/product-images/') || url.pathname.startsWith('/product-images/')) {
+      const filename = url.pathname.replace(/^\/api\/product-images\//, '').replace(/^\/product-images\//, '');
+      const assetUrl = new URL(`/product-images/${filename}`, request.url);
+      try {
+        const assetResp = await env.ASSETS.fetch(new Request(assetUrl, request));
+        if (assetResp && assetResp.status === 200) {
+          return assetResp;
+        }
+      } catch (_) {}
+    }
+
     // Forward API and actuator requests to Render Storefront Backend
     if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/actuator/')) {
       const targetUrl = new URL(url.pathname + url.search, 'https://hearth-backend-0bbo.onrender.com');

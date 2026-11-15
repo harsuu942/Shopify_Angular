@@ -940,7 +940,7 @@ public class StoreController {
     return List.of();
   }
 
-  @GetMapping("/cms/navigation")
+  @GetMapping({"/cms/navigation", "/navigation", "/api/navigation"})
   public List<Map<String,Object>> navigation(){
     try {
       var list = restClient.get().uri("/api/internal/navigation")
@@ -973,7 +973,48 @@ public class StoreController {
     } catch (Exception e) {
       System.err.println("StoreController navigation fetch notice: " + e.getMessage());
     }
-    return List.of();
+    return defaultNavigationMenus();
+  }
+
+  private List<Map<String, Object>> defaultNavigationMenus() {
+    return List.of(
+      Map.of(
+        "id", 1, "menuId", "bathroom-suites", "title", "Bathroom Suites", "category", "Bathrooms",
+        "icon", "🛁", "badge", "", "sortOrder", 1, "status", "PUBLISHED",
+        "imageUrl", "/product-images/2a19631f-69b4-404a-8fa2-49cdc0dbed53.jpg",
+        "description", "Transform your bathroom with luxury heated towel warmers, mirror radiators, dual fuel all-season heating kits, and precision chrome & black valves."
+      ),
+      Map.of(
+        "id", 2, "menuId", "radiators", "title", "Radiators", "category", "Radiators",
+        "icon", "🔥", "badge", "", "sortOrder", 2, "status", "PUBLISHED",
+        "imageUrl", "/product-images/610be977-0784-40d1-a857-edc5e78bc884.png",
+        "description", "High-efficiency convector radiators, column radiators, and designer flat panels engineered to keep British homes warm."
+      ),
+      Map.of(
+        "id", 3, "menuId", "towel-rails", "title", "Heated Towel Rails", "category", "Heated Towel Rails",
+        "icon", "🛁", "badge", "", "sortOrder", 3, "status", "PUBLISHED",
+        "imageUrl", "/product-images/325c65f7-c7eb-4da9-b4e1-8a150483c9e5.jpg",
+        "description", "Premium heated towel rails and ladder warmers designed for optimal heat output and cozy warm towels."
+      ),
+      Map.of(
+        "id", 4, "menuId", "electric-heating", "title", "Electric Heating", "category", "Electric Heating",
+        "icon", "⚡", "badge", "", "sortOrder", 4, "status", "PUBLISHED",
+        "imageUrl", "/product-images/fc274807-bc10-4063-b29c-c8bde1f7dd00.png",
+        "description", "Smart electric radiators, pre-filled electric towel warmers, and digital WiFi heating elements."
+      ),
+      Map.of(
+        "id", 5, "menuId", "valves", "title", "Valves & Accessories", "category", "Valves & Accessories",
+        "icon", "⚙", "badge", "", "sortOrder", 5, "status", "PUBLISHED",
+        "imageUrl", "/product-images/65301fc2-1bf1-4cff-b046-589de5422312.jpg",
+        "description", "Precision thermostatic radiator valves (TRVs), 50mm twin valve sets, and pipe finishing sleeves."
+      ),
+      Map.of(
+        "id", 6, "menuId", "sale", "title", "SALE", "category", "SALE",
+        "icon", "🏷", "badge", "HOT", "sortOrder", 6, "status", "PUBLISHED",
+        "imageUrl", "/product-images/610be977-0784-40d1-a857-edc5e78bc884.png",
+        "description", "Unbeatable seasonal deals with up to 40% off clearance radiators, heated towel rails, and ex-display heating sets."
+      )
+    );
   }
 
   private Map<String, String> buildCmsResponse(Map<String, Object> c) {
@@ -1184,9 +1225,21 @@ public class StoreController {
     ));
   }
 
-  @GetMapping("/admin/summary")
+  @GetMapping({"/admin/summary", "/dashboard", "/api/dashboard"})
   public Map<String,Object> summary(){
-    return Map.of("products",products.count(),"orders",orders.count(),"lowStock",products.findAll().stream().filter(p->p.getStock()<10).count(),"revenue",orders.findAll().stream().map(CustomerOrder::getTotal).reduce(BigDecimal.ZERO,BigDecimal::add));
+    var ords = orders.findAll();
+    var rev = ords.stream().map(CustomerOrder::getTotal).reduce(BigDecimal.ZERO,BigDecimal::add);
+    return Map.of(
+      "products", products.count(),
+      "orders", ords.size(),
+      "customers", users.count(),
+      "lowStock", products.findAll().stream().filter(p->p.getStock()<10).count(),
+      "revenue", rev,
+      "revenueMinor", rev.multiply(BigDecimal.valueOf(100)).longValue(),
+      "openQuotes", 5,
+      "paymentExceptions", 0,
+      "recentOrders", ords.stream().limit(5).toList()
+    );
   }
 
   @GetMapping("/reviews")
