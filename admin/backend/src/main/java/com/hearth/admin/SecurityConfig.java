@@ -61,10 +61,24 @@ class JwtService {
 
 @Component
 class JwtFilter extends OncePerRequestFilter {
-  private final JwtService jwt; JwtFilter(JwtService jwt){this.jwt=jwt;}
+  private final JwtService jwt;
+  JwtFilter(JwtService jwt){this.jwt=jwt;}
   protected void doFilterInternal(HttpServletRequest req,HttpServletResponse res,FilterChain chain) throws java.io.IOException,jakarta.servlet.ServletException {
     var h=req.getHeader(HttpHeaders.AUTHORIZATION);
-    if(h!=null&&h.startsWith("Bearer ")) try { var c=jwt.parse(h.substring(7)); var role=String.valueOf(c.get("role")); var auth=new UsernamePasswordAuthenticationToken(c.getSubject(),null,List.of(new SimpleGrantedAuthority("ROLE_"+role))); org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(auth); } catch(Exception ignored) {}
+    if(h!=null && !h.isBlank()) {
+      String rawToken = null;
+      if (h.startsWith("Bearer ") || h.startsWith("bearer ")) rawToken = h.substring(7).trim();
+      else if (h.startsWith("Basic ") || h.startsWith("basic ")) rawToken = h.substring(6).trim();
+      else if (h.contains(".")) rawToken = h.trim();
+      if (rawToken != null && !rawToken.isBlank()) {
+        try {
+          var c=jwt.parse(rawToken);
+          var role=String.valueOf(c.get("role"));
+          var auth=new UsernamePasswordAuthenticationToken(c.getSubject(),null,List.of(new SimpleGrantedAuthority("ROLE_"+role)));
+          org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(auth);
+        } catch(Exception ignored) {}
+      }
+    }
     chain.doFilter(req,res);
   }
 }

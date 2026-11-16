@@ -284,6 +284,7 @@ class BlogPost extends BaseEntity {
 }
 
 @Entity @Table(name="navigation_menus", indexes=@Index(name="idx_nav_menu_id", columnList="menuId"))
+@JsonIgnoreProperties(ignoreUnknown = true)
 class NavigationMenu extends BaseEntity {
   @Column(unique=true, nullable=false) public String menuId;
   @Column(nullable=false) public String title;
@@ -297,5 +298,9 @@ class NavigationMenu extends BaseEntity {
   @Column(columnDefinition="LONGTEXT") public String filterOptionsJson;
   @Column(columnDefinition="LONGTEXT") public String columnsJson;
   @Column(columnDefinition="LONGTEXT") public String featuredPromoJson;
+
+  @Transient public Object columns;
+  @Transient public Object filterOptions;
+  @Transient public Object featuredPromo;
 }
 

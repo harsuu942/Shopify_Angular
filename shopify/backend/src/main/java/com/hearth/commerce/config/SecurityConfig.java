@@ -36,8 +36,8 @@ public class SecurityConfig {
         .addHeaderWriter(new StaticHeadersWriter("Permissions-Policy","camera=(), microphone=(), geolocation=()")))
       .authorizeHttpRequests(a->a
         .requestMatchers("/api/inquiries/my").authenticated()
-        .requestMatchers(HttpMethod.GET,"/api/products/**","/api/categories","/api/product-images/**","/api/cms/**","/api/blogs","/api/blogs/**","/api/orders/track/**","/api/reviews/**","/api/checkout/**","/api/inquiries/track/**","/api/settings/**").permitAll()
-        .requestMatchers(HttpMethod.HEAD,"/api/products/**","/api/categories","/api/product-images/**","/api/cms/**","/api/blogs","/api/blogs/**","/api/orders/track/**","/api/reviews/**","/api/checkout/**","/api/inquiries/track/**","/api/settings/**").permitAll()
+        .requestMatchers(HttpMethod.GET,"/api/products/**","/api/categories","/api/product-images/**","/api/cms/**","/api/navigation","/api/banners","/api/banners/**","/api/brands","/api/blogs","/api/blogs/**","/api/orders/track/**","/api/reviews/**","/api/checkout/**","/api/inquiries/track/**","/api/settings/**").permitAll()
+        .requestMatchers(HttpMethod.HEAD,"/api/products/**","/api/categories","/api/product-images/**","/api/cms/**","/api/navigation","/api/banners","/api/banners/**","/api/brands","/api/blogs","/api/blogs/**","/api/orders/track/**","/api/reviews/**","/api/checkout/**","/api/inquiries/track/**","/api/settings/**").permitAll()
         .requestMatchers(HttpMethod.POST,"/api/reviews/*/helpful","/api/reviews").permitAll()
         .requestMatchers(HttpMethod.POST,"/api/reviews/*/approve","/api/reviews/*/reject").hasRole("ADMIN")
         .requestMatchers(HttpMethod.DELETE,"/api/reviews/**").hasRole("ADMIN")

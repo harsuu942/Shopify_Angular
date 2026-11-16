@@ -12,9 +12,12 @@ interface Product{id?:number;sku:string;name:string;brand:string;category:string
 interface User{name:string;email:string;role:string}
 
 const authInterceptor=(req:any,next:any)=>{
-  const token=sessionStorage.getItem('hearth_admin_token');
+  const token=sessionStorage.getItem('hearth_admin_token') || localStorage.getItem('hearth_admin_token');
   const headers:Record<string,string>={'X-Portal':'admin'};
-  if(token){headers['Authorization']=token.startsWith('Basic ')?token:`Basic ${token}`;}
+  if(token){
+    const cleanToken = token.replace(/^(Bearer|Basic)\s+/i, '').trim();
+    headers['Authorization']=`Bearer ${cleanToken}`;
+  }
   const authReq=req.clone({setHeaders:headers});
   return next(authReq).pipe(
     catchError((error:any)=>{
@@ -983,7 +986,7 @@ const authInterceptor=(req:any,next:any)=>{
 `})
 class App {
  @ViewChild('globalSearchInput') globalSearchInput?:ElementRef<HTMLInputElement>;
-  private http=inject(HttpClient);private sanitizer=inject(DomSanitizer);private searchTimer?:ReturnType<typeof setTimeout>; user=signal<User|null>((()=>{try{const u=JSON.parse(sessionStorage.getItem('hearth_admin_user')||'null');if(u){if(!u.name||u.name==='undefined'){u.name=u.fullName||u.email?.split('@')[0]||'Store Administrator';}return u;}}catch(_){}return null;})()); view=signal<View>('dashboard');navOpen=signal(false);loading=signal(false);saving=signal(false);uploadingImage=signal(false);uploadingPdf=signal(false);contentEditorTab:'editor'|'preview'='editor';inventorySearch='';onlyLowStock=false;importingProducts=signal(false);importingImages=signal(false);syncingAll=signal(false);syncingProductId=signal<number|null>(null);bulkImportMode=signal<'csv'|'excel'>('csv');parsedCsvProducts=signal<any[]>([]);csvRawFilename=signal('');csvAutoPublish=signal(true);uploadedMediaList=signal<any[]>([]);loadingMedia=signal(false);uploadingBulkImages=signal(false);bulkImageResults=signal<any[]>([]);mediaManagerTab=signal<'upload'|'zip'|'gallery'>('upload');selectedMediaUrl=signal('');assignTargetProductId:number|null=null;assigningImage=signal(false);allProductsList=signal<Product[]>([]);error=signal('');toast=signal('');dashboardData=signal<any>(null);imageCoverage=signal<any>(null);products=signal<Product[]>([]);productPage=signal(0);productTotalPages=signal(1);productTotalElements=signal(0);readonly productPageSize=10;customers=signal<any[]>([]);quotes=signal<any[]>([]);orders=signal<any[]>([]);promotions=signal<any[]>([]);inquiries=signal<any[]>([]);selectedInquiry=signal<any>(null);inquiryResolutionNote='';inquiryDetailStatus='CONTACTED';reviews=signal<any[]>([]);reviewFilter='';inquiryFilter='';inquirySearch='';orderDraft:any={};promoDraft:any={};promoMinBasket=0;inventory=signal<any[]>([]);contents=signal<any[]>([]);blogs=signal<AdminBlogPost[]>([]);loadingBlogs=signal(false);syncingAllBlogs=signal(false);savingBlog=signal(false);blogSearchQuery="";blogCategoryFilter="";blogStatusFilter="";blogDraft:AdminBlogPost=this.emptyBlog();audits=signal<any[]>([]);auditPage=signal(0);auditTotalPages=signal(1);auditTotalElements=signal(0);readonly auditPageSize=10;modal=signal<any>(null);searchOpen=signal(false);searching=signal(false);searchResults=signal<any[]>([]);notificationsOpen=signal(false);profileOpen=signal(false);unreadNotifications=signal(true);email='';password='';showPassword=false;globalSearch='';query='';productStatus='';productPrice=0;productCost=0;quoteSubtotal=0;quoteTax=0;selectedImageName='';
+  private http=inject(HttpClient);private sanitizer=inject(DomSanitizer);private searchTimer?:ReturnType<typeof setTimeout>; user=signal<User|null>((()=>{try{const u=JSON.parse(sessionStorage.getItem('hearth_admin_user')||localStorage.getItem('hearth_admin_user')||'null');if(u){if(!u.name||u.name==='undefined'){u.name=u.fullName||u.email?.split('@')[0]||'Store Administrator';}return u;}}catch(_){}return null;})()); view=signal<View>('dashboard');navOpen=signal(false);loading=signal(false);saving=signal(false);uploadingImage=signal(false);uploadingPdf=signal(false);contentEditorTab:'editor'|'preview'='editor';inventorySearch='';onlyLowStock=false;importingProducts=signal(false);importingImages=signal(false);syncingAll=signal(false);syncingProductId=signal<number|null>(null);bulkImportMode=signal<'csv'|'excel'>('csv');parsedCsvProducts=signal<any[]>([]);csvRawFilename=signal('');csvAutoPublish=signal(true);uploadedMediaList=signal<any[]>([]);loadingMedia=signal(false);uploadingBulkImages=signal(false);bulkImageResults=signal<any[]>([]);mediaManagerTab=signal<'upload'|'zip'|'gallery'>('upload');selectedMediaUrl=signal('');assignTargetProductId:number|null=null;assigningImage=signal(false);allProductsList=signal<Product[]>([]);error=signal('');toast=signal('');dashboardData=signal<any>(null);imageCoverage=signal<any>(null);products=signal<Product[]>([]);productPage=signal(0);productTotalPages=signal(1);productTotalElements=signal(0);readonly productPageSize=10;customers=signal<any[]>([]);quotes=signal<any[]>([]);orders=signal<any[]>([]);promotions=signal<any[]>([]);inquiries=signal<any[]>([]);selectedInquiry=signal<any>(null);inquiryResolutionNote='';inquiryDetailStatus='CONTACTED';reviews=signal<any[]>([]);reviewFilter='';inquiryFilter='';inquirySearch='';orderDraft:any={};promoDraft:any={};promoMinBasket=0;inventory=signal<any[]>([]);contents=signal<any[]>([]);blogs=signal<AdminBlogPost[]>([]);loadingBlogs=signal(false);syncingAllBlogs=signal(false);savingBlog=signal(false);blogSearchQuery="";blogCategoryFilter="";blogStatusFilter="";blogDraft:AdminBlogPost=this.emptyBlog();audits=signal<any[]>([]);auditPage=signal(0);auditTotalPages=signal(1);auditTotalElements=signal(0);readonly auditPageSize=10;modal=signal<any>(null);searchOpen=signal(false);searching=signal(false);searchResults=signal<any[]>([]);notificationsOpen=signal(false);profileOpen=signal(false);unreadNotifications=signal(true);email='';password='';showPassword=false;globalSearch='';query='';productStatus='';productPrice=0;productCost=0;quoteSubtotal=0;quoteTax=0;selectedImageName='';
   productDraft:Product=this.emptyProduct();customerDraft:any={};quoteDraft:any={};
   brands = signal<any[]>([]); loadingBrands = signal<boolean>(false); savingQuote = signal<boolean>(false); sendingQuoteEmail = signal<boolean>(false);
   companyList = signal<any[]>([]); loadingCompanies = signal<boolean>(false); savingCompany = signal<boolean>(false);
@@ -1251,9 +1254,9 @@ class App {
  copyToClipboard(text:string){if(navigator.clipboard){navigator.clipboard.writeText(text).then(()=>this.notify('Copied URL: '+text)).catch(()=>this.notify(text))}else this.notify(text)}
  importProducts(event:Event){const input=event.target as HTMLInputElement;const file=input.files?.[0];if(!file)return;if(file.name.toLowerCase().endsWith('.csv')){this.importProductsCsv(event);return}this.importingProducts.set(true);const form=new FormData();form.append('file',file);this.http.post<any>('/api/products/import-workbook',form).pipe(finalize(()=>{this.importingProducts.set(false);input.value=''}),catchError(e=>{this.notify(e.error?.message||'Workbook import failed');return of(null)})).subscribe(result=>{if(result){this.productPage.set(0);const skipped=result.skipped?` · ${result.skipped} rows skipped`:'';this.notify(`Imported ${result.created} new products, updated ${result.updated}, ${result.variants} variants${skipped}`);this.loadProducts()}})}
  importImageLibrary(event:Event){const input=event.target as HTMLInputElement;const file=input.files?.[0];if(!file)return;this.importingImages.set(true);const form=new FormData();form.append('file',file);this.http.post<any>('/api/products/import-images',form).pipe(finalize(()=>{this.importingImages.set(false);input.value=''}),catchError(e=>{this.notify(e.error?.message||'Image matching failed');return of(null)})).subscribe(result=>{if(result){this.notify(`Matched ${result.matched} EAN images · ${result.unmatched} unmatched`);this.loadProducts();this.loadImageCoverage()}})}
- login(){this.loading.set(true);this.error.set('');this.http.post<any>('/api/auth/login',{email:this.email,password:this.password}).pipe(finalize(()=>this.loading.set(false)),catchError(e=>{const msg=e.error?.message||(typeof e.error==='string'&&e.error.length<120?e.error:'')||'Backend service is waking up on Render. Please retry in a few moments.';this.error.set(msg);return of(null)})).subscribe(r=>{if(!r)return;sessionStorage.setItem('hearth_admin_token',r.token);const displayName=r.fullName||r.name||(r.email?r.email.split('@')[0]:'')||'Store Administrator';const u={name:displayName,email:r.email||this.email,role:r.role||'ADMIN'};sessionStorage.setItem('hearth_admin_user',JSON.stringify(u));this.user.set(u);this.loadDashboard();this.loadProducts();this.loadNavigationMenus();})}
+ login(){this.loading.set(true);this.error.set('');this.http.post<any>('/api/auth/login',{email:this.email,password:this.password}).pipe(finalize(()=>this.loading.set(false)),catchError(e=>{const msg=e.error?.message||(typeof e.error==='string'&&e.error.length<120?e.error:'')||'Backend service is waking up on Render. Please retry in a few moments.';this.error.set(msg);return of(null)})).subscribe(r=>{if(!r)return;sessionStorage.setItem('hearth_admin_token',r.token);localStorage.setItem('hearth_admin_token',r.token);const displayName=r.fullName||r.name||(r.email?r.email.split('@')[0]:'')||'Store Administrator';const u={name:displayName,email:r.email||this.email,role:r.role||'ADMIN'};sessionStorage.setItem('hearth_admin_user',JSON.stringify(u));localStorage.setItem('hearth_admin_user',JSON.stringify(u));this.user.set(u);this.loadDashboard();this.loadProducts();this.loadNavigationMenus();})}
  logout(){this.http.post('/api/auth/logout',{}).pipe(catchError(()=>of(null)),finalize(()=>this.clearAdminSession())).subscribe()}
- clearAdminSession(){sessionStorage.removeItem('hearth_admin_token');sessionStorage.removeItem('hearth_admin_user');this.closeHeaderMenus();this.user.set(null)}
+ clearAdminSession(){sessionStorage.removeItem('hearth_admin_token');localStorage.removeItem('hearth_admin_token');sessionStorage.removeItem('hearth_admin_user');localStorage.removeItem('hearth_admin_user');this.closeHeaderMenus();this.user.set(null)}
   go(v:View){this.view.set(v);this.navOpen.set(false);this.closeHeaderMenus();this.query='';if(v==='dashboard')this.loadDashboard();if(v==='navigation')this.loadNavigationMenus();if(v==='companies'){this.loadCompanies();this.loadBrands();}if(v==='products'){this.loadCompanies();this.loadProducts();}if(v==='customers')this.loadCustomers();if(v==='quotes'){this.loadQuotes();this.loadAllProductsForAssignment();}if(v==='orders')this.loadOrders();if(v==='promotions')this.loadPromotions();if(v==='inventory'){this.loadProducts();this.loadInventory();this.loadAllProductsForAssignment();}if(v==='inquiries')this.loadInquiries();if(v==='reviews')this.loadAdminReviews();if(v==='content')this.loadContent();if(v==='banners')this.loadBanners();if(v==='blogs')this.loadBlogs();if(v==='audit')this.loadAudit()}
   loadAdminReviews(){this.fetch('/api/reviews?status='+encodeURIComponent(this.reviewFilter),(r:any)=>this.reviews.set(r||[]))}
   approveAdminReview(r:any){this.http.post<any>(`/api/reviews/${r.id}/approve`,{}).subscribe(()=>{this.notify('Approved review by '+r.author);this.loadAdminReviews()})}
@@ -2063,6 +2066,7 @@ exportMediaManifestCsv(){
   getSeedNavigationMenus(): any[] {
     return [
       {
+        id: 65,
         menuId: 'bathroom-suites',
         title: 'Bathroom Suites',
         category: 'Bathrooms',
@@ -2132,6 +2136,7 @@ exportMediaManifestCsv(){
         }
       },
       {
+        id: 66,
         menuId: 'radiators',
         title: 'Radiators',
         category: 'Radiators',
@@ -2206,6 +2211,7 @@ exportMediaManifestCsv(){
         }
       },
       {
+        id: 67,
         menuId: 'towel-rails',
         title: 'Heated Towel Rails',
         category: 'Heated Towel Rails',
@@ -2276,6 +2282,7 @@ exportMediaManifestCsv(){
         }
       },
       {
+        id: 68,
         menuId: 'electric-heating',
         title: 'Electric Heating',
         category: 'Electric Heating',
@@ -2344,6 +2351,7 @@ exportMediaManifestCsv(){
         }
       },
       {
+        id: 69,
         menuId: 'valves',
         title: 'Valves & Accessories',
         category: 'Valves & Accessories',
@@ -2411,6 +2419,7 @@ exportMediaManifestCsv(){
         }
       },
       {
+        id: 70,
         menuId: 'sale',
         title: 'SALE',
         category: 'SALE',
@@ -2523,15 +2532,49 @@ exportMediaManifestCsv(){
   }
 
   toggleNavMenuStatus(m: any) {
-    const updatedStatus = m.status === "PUBLISHED" ? "DRAFT" : "PUBLISHED";
-    const payload = { ...m, status: updatedStatus };
-    this.http.put<any>(`/api/navigation/${m.id}`, payload).subscribe({
-      next: () => {
-        m.status = updatedStatus;
-        this.notify(`Menu ${m.title} switched to ${updatedStatus}`);
-      },
-      error: () => this.notify("Failed to update status")
-    });
+    if (!m) return;
+    const oldStatus = m.status;
+    const updatedStatus = oldStatus === "PUBLISHED" ? "DRAFT" : "PUBLISHED";
+    m.status = updatedStatus;
+
+    if (m.id) {
+      this.http.post<any>(`/api/navigation/${m.id}/toggle-status`, {}).subscribe({
+        next: (res) => {
+          if (res && res.status) m.status = res.status;
+          this.notify(`Menu "${m.title}" switched to ${m.status}`);
+        },
+        error: () => {
+          const payload = {
+            id: m.id,
+            status: updatedStatus,
+            title: m.title,
+            menuId: m.menuId,
+            category: m.category,
+            sortOrder: m.sortOrder || 1
+          };
+          this.http.put<any>(`/api/navigation/${m.id}`, payload).subscribe({
+            next: (res) => {
+              if (res && res.status) m.status = res.status;
+              this.notify(`Menu "${m.title}" switched to ${m.status}`);
+            },
+            error: (err) => {
+              m.status = oldStatus;
+              this.notify(err.error?.message || err.message || "Failed to update status");
+            }
+          });
+        }
+      });
+    } else {
+      let target = this.navMenus().find(x => x.menuId === m.menuId && x.id);
+      if (target) {
+        m.id = target.id;
+        this.toggleNavMenuStatus(m);
+      } else {
+        this.navMenuDraft = JSON.parse(JSON.stringify(m));
+        this.navMenuDraft.status = updatedStatus;
+        this.saveNavMenu();
+      }
+    }
   }
 
   saveNavMenu() {
@@ -2543,7 +2586,7 @@ exportMediaManifestCsv(){
       this.navMenuDraft.category = this.navMenuDraft.title.trim();
     }
     if (!this.navMenuDraft.menuId || !this.navMenuDraft.menuId.trim()) {
-      this.navMenuDraft.menuId = this.navMenuDraft.title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+      this.navMenuDraft.menuId = this.navMenuDraft.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
     }
 
     if (this.navMenuDraft.filterOptions?.customFilters) {
@@ -2556,25 +2599,46 @@ exportMediaManifestCsv(){
         }));
     }
 
+    // Clean columns array
+    const cleanColumns = Array.isArray(this.navMenuDraft.columns)
+      ? this.navMenuDraft.columns.map((col: any) => ({
+          title: col.title || '',
+          items: Array.isArray(col.items)
+            ? col.items.map((it: any) => ({
+                label: it.label || '',
+                query: it.query || '',
+                category: it.category || '',
+                badge: it.badge || ''
+              }))
+            : []
+        }))
+      : [];
+
     this.savingNavMenu.set(true);
+    let targetId = this.navMenuDraft.id;
+    if (!targetId) {
+      const match = this.navMenus().find(x => x.menuId === this.navMenuDraft.menuId && x.id);
+      if (match) targetId = match.id;
+    }
+
     const payload = {
-      id: this.navMenuDraft.id,
+      id: targetId || null,
       menuId: this.navMenuDraft.menuId,
       title: this.navMenuDraft.title,
       category: this.navMenuDraft.category,
       imageUrl: this.navMenuDraft.imageUrl || "",
-      icon: this.navMenuDraft.icon,
-      badge: this.navMenuDraft.badge,
-      description: this.navMenuDraft.description,
+      icon: this.navMenuDraft.icon || "",
+      badge: this.navMenuDraft.badge || "",
+      description: this.navMenuDraft.description || "",
       sortOrder: this.navMenuDraft.sortOrder || 1,
       status: this.navMenuDraft.status || "PUBLISHED",
-      filterOptionsJson: JSON.stringify(this.navMenuDraft.filterOptions),
-      columnsJson: JSON.stringify(this.navMenuDraft.columns),
-      featuredPromoJson: JSON.stringify(this.navMenuDraft.featuredPromo)
+      filterOptionsJson: JSON.stringify(this.navMenuDraft.filterOptions || {}),
+      columnsJson: JSON.stringify(cleanColumns),
+      featuredPromoJson: JSON.stringify(this.navMenuDraft.featuredPromo || {})
     };
 
-    const req$ = this.navMenuDraft.id
-      ? this.http.put<any>(`/api/navigation/${this.navMenuDraft.id}`, payload)
+    const req$ = targetId
+      ? this.http.put<any>(`/api/navigation/${targetId}`, payload)
       : this.http.post<any>("/api/navigation", payload);
 
     req$.pipe(finalize(() => this.savingNavMenu.set(false))).subscribe({
@@ -2584,7 +2648,7 @@ exportMediaManifestCsv(){
         this.loadNavigationMenus();
       },
       error: err => {
-        this.notify(err.error?.message || "Failed to save navigation menu");
+        this.notify(err.error?.message || err.message || "Failed to save navigation menu");
       }
     });
   }
@@ -2702,6 +2766,7 @@ exportMediaManifestCsv(){
   removeSubcategoryItem(index: number) {
     if (this.navMenuDraft.filterOptions?.subcategories) {
       this.navMenuDraft.filterOptions.subcategories.splice(index, 1);
+      this.navMenuDraft.filterOptions.subcategories = [...this.navMenuDraft.filterOptions.subcategories];
     }
   }
 
@@ -2714,11 +2779,13 @@ exportMediaManifestCsv(){
       name: "",
       optionsStr: ""
     });
+    this.navMenuDraft.filterOptions.customFilters = [...this.navMenuDraft.filterOptions.customFilters];
   }
 
   removeCustomFilterGroup(index: number) {
     if (this.navMenuDraft.filterOptions?.customFilters) {
       this.navMenuDraft.filterOptions.customFilters.splice(index, 1);
+      this.navMenuDraft.filterOptions.customFilters = [...this.navMenuDraft.filterOptions.customFilters];
     }
   }
 
@@ -2728,11 +2795,13 @@ exportMediaManifestCsv(){
       title: "New Column",
       items: [{ label: "", query: "", category: "", badge: "" }]
     });
+    this.navMenuDraft.columns = [...this.navMenuDraft.columns];
   }
 
   removeColumn(colIndex: number) {
     if (this.navMenuDraft.columns) {
       this.navMenuDraft.columns.splice(colIndex, 1);
+      this.navMenuDraft.columns = [...this.navMenuDraft.columns];
     }
   }
 
@@ -2742,12 +2811,16 @@ exportMediaManifestCsv(){
         this.navMenuDraft.columns[colIndex].items = [];
       }
       this.navMenuDraft.columns[colIndex].items.push({ label: "", query: "", category: "", badge: "" });
+      this.navMenuDraft.columns[colIndex].items = [...this.navMenuDraft.columns[colIndex].items];
+      this.navMenuDraft.columns = [...this.navMenuDraft.columns];
     }
   }
 
   removeColumnItem(colIndex: number, itemIndex: number) {
     if (this.navMenuDraft.columns?.[colIndex]?.items) {
       this.navMenuDraft.columns[colIndex].items.splice(itemIndex, 1);
+      this.navMenuDraft.columns[colIndex].items = [...this.navMenuDraft.columns[colIndex].items];
+      this.navMenuDraft.columns = [...this.navMenuDraft.columns];
     }
   }
 

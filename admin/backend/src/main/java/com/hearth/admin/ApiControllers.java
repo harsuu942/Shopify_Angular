@@ -1199,6 +1199,15 @@ class NavigationMenuController {
     return saved;
   }
 
+  @PostMapping("/{id}/toggle-status")
+  @PreAuthorize("hasAnyRole('ADMIN','CATALOGUE_MANAGER')")
+  @Transactional
+  public NavigationMenu toggleStatus(@PathVariable("id") Long id) {
+    var existing = repo.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Navigation menu not found"));
+    existing.status = "PUBLISHED".equalsIgnoreCase(existing.status) ? "DRAFT" : "PUBLISHED";
+    return repo.save(existing);
+  }
+
   @PostMapping("/{id}/move-up")
   @PreAuthorize("hasAnyRole('ADMIN','CATALOGUE_MANAGER')")
   @Transactional
