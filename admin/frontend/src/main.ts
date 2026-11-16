@@ -147,7 +147,15 @@ const authInterceptor=(req:any,next:any)=>{
           <tbody>
             @for(m of navMenus();track m.id||m.menuId){
               <tr>
-                <td><span class="badge blue">#{{m.sortOrder||1}}</span></td>
+                <td style="width:75px">
+                  <div style="display:inline-flex;align-items:center;gap:4px">
+                    <span class="badge blue" style="font-weight:700">#{{m.sortOrder||1}}</span>
+                    <div style="display:flex;flex-direction:column;gap:1px">
+                      <button type="button" class="sort-order-btn" (click)="moveNavMenuUp(m)" [disabled]="isFirstNavMenu(m)" title="Move up in priority">▲</button>
+                      <button type="button" class="sort-order-btn" (click)="moveNavMenuDown(m)" [disabled]="isLastNavMenu(m)" title="Move down in priority">▼</button>
+                    </div>
+                  </div>
+                </td>
                 <td>
                   <div style="display:flex;align-items:center;gap:10px">
                     @if(m.imageUrl){
@@ -369,7 +377,7 @@ const authInterceptor=(req:any,next:any)=>{
 
 @if(modal()!.type==='sendCustomerInquiry'){<div style="padding:24px"><div style="margin-bottom:16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px"><h3 style="margin:0 0 6px;color:#166534">Customer Resolution & Response Notification</h3><p style="margin:0;font-size:0.86rem;color:#15803d">An official technical resolution email will be sent directly to the customer.</p></div><div style="display:flex;flex-direction:column;gap:12px;font-size:0.88rem"><div><strong>Support Ticket:</strong> #{{selectedInquiryForUpdate?.ticketNumber||('TKT-'+selectedInquiryForUpdate?.id)}}</div><div><strong>Customer:</strong> {{selectedInquiryForUpdate?.name||selectedInquiryForUpdate?.customerName}} (<code>{{selectedInquiryForUpdate?.email||selectedInquiryForUpdate?.customerEmail}}</code>)</div><div><strong>Category:</strong> {{selectedInquiryForUpdate?.category}}</div><label>Resolution Message / Response:<textarea [(ngModel)]="inquiryCustomerMessage" rows="4" placeholder="e.g. Thank you for contacting THP Technical Support. We have processed your warranty claim and your replacement valve has been scheduled for dispatch."></textarea></label></div><div class="form-actions" style="margin-top:20px"><button type="button" class="secondary" (click)="closeModal()">Cancel</button><button type="button" class="primary" [disabled]="sendingCustomerNotification()" (click)="confirmSendInquiryResponse()">{{sendingCustomerNotification()?'Sending…':'✉ Send Response to Customer'}}</button></div></div>}
 
-@if(modal()!.type==='company'){<form (ngSubmit)="saveCompany()" class="form-grid"><label>Brand / Company Name *<input name="bname" [(ngModel)]="companyDraft.name" required placeholder="e.g. Hearth Luxury Radiators"></label><label>Brand Code *<input name="bcode" [(ngModel)]="companyDraft.code" required placeholder="e.g. HEARTH" style="text-transform:uppercase"></label><div class="full" style="display:flex;gap:8px;align-items:center"><label style="flex:1">Brand Logo URL<input name="blogo" [(ngModel)]="companyDraft.logoUrl" placeholder="https://... or /uploads/..."></label><button type="button" class="secondary" (click)="openMediaPicker('company')" style="margin-top:20px;white-space:nowrap">🖼 Pick Logo Image</button></div><label>Official Website<input name="bweb" type="url" [(ngModel)]="companyDraft.website" placeholder="https://brand.co.uk"></label><label>Contact Email<input name="bmail" type="email" [(ngModel)]="companyDraft.contactEmail" placeholder="support@brand.co.uk"></label><label>Contact Phone<input name="bphone" [(ngModel)]="companyDraft.contactPhone" placeholder="+44 20 ..."></label><label>Country of Origin<input name="bcountry" [(ngModel)]="companyDraft.country" placeholder="United Kingdom"></label><label>Display Sort Order<input name="bsort" type="number" [(ngModel)]="companyDraft.sortOrder" min="1"></label><label>Status<select name="bstatus" [(ngModel)]="companyDraft.status"><option value="ACTIVE">ACTIVE (Visible on Storefront)</option><option value="INACTIVE">INACTIVE</option></select></label><label class="full">Description & Manufacturer Warranty Terms<textarea name="bdesc" rows="3" [(ngModel)]="companyDraft.description" placeholder="Brief manufacturer summary, warranty coverage details, or brand ethos..."></textarea></label><div class="form-actions full"><button type="button" class="secondary" (click)="closeModal()">Cancel</button><button class="primary" [disabled]="savingCompany()">{{savingCompany()?'Saving…':'💾 Save Brand'}}</button></div></form>}
+@if(modal()!.type==='company'){<form (ngSubmit)="saveCompany()" class="form-grid"><label>Brand / Company Name *<input name="bname" [(ngModel)]="companyDraft.name" (input)="onCompanyNameChange()" required placeholder="e.g. Hearth Luxury Radiators"></label><label>Brand Code *<input name="bcode" [(ngModel)]="companyDraft.code" required placeholder="e.g. HEARTH" style="text-transform:uppercase"></label><div class="full" style="display:flex;gap:8px;align-items:center"><label style="flex:1">Brand Logo URL<input name="blogo" [(ngModel)]="companyDraft.logoUrl" placeholder="https://... or /uploads/..."></label><button type="button" class="secondary" (click)="openMediaPicker('company')" style="margin-top:20px;white-space:nowrap">🖼 Pick Logo Image</button></div><label>Official Website<input name="bweb" type="url" [(ngModel)]="companyDraft.website" placeholder="https://brand.co.uk"></label><label>Contact Email<input name="bmail" type="email" [(ngModel)]="companyDraft.contactEmail" placeholder="support@brand.co.uk"></label><label>Contact Phone<input name="bphone" [(ngModel)]="companyDraft.contactPhone" placeholder="+44 20 ..."></label><label>Country of Origin<input name="bcountry" [(ngModel)]="companyDraft.country" placeholder="United Kingdom"></label><label>Display Sort Order<input name="bsort" type="number" [(ngModel)]="companyDraft.sortOrder" min="1"></label><label>Status<select name="bstatus" [(ngModel)]="companyDraft.status"><option value="ACTIVE">ACTIVE (Visible on Storefront)</option><option value="INACTIVE">INACTIVE</option></select></label><label class="full">Description & Manufacturer Warranty Terms<textarea name="bdesc" rows="3" [(ngModel)]="companyDraft.description" placeholder="Brief manufacturer summary, warranty coverage details, or brand ethos..."></textarea></label><div class="form-actions full"><button type="button" class="secondary" (click)="closeModal()">Cancel</button><button type="submit" class="primary" [disabled]="savingCompany()">{{savingCompany()?'Saving…':'💾 Save Brand'}}</button></div></form>}
 @if(modal()!.type==='review'){<form (ngSubmit)="saveReview()" class="form-grid"><label>Customer Name *<input name="rauthor" [(ngModel)]="reviewDraft.author" required placeholder="e.g. Sarah Jenkins"></label><label>Customer Email<input name="remail" type="email" [(ngModel)]="reviewDraft.authorEmail" placeholder="customer@example.co.uk"></label><label>Customer Role / Badge<input name="rrole" [(ngModel)]="reviewDraft.role" placeholder="e.g. Verified Homeowner, Trade Plumber"></label><label>Customer Location<input name="rloc" [(ngModel)]="reviewDraft.location" placeholder="e.g. Surrey, UK"></label><label>Rating (1 to 5 Stars) *<select name="rrating" [(ngModel)]="reviewDraft.rating"><option [ngValue]="5">★★★★★ 5 Stars (Excellent)</option><option [ngValue]="4">★★★★☆ 4 Stars (Very Good)</option><option [ngValue]="3">★★★☆☆ 3 Stars (Average)</option><option [ngValue]="2">★★☆☆☆ 2 Stars (Below Average)</option><option [ngValue]="1">★☆☆☆☆ 1 Star (Poor)</option></select></label><label>Category<input name="rcat" [(ngModel)]="reviewDraft.category" placeholder="e.g. Designer Radiators"></label><label>Associated Product / SKU<input name="rsku" [(ngModel)]="reviewDraft.productSku" placeholder="e.g. OXF-001"></label><label>Moderation Status<select name="rstatus" [(ngModel)]="reviewDraft.status"><option value="APPROVED">APPROVED (Published on Storefront)</option><option value="PENDING_APPROVAL">PENDING_APPROVAL (Pending Moderation)</option><option value="REJECTED">REJECTED (Hidden)</option></select></label><label class="checkbox-inline full" style="margin-top:4px"><input type="checkbox" name="rverified" [(ngModel)]="reviewDraft.verified"><span>Verified Genuine Purchaser</span></label><label class="full">Review Headline *<input name="rtitle" [(ngModel)]="reviewDraft.title" required placeholder="e.g. Outstanding heat output and exceptional finish!"></label><label class="full">Review Comment / Content *<textarea name="rcomment" rows="4" [(ngModel)]="reviewDraft.comment" required placeholder="Detailed customer feedback and experience..."></textarea></label><div class="form-actions full"><button type="button" class="secondary" (click)="closeModal()">Cancel</button><button class="primary" [disabled]="savingReview()">{{savingReview()?'Saving…':'💾 Save Review'}}</button></div></form>}
  @if(modal()!.type==='stock'){<form (ngSubmit)="saveStock()" class="form-grid"><label class="full"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><span>Select Product to Adjust</span><small class="muted">{{filteredStockProducts().length}} products found</small></div><div style="display:flex;gap:8px;margin-bottom:6px"><input type="text" [ngModel]="stockProductSearch()" (ngModelChange)="stockProductSearch.set($event)" name="stockSearch" placeholder="Filter by product name or SKU..." style="flex:1;padding:7px 10px;font-size:0.84rem;border:1px solid #cbd5e1;border-radius:6px">@if(stockProductSearch()){<button type="button" class="secondary" (click)="stockProductSearch.set('')" style="padding:4px 8px;font-size:0.75rem">✕ Clear</button>}</div><select name="product" [(ngModel)]="stockDraft.productId" required><option [ngValue]="null">-- Choose a product ({{filteredStockProducts().length}} options) --</option>@for(p of filteredStockProducts();track p.id){<option [ngValue]="p.id">{{p.name}} (SKU: {{p.sku}}) — Current Stock: {{p.stock}}</option>}</select></label><label>Movement Direction<select name="type" [(ngModel)]="stockDraft.type"><option value="ADD">Add Stock (+)</option><option value="REMOVE">Remove Stock (-)</option></select></label><label>Quantity<input name="qty" type="number" min="1" [(ngModel)]="stockDraft.quantity" required></label><label>Warehouse<input name="warehouse" [(ngModel)]="stockDraft.warehouse" placeholder="Main Warehouse" required></label><label>Reference / PO / RMA #<input name="ref" [(ngModel)]="stockDraft.reference" placeholder="e.g. PO-1042 or RMA-88"></label><label class="full">Reason / Audit Trail Note<input name="reason" [(ngModel)]="stockDraft.reason" required placeholder="e.g. Supplier delivery, Damaged stock write-off, Physical count correction"></label><div class="form-actions full"><button type="button" class="secondary" (click)="closeModal()">Cancel</button><button class="primary" [disabled]="saving()">{{saving()?'Recording & Syncing…':'Record adjustment'}}</button></div></form>}
  @if(modal()!.type==='content'){<div><div style="padding:16px 26px 0"><div class="cms-modal-tabs"><button type="button" [class.active]="contentEditorTab==='editor'" (click)="contentEditorTab='editor'">✍ Editor (HTML & Content)</button><button type="button" [class.active]="contentEditorTab==='preview'" (click)="contentEditorTab='preview'">👁 Live HTML Viewer</button></div></div>@if(contentEditorTab==='editor'){<form (ngSubmit)="saveContent()" class="form-grid" style="padding-top:6px"><label>Title<input name="title" [(ngModel)]="contentDraft.title" required placeholder="e.g. Terms & Conditions"></label><label>Slug<input name="slug" [(ngModel)]="contentDraft.slug" required placeholder="e.g. terms-and-conditions"></label><label>Type<select name="ctype" [(ngModel)]="contentDraft.type"><option>PAGE</option><option>LANDING_PAGE</option><option>BANNER</option><option>FAQ</option></select></label><label>Status<select name="cstatus" [(ngModel)]="contentDraft.status"><option>PUBLISHED</option><option>DRAFT</option></select></label><label class="full">SEO Title<input name="seo" [(ngModel)]="contentDraft.seoTitle" placeholder="Page title for search engines"></label><div class="full"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><label style="margin:0;font-size:0.75rem;font-weight:700">Page Content / HTML Markup</label><small class="muted">Supports rich HTML or plain text</small></div><div class="cms-toolbar"><button type="button" class="cms-toolbar-btn" (click)="insertTag('b')"><b>B</b></button><button type="button" class="cms-toolbar-btn" (click)="insertTag('i')"><i>I</i></button><button type="button" class="cms-toolbar-btn" (click)="insertTag('h3')">H3</button><button type="button" class="cms-toolbar-btn" (click)="insertTag('p')">&para; P</button><button type="button" class="cms-toolbar-btn" (click)="insertTag('ul')">• List</button><button type="button" class="cms-toolbar-btn" (click)="insertTag('quote')">&ldquo; Quote</button><button type="button" class="cms-toolbar-btn" (click)="insertTag('table')">⊞ Table</button><button type="button" class="cms-toolbar-btn" (click)="insertTag('link')">🔗 Contact Link</button></div><textarea name="body" rows="12" [(ngModel)]="contentDraft.body" style="font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:0.86rem;line-height:1.5;white-space:pre-wrap" placeholder="Enter page text, policy terms, FAQ content, or HTML tags..."></textarea></div><div class="full" style="background:#f9fafb;border:1px solid var(--line);border-radius:0.75rem;padding:16px;margin-top:6px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div><strong style="font-size:0.82rem;color:var(--ink)">Official Document / PDF Attachment</strong><small class="d-block muted" style="font-size:0.68rem;margin-top:2px">Upload official PDF terms, policy documents, or warranty certificates. Synced to storefront for customer download.</small></div></div>@if(contentDraft.pdfFilename){<div class="cms-pdf-card"><div class="cms-pdf-info"><span style="font-size:1.6rem">📄</span><div><strong>{{contentDraft.pdfFilename}}</strong><small class="d-block" style="color:var(--green)">✓ Uploaded & Synced</small></div></div><div class="cms-pdf-actions"><a [href]="contentDraft.pdfUrl" target="_blank" class="mini-btn primary-mini" style="text-decoration:none">👁 View PDF</a><button type="button" class="mini-btn danger-mini" (click)="removeCmsPdf()">✕ Remove PDF</button></div></div>}<label class="upload-dropzone" [class.uploading]="uploadingPdf()" style="margin-top:10px;min-height:80px"><input type="file" accept="application/pdf,.pdf" (change)="uploadCmsPdf($event)" [disabled]="uploadingPdf()"><b>{{uploadingPdf()?'Uploading and syncing PDF document…':(contentDraft.pdfFilename?'Replace attached PDF file':'Choose or drop PDF document (.pdf)')}}</b><small>PDF format · up to 25 MB · instantly synced to Storefront</small></label></div><div class="form-actions full"><button type="button" class="secondary" (click)="closeModal()">Cancel</button><button class="primary" [disabled]="saving()||uploadingPdf()">{{saving()?'Saving…':(contentDraft.id?'💾 Update & Sync':'＋ Create & Sync')}}</button></div></form>}@if(contentEditorTab==='preview'){<div style="padding:10px 26px 24px"><div style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:center"><div><span class="eyebrow">{{contentDraft.type||'PAGE'}}</span><h2 style="margin:4px 0">{{contentDraft.title||'Untitled Page'}}</h2><small class="muted">Slug: <code>/{{contentDraft.slug||'slug'}}</code></small></div><span class="badge" [class.green]="contentDraft.status==='PUBLISHED'">{{contentDraft.status||'DRAFT'}}</span></div>@if(contentDraft.pdfFilename){<div class="cms-pdf-card" style="margin-bottom:16px"><div class="cms-pdf-info"><span style="font-size:1.4rem">📄</span><div><strong>Attached Official PDF: {{contentDraft.pdfFilename}}</strong><small class="d-block" style="color:var(--green)">Available for customer view & download on storefront</small></div></div><a [href]="contentDraft.pdfUrl" target="_blank" class="mini-btn primary-mini" style="text-decoration:none">👁 View PDF</a></div>}<div class="cms-live-preview-body" [innerHTML]="renderCmsHtml(contentDraft.body)"></div><div class="form-actions" style="margin-top:20px"><button type="button" class="secondary" (click)="contentEditorTab='editor'">← Back to Editor</button><button type="button" class="primary" (click)="saveContent()" [disabled]="saving()||uploadingPdf()">{{saving()?'Saving…':'💾 Save & Sync Page'}}</button></div></div>}</div>}
@@ -611,7 +619,7 @@ const authInterceptor=(req:any,next:any)=>{
                 <div class="subcategory-edit-card">
                   
                   <!-- Left: Thumbnail Preview & Pick Media -->
-                  <div style="display:flex;flex-direction:column;align-items:center;gap:6px;width:96px;flex-shrink:0">
+                  <div style="display:flex;flex-direction:column;align-items:center;gap:6px;width:104px;flex-shrink:0">
                     <div style="width:72px;height:72px;border-radius:8px;border:1px solid #cbd5e1;background:#f8fafc;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative">
                       @if(sub.imageUrl){
                         <img [src]="sub.imageUrl" [alt]="sub.label || 'Subcategory'" (error)="onImgError($event)" style="width:100%;height:100%;object-fit:cover">
@@ -619,9 +627,20 @@ const authInterceptor=(req:any,next:any)=>{
                         <span style="font-size:1.8rem;color:#94a3b8">🖼️</span>
                       }
                     </div>
-                    <button type="button" class="secondary" (click)="openMediaPicker('subcategory', sub, navMenuDraft.category)" style="font-size:0.74rem;padding:4px 8px;width:100%;white-space:nowrap;display:flex;align-items:center;justify-content:center;gap:4px">
-                      <span>🖼</span> Pick Image
-                    </button>
+                    <div style="display:flex;flex-direction:column;gap:3px;width:100%">
+                      <button type="button" class="secondary" (click)="openMediaPicker('subcategory', sub, navMenuDraft.category)" style="font-size:0.72rem;padding:3px 6px;width:100%;white-space:nowrap;display:flex;align-items:center;justify-content:center;gap:4px">
+                        <span>🖼</span> Pick
+                      </button>
+                      @if(sub.imageUrl){
+                        <button type="button" class="secondary" (click)="cropExistingSubcategory(sub)" style="font-size:0.72rem;padding:3px 6px;width:100%;white-space:nowrap;display:flex;align-items:center;justify-content:center;gap:3px">
+                          <span>✂</span> Crop
+                        </button>
+                      }
+                      <label style="margin:0;font-size:0.72rem;padding:3px 6px;width:100%;cursor:pointer;text-align:center;background:#fff;border:1px solid #cbd5e1;border-radius:4px">
+                        <input type="file" accept="image/jpeg,image/png,image/webp" (change)="onSubcategoryFileSelected($event, sub)" style="display:none">
+                        <span>✂ Upload</span>
+                      </label>
+                    </div>
                   </div>
 
                   <!-- Middle & Right: Inputs Grid -->
@@ -746,10 +765,12 @@ const authInterceptor=(req:any,next:any)=>{
           @if(navMenuDraft.featuredPromo?.imageUrl){
             <div class="product-edit-preview full" style="display:flex;align-items:center;gap:16px;background:#f8fafc;padding:12px 16px;border-radius:8px;border:1px solid #e2e8f0">
               <img [src]="navMenuDraft.featuredPromo.imageUrl" [alt]="navMenuDraft.featuredPromo.title" (error)="onImgError($event)" style="width:120px;height:70px;object-fit:cover;border-radius:6px;border:1px solid #cbd5e1">
-              <div>
+              <div style="flex:1">
                 <strong style="font-size:0.92rem;display:block">Promo Image Preview</strong>
                 <small class="muted" style="word-break:break-all">{{navMenuDraft.featuredPromo.imageUrl}}</small>
               </div>
+              <button type="button" class="secondary" (click)="cropExistingNavPromo()" style="padding:6px 12px;font-size:0.8rem">✂ Recrop Image</button>
+              <button type="button" class="delete-btn" (click)="navMenuDraft.featuredPromo.imageUrl=''" style="padding:6px 12px;font-size:0.8rem">✕ Remove</button>
             </div>
           }
           <label class="full">Promo Eyebrow Tag<input name="pTag" [(ngModel)]="navMenuDraft.featuredPromo.tag" placeholder="e.g. LUXURY BATHROOM HEATING"></label>
@@ -759,8 +780,10 @@ const authInterceptor=(req:any,next:any)=>{
           <label>Target Query / Category<input name="pQry" [(ngModel)]="navMenuDraft.featuredPromo.query" placeholder="e.g. Alex or Bathrooms"></label>
           <div class="full image-upload-field">
             <span>Featured Promo Image</span>
-            <div style="display:flex;gap:10px;align-items:center;margin-top:6px">
-              <input name="pImg" type="url" [(ngModel)]="navMenuDraft.featuredPromo.imageUrl" placeholder="https://... or pick from media" style="flex:1">
+            <div style="display:flex;gap:10px;align-items:center;margin-top:6px;flex-wrap:wrap">
+              <input name="pImg" type="url" [(ngModel)]="navMenuDraft.featuredPromo.imageUrl" placeholder="https://... or pick from media" style="flex:1;min-width:200px">
+              <input type="file" #promoFileInput accept="image/jpeg,image/png,image/webp" (change)="onNavPromoFileSelected($event)" style="display:none">
+              <button type="button" class="primary" (click)="promoFileInput.click()" style="white-space:nowrap;padding:10px 14px;display:flex;align-items:center;gap:6px"><span>✂</span> Upload &amp; Crop Image</button>
               <button type="button" class="secondary" (click)="openMediaPicker('navPromo', null, navMenuDraft.category)" style="white-space:nowrap;padding:10px 14px;display:flex;align-items:center;gap:6px"><span>🖼</span> Pick Image</button>
             </div>
           </div>
@@ -783,7 +806,7 @@ const authInterceptor=(req:any,next:any)=>{
     <header>
       <div>
         <p class="eyebrow">IMAGE FRAMING &amp; OPTIMIZATION</p>
-        <h2>✂ Crop &amp; Adjust {{cropTargetType === 'banner' ? 'Banner' : 'Category'}} Image</h2>
+        <h2>✂ Crop &amp; Adjust {{cropTargetType === 'banner' ? 'Banner' : (cropTargetType === 'subcategory' ? 'Subcategory' : (cropTargetType === 'navPromo' ? 'Mega-Menu Promo' : 'Category'))}} Image</h2>
       </div>
       <button type="button" (click)="closeCropModal()">×</button>
     </header>
@@ -798,7 +821,13 @@ const authInterceptor=(req:any,next:any)=>{
           Hero Slider (16:7 / 1920×840)
         </button>
         <button type="button" class="tab-btn" [class.active]="cropAspectRatio==='16:9'" (click)="setCropAspectRatio('16:9')">
-          Campaign Card (16:9 / 1200×675)
+          Standard / Promo (16:9 / 1600×900)
+        </button>
+        <button type="button" class="tab-btn" [class.active]="cropAspectRatio==='4:3'" (click)="setCropAspectRatio('4:3')">
+          Card (4:3 / 1200×900)
+        </button>
+        <button type="button" class="tab-btn" [class.active]="cropAspectRatio==='1:1'" (click)="setCropAspectRatio('1:1')">
+          Square (1:1 / 1000×1000)
         </button>
         <button type="button" class="tab-btn" [class.active]="cropAspectRatio==='21:9'" (click)="setCropAspectRatio('21:9')">
           Ultra-Wide (21:9 / 1920×820)
@@ -1636,14 +1665,48 @@ editCompany(c: any) {
   this.modal.set({ type: 'company', kicker: 'MANUFACTURERS', title: 'Edit ' + c.name });
 }
 
+onCompanyNameChange() {
+  if (this.companyDraft.name) {
+    const autoCode = this.companyDraft.name.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+    if (!this.companyDraft.code || this.companyDraft._autoGeneratedCode) {
+      this.companyDraft.code = autoCode;
+      this.companyDraft._autoGeneratedCode = true;
+    }
+  }
+}
+
 saveCompany() {
-  if (!this.companyDraft.name || !this.companyDraft.code) {
-    this.notify('Brand Name and Code are required');
+  const name = (this.companyDraft.name || '').trim();
+  if (!name) {
+    this.notify('Brand / Company Name is required');
     return;
+  }
+  let code = (this.companyDraft.code || '').trim();
+  if (!code) {
+    code = name.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+    if (!code) code = 'BRAND' + Date.now();
   }
   this.savingCompany.set(true);
   const id = this.companyDraft.id;
-  this.http.request(id ? 'PUT' : 'POST', id ? `/api/companies/${id}` : '/api/companies', { body: this.companyDraft }).pipe(
+  const payload = {
+    id: id || null,
+    name: name,
+    code: code,
+    logoUrl: this.companyDraft.logoUrl || '',
+    website: this.companyDraft.website || '',
+    contactEmail: this.companyDraft.contactEmail || '',
+    contactPhone: this.companyDraft.contactPhone || '',
+    country: this.companyDraft.country || 'United Kingdom',
+    description: this.companyDraft.description || '',
+    status: this.companyDraft.status || 'ACTIVE',
+    sortOrder: this.companyDraft.sortOrder || 1
+  };
+
+  const req$ = id
+    ? this.http.put<any>(`/api/companies/${id}`, payload)
+    : this.http.post<any>('/api/companies', payload);
+
+  req$.pipe(
     finalize(() => this.savingCompany.set(false)),
     catchError(e => {
       this.notify(e.error?.message || 'Failed to save brand');
@@ -1652,7 +1715,7 @@ saveCompany() {
   ).subscribe(res => {
     if (res) {
       this.closeModal();
-      this.notify(id ? 'Brand updated successfully' : 'Brand created successfully');
+      this.notify(id ? '✓ Brand updated successfully' : '✓ Brand created successfully');
       this.loadCompanies();
       this.loadBrands();
     }
@@ -2526,15 +2589,84 @@ exportMediaManifestCsv(){
     });
   }
 
+  isFirstNavMenu(m: any): boolean {
+    const list = this.navMenus();
+    if (!list.length) return true;
+    return (list[0].id && list[0].id === m.id) || (list[0].menuId && list[0].menuId === m.menuId);
+  }
+
+  isLastNavMenu(m: any): boolean {
+    const list = this.navMenus();
+    if (!list.length) return true;
+    const last = list[list.length - 1];
+    return (last.id && last.id === m.id) || (last.menuId && last.menuId === m.menuId);
+  }
+
+  moveNavMenuUp(m: any) {
+    if (this.isFirstNavMenu(m)) return;
+    this.swapNavMenusLocally(m, -1);
+    if (m.id) {
+      this.http.post<any[]>(`/api/navigation/${m.id}/move-up`, {}).subscribe({
+        next: (res) => {
+          if (Array.isArray(res) && res.length) {
+            this.navMenus.set(res);
+          }
+          this.notify(`Moved "${m.title}" up in priority`);
+        },
+        error: () => this.loadNavigationMenus()
+      });
+    }
+  }
+
+  moveNavMenuDown(m: any) {
+    if (this.isLastNavMenu(m)) return;
+    this.swapNavMenusLocally(m, 1);
+    if (m.id) {
+      this.http.post<any[]>(`/api/navigation/${m.id}/move-down`, {}).subscribe({
+        next: (res) => {
+          if (Array.isArray(res) && res.length) {
+            this.navMenus.set(res);
+          }
+          this.notify(`Moved "${m.title}" down in priority`);
+        },
+        error: () => this.loadNavigationMenus()
+      });
+    }
+  }
+
+  swapNavMenusLocally(m: any, direction: number) {
+    const list = [...this.navMenus()];
+    const idx = list.findIndex(x => (x.id && x.id === m.id) || (x.menuId && x.menuId === m.menuId));
+    if (idx < 0) return;
+    const targetIdx = idx + direction;
+    if (targetIdx < 0 || targetIdx >= list.length) return;
+    const temp = list[idx];
+    list[idx] = list[targetIdx];
+    list[targetIdx] = temp;
+    list.forEach((item, i) => { item.sortOrder = i + 1; });
+    this.navMenus.set(list);
+  }
+
   deleteNavMenu(m: any) {
-    if (confirm(`Are you sure you want to delete menu "${m.title}"?`)) {
+    if (!confirm(`Are you sure you want to delete navigation menu "${m.title}"?`)) return;
+    // Remove locally right away for instantaneous response
+    const currentList = this.navMenus().filter(x => (m.id ? x.id !== m.id : x.menuId !== m.menuId));
+    currentList.forEach((item, i) => { item.sortOrder = i + 1; });
+    this.navMenus.set(currentList);
+
+    if (m.id) {
       this.http.delete(`/api/navigation/${m.id}`).subscribe({
         next: () => {
-          this.notify(`Deleted menu "${m.title}"`);
+          this.notify(`✓ Deleted menu "${m.title}"`);
           this.loadNavigationMenus();
         },
-        error: () => this.notify("Failed to delete menu")
+        error: (err) => {
+          this.notify(err.error?.message || "Failed to delete menu on server");
+          this.loadNavigationMenus();
+        }
       });
+    } else {
+      this.notify(`✓ Removed menu "${m.title}"`);
     }
   }
 
@@ -2866,8 +2998,9 @@ exportMediaManifestCsv(){
   // ==========================================
   cropModalActive = signal<boolean>(false);
   croppingImage = signal<boolean>(false);
-  cropAspectRatio: '16:6' | '16:7' | '16:9' | '21:9' = '16:6';
-  cropTargetType: 'banner' | 'navCategory' = 'banner';
+  cropAspectRatio: '16:6' | '16:7' | '16:9' | '21:9' | '4:3' | '1:1' = '16:6';
+  cropTargetType: 'banner' | 'navCategory' | 'navPromo' | 'subcategory' = 'banner';
+  cropTargetItem: any = null;
   cropImageSrc: string = '';
   cropZoom: number = 1.0;
   cropPanX: number = 0;
@@ -2924,25 +3057,75 @@ exportMediaManifestCsv(){
     reader.readAsDataURL(file);
   }
 
-  openCropModal(src: string, targetType: 'banner' | 'navCategory' = 'banner') {
+  cropExistingNavPromo() {
+    if (!this.navMenuDraft.featuredPromo?.imageUrl) return;
+    this.openCropModal(this.navMenuDraft.featuredPromo.imageUrl, 'navPromo');
+  }
+
+  onNavPromoFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      if (dataUrl) {
+        this.openCropModal(dataUrl, 'navPromo');
+      }
+      input.value = '';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  cropExistingSubcategory(sub: any) {
+    if (!sub?.imageUrl) return;
+    this.openCropModal(sub.imageUrl, 'subcategory', sub);
+  }
+
+  onSubcategoryFileSelected(event: Event, sub: any) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      if (dataUrl) {
+        this.openCropModal(dataUrl, 'subcategory', sub);
+      }
+      input.value = '';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  openCropModal(src: string, targetType: 'banner' | 'navCategory' | 'navPromo' | 'subcategory' = 'banner', targetItem: any = null) {
     this.cropImageSrc = src;
     this.cropTargetType = targetType;
+    this.cropTargetItem = targetItem;
     this.cropZoom = 1.0;
     this.cropPanX = 0;
     this.cropPanY = 0;
-    this.cropAspectRatio = targetType === 'banner' ? (this.bannerDraft.type === 'CAMPAIGN_BANNER' ? '16:9' : '16:6') : '16:9';
+    if (targetType === 'banner') {
+      this.cropAspectRatio = this.bannerDraft.type === 'CAMPAIGN_BANNER' ? '16:9' : '16:6';
+    } else if (targetType === 'subcategory') {
+      this.cropAspectRatio = '1:1';
+    } else if (targetType === 'navPromo') {
+      this.cropAspectRatio = '16:9';
+    } else {
+      this.cropAspectRatio = '16:9';
+    }
     this.cropModalActive.set(true);
   }
 
   closeCropModal() {
     this.cropModalActive.set(false);
     this.cropImageSrc = '';
+    this.cropTargetItem = null;
     this.cropZoom = 1.0;
     this.cropPanX = 0;
     this.cropPanY = 0;
   }
 
-  setCropAspectRatio(ratio: '16:6' | '16:7' | '16:9' | '21:9') {
+  setCropAspectRatio(ratio: '16:6' | '16:7' | '16:9' | '21:9' | '4:3' | '1:1') {
     this.cropAspectRatio = ratio;
     this.resetCropTransform();
   }
@@ -2953,6 +3136,8 @@ exportMediaManifestCsv(){
       case '16:7': return '16 / 7';
       case '16:9': return '16 / 9';
       case '21:9': return '21 / 9';
+      case '4:3': return '4 / 3';
+      case '1:1': return '1 / 1';
       default: return '16 / 6';
     }
   }
@@ -2963,6 +3148,8 @@ exportMediaManifestCsv(){
       case '16:7': return 16 / 7;
       case '16:9': return 16 / 9;
       case '21:9': return 21 / 9;
+      case '4:3': return 4 / 3;
+      case '1:1': return 1 / 1;
       default: return 16 / 6;
     }
   }
@@ -2998,11 +3185,14 @@ exportMediaManifestCsv(){
     this.croppingImage.set(true);
 
     let targetWidth = 1920;
-    let targetHeight = Math.round(targetWidth / this.getNumericAspectRatio());
     if (this.cropAspectRatio === '16:9') {
       targetWidth = 1600;
-      targetHeight = 900;
+    } else if (this.cropAspectRatio === '4:3') {
+      targetWidth = 1200;
+    } else if (this.cropAspectRatio === '1:1') {
+      targetWidth = 1000;
     }
+    const targetHeight = Math.round(targetWidth / this.getNumericAspectRatio());
 
     const canvas = document.createElement('canvas');
     canvas.width = targetWidth;
@@ -3014,7 +3204,10 @@ exportMediaManifestCsv(){
     }
 
     const img = new Image();
-    img.crossOrigin = 'anonymous';
+    const isDataUrl = this.cropImageSrc.startsWith('data:');
+    if (!isDataUrl) {
+      img.crossOrigin = 'anonymous';
+    }
     img.onload = () => {
       const vpRect = viewport.getBoundingClientRect();
       const vpWidth = vpRect.width;
@@ -3033,11 +3226,11 @@ exportMediaManifestCsv(){
       let baseDrawHeight = vpHeight;
 
       if (imgAspect > vpAspect) {
-        baseDrawHeight = vpHeight;
-        baseDrawWidth = vpHeight * imgAspect;
-      } else {
         baseDrawWidth = vpWidth;
         baseDrawHeight = vpWidth / imgAspect;
+      } else {
+        baseDrawHeight = vpHeight;
+        baseDrawWidth = vpHeight * imgAspect;
       }
 
       const zoomedWidth = baseDrawWidth * this.cropZoom;
@@ -3060,14 +3253,14 @@ exportMediaManifestCsv(){
           return;
         }
 
-        const file = new File([blob], `banner-crop-${Date.now()}.jpg`, { type: 'image/jpeg' });
+        const file = new File([blob], `crop-${Date.now()}.jpg`, { type: 'image/jpeg' });
         const form = new FormData();
         form.append('file', file);
 
         this.http.post<{url: string; filename: string}>('/api/products/images', form).pipe(
           finalize(() => this.croppingImage.set(false)),
           catchError(err => {
-            this.notify(err.error?.message || 'Banner upload failed');
+            this.notify(err.error?.message || 'Crop upload failed');
             return of(null);
           })
         ).subscribe(res => {
@@ -3078,6 +3271,17 @@ exportMediaManifestCsv(){
             } else if (this.cropTargetType === 'navCategory') {
               this.navMenuDraft.imageUrl = res.url;
               this.notify('✓ Category image cropped & uploaded successfully!');
+            } else if (this.cropTargetType === 'navPromo') {
+              if (!this.navMenuDraft.featuredPromo) {
+                this.navMenuDraft.featuredPromo = {};
+              }
+              this.navMenuDraft.featuredPromo.imageUrl = res.url;
+              this.notify('✓ Mega-menu promo card image cropped & updated!');
+            } else if (this.cropTargetType === 'subcategory') {
+              if (this.cropTargetItem) {
+                this.cropTargetItem.imageUrl = res.url;
+              }
+              this.notify('✓ Subcategory thumbnail cropped & updated!');
             }
             this.closeCropModal();
           }
@@ -3088,7 +3292,12 @@ exportMediaManifestCsv(){
       this.croppingImage.set(false);
       this.notify('Could not load image for cropping');
     };
-    img.src = this.cropImageSrc;
+    if (!isDataUrl && this.cropImageSrc.startsWith('http')) {
+      const sep = this.cropImageSrc.includes('?') ? '&' : '?';
+      img.src = this.cropImageSrc + sep + '_cb=' + Date.now();
+    } else {
+      img.src = this.cropImageSrc;
+    }
   }
 
  private emptyProduct():Product{return{sku:'',name:'',brand:'Terma',category:'Designer Radiators',description:'',priceMinor:0,costMinor:0,stock:10,lowStockThreshold:5,discountPercent:0,status:'PUBLISHED',taxClass:'STANDARD',shippingClass:'STANDARD',variants:[]}}

@@ -29,7 +29,7 @@ management:
       exposure:
         exclude: "*"
 app:
-  admin-api-url: ${ADMIN_API_URL:http://127.0.0.1:8081}
+  admin-api-url: ${ADMIN_API_URL:https://hearth-admin-backend.onrender.com}
   upload-dir: ${SHOP_UPLOAD_DIR:./data/product-images}
   catalogue-sync-secret: ${CATALOGUE_SYNC_SECRET:local-catalogue-sync-secret}
   cors-origin: ${CORS_ORIGIN:http://localhost:4200}

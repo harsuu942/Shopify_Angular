@@ -769,6 +769,12 @@ public class StoreController {
   @GetMapping("/cms/banners")
   public List<Map<String,Object>> banners(){
     try {
+      var list = restClient.get().uri("/api/internal/banners")
+        .retrieve()
+        .body(new ParameterizedTypeReference<List<Map<String,Object>>>(){});
+      if(list != null && !list.isEmpty()) return list;
+    } catch(Exception ignored){}
+    try {
       var list = restClient.get().uri("/api/internal/content/published")
         .header("X-Catalogue-Sync-Secret", syncSecret)
         .retrieve()
@@ -832,6 +838,12 @@ public class StoreController {
 
   @GetMapping("/cms/campaigns")
   public List<Map<String,Object>> campaigns(){
+    try {
+      var list = restClient.get().uri("/api/internal/campaigns")
+        .retrieve()
+        .body(new ParameterizedTypeReference<List<Map<String,Object>>>(){});
+      if(list != null && !list.isEmpty()) return list;
+    } catch(Exception ignored){}
     try {
       var list = restClient.get().uri("/api/internal/content/published")
         .header("X-Catalogue-Sync-Secret", syncSecret)

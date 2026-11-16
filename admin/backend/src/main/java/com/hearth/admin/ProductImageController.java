@@ -266,13 +266,17 @@ class ProductImageController {
   }
 
   @GetMapping("/api/product-images/{filename}")
+  @org.springframework.web.bind.annotation.CrossOrigin(origins = "*")
   ResponseEntity<Resource> image(@PathVariable("filename") String filename) throws IOException {
     if(!filename.matches("[a-zA-Z0-9_.-]+\\.(jpg|png|gif|webp|svg|pdf)"))throw new ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND);
     var file=uploadDir.resolve(filename).normalize();
     if(!file.startsWith(uploadDir)||!Files.isRegularFile(file))throw new ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND);
     var resource=new UrlResource(file.toUri());
     var type=filename.endsWith(".svg")?"image/svg+xml":(filename.endsWith(".pdf")?"application/pdf":Files.probeContentType(file));
-    var resBuilder = ResponseEntity.ok().cacheControl(CacheControl.maxAge(365, TimeUnit.DAYS).cachePublic()).contentType(MediaType.parseMediaType(type==null?"application/octet-stream":type));
+    var resBuilder = ResponseEntity.ok()
+        .header(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "*")
+        .cacheControl(CacheControl.maxAge(365, TimeUnit.DAYS).cachePublic())
+        .contentType(MediaType.parseMediaType(type==null?"application/octet-stream":type));
     if(filename.endsWith(".pdf")){
       resBuilder.header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"");
     }

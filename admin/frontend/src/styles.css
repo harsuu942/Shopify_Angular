@@ -59,6 +59,9 @@
 .sync-row-btn{border:1px solid #c0d8cf;background:#f2f8f5;color:#27715d;border-radius:.4rem;padding:6px 10px;font-size:.64rem;font-weight:700;display:inline-flex;align-items:center;gap:4px;cursor:pointer;margin-right:6px}
 .sync-row-btn:hover{background:#e3f1eb;border-color:#27715d}
 .sync-row-btn:disabled{opacity:.5;cursor:wait}
+.sort-order-btn{border:1px solid #cbd5e1;background:#f8fafc;color:#334155;border-radius:3px;width:22px;height:16px;line-height:14px;font-size:0.55rem;font-weight:700;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0;transition:all 0.15s ease}
+.sort-order-btn:hover:not(:disabled){background:#0284c7;color:#fff;border-color:#0284c7}
+.sort-order-btn:disabled{opacity:0.35;cursor:not-allowed}
 .spin{animation:spin-kf .8s linear infinite;display:inline-block}@keyframes spin-kf{100%{transform:rotate(360deg)}}
 
 .status[data-status=SYNCED]{background:#d7f0e4;color:#185a48}

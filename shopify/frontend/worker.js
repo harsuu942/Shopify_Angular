@@ -9,7 +9,32 @@ export default {
       try {
         const assetResp = await env.ASSETS.fetch(new Request(assetUrl, request));
         if (assetResp && assetResp.status === 200) {
-          return assetResp;
+          const res = new Response(assetResp.body, assetResp);
+          res.headers.set('Access-Control-Allow-Origin', '*');
+          return res;
+        }
+      } catch (_) {}
+
+      // If not in static assets, proxy to Render Admin Backend (dynamic uploads) or Storefront Backend
+      try {
+        const adminImgUrl = `https://hearth-admin-backend.onrender.com/api/product-images/${filename}`;
+        const resp = await fetch(adminImgUrl, { method: 'GET', headers: { 'Accept': 'image/*' } });
+        if (resp && resp.status === 200) {
+          const res = new Response(resp.body, resp);
+          res.headers.set('Access-Control-Allow-Origin', '*');
+          res.headers.set('Cache-Control', 'public, max-age=31536000');
+          return res;
+        }
+      } catch (_) {}
+
+      try {
+        const shopImgUrl = `https://hearth-backend-0bbo.onrender.com/api/product-images/${filename}`;
+        const resp2 = await fetch(shopImgUrl, { method: 'GET', headers: { 'Accept': 'image/*' } });
+        if (resp2 && resp2.status === 200) {
+          const res2 = new Response(resp2.body, resp2);
+          res2.headers.set('Access-Control-Allow-Origin', '*');
+          res2.headers.set('Cache-Control', 'public, max-age=31536000');
+          return res2;
         }
       } catch (_) {}
     }
@@ -17,8 +42,22 @@ export default {
     // Forward API and actuator requests to Render Backends
     if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/actuator/')) {
       const isNavRequest = url.pathname === '/api/cms/navigation' || url.pathname === '/api/navigation';
-      const targetOrigin = isNavRequest ? 'https://hearth-admin-backend.onrender.com' : 'https://hearth-backend-0bbo.onrender.com';
-      const targetPath = isNavRequest ? '/api/internal/navigation' : (url.pathname + url.search);
+      const isBannerRequest = url.pathname === '/api/cms/banners' || url.pathname === '/api/banners';
+      const isCampaignRequest = url.pathname === '/api/cms/campaigns';
+
+      let targetOrigin = 'https://hearth-backend-0bbo.onrender.com';
+      let targetPath = url.pathname + url.search;
+
+      if (isNavRequest) {
+        targetOrigin = 'https://hearth-admin-backend.onrender.com';
+        targetPath = '/api/internal/navigation';
+      } else if (isBannerRequest) {
+        targetOrigin = 'https://hearth-admin-backend.onrender.com';
+        targetPath = '/api/internal/banners';
+      } else if (isCampaignRequest) {
+        targetOrigin = 'https://hearth-admin-backend.onrender.com';
+        targetPath = '/api/internal/campaigns';
+      }
 
       let body = undefined;
       if (!['GET', 'HEAD'].includes(request.method)) {

@@ -257,7 +257,7 @@
                 <div class="mega-top-action-bar">
                   <div class="mega-cat-info">
                     @if(menu.imageUrl) {
-                      <img [src]="imageSrc(menu.imageUrl)" class="mega-cat-thumb" [alt]="menu.title" (error)="imageFailed($event)">
+                      <img [src]="imageSrc(menu.imageUrl, menu.category, menu.title)" class="mega-cat-thumb" [alt]="menu.title" (error)="imageFailed($event, menu.category, menu.title)">
                     } @else {
                       <span class="mega-cat-icon">{{menu.icon}}</span>
                     }
@@ -297,7 +297,7 @@
                       <div class="mega-promo-card" (click)="selectPromoCard(menu.featuredPromo, menu.category)" role="button" tabindex="0">
                         @if(menu.featuredPromo.imageUrl || menu.imageUrl) {
                           <div class="mega-promo-img-wrap">
-                            <img [src]="imageSrc(menu.featuredPromo.imageUrl || menu.imageUrl)" [alt]="menu.featuredPromo.title || menu.title || 'Featured Deal'" (error)="imageFailed($event)" loading="lazy" />
+                            <img [src]="imageSrc(menu.featuredPromo.imageUrl || menu.imageUrl, menu.category, menu.featuredPromo.title)" [alt]="menu.featuredPromo.title || menu.title || 'Featured Deal'" (error)="imageFailed($event, menu.category, menu.featuredPromo.title)" loading="lazy" />
                             @if(menu.featuredPromo.tag) {
                               <span class="mega-promo-tag">{{menu.featuredPromo.tag}}</span>
                             }
@@ -503,7 +503,7 @@
           @for(p of sorted(); track p.id) {
             <article class="clean-product-card" (click)="select(p)">
               <div class="clean-card-img-wrap">
-                <img [src]="imageSrc(p.image)" (error)="imageFailed($event)" [alt]="p.name" loading="lazy" referrerpolicy="no-referrer">
+                <img [src]="imageSrc(p.image, p.category, p.name)" (error)="imageFailed($event, p.category, p.name)" [alt]="p.name" loading="lazy" referrerpolicy="no-referrer">
                 <span class="clean-stock-badge">In Stock</span>
               </div>
               <div class="clean-card-info">
@@ -602,7 +602,7 @@
                   [class.active]="selectedSubcategory() === sub.query"
                   (click)="selectedSubcategory.set(selectedSubcategory() === sub.query ? '' : sub.query)">
                   <div class="visual-subcat-img-box">
-                    <img [src]="imageSrc(sub.imageUrl)" (error)="imageFailed($event)" [alt]="sub.label" loading="lazy">
+                    <img [src]="imageSrc(sub.imageUrl, currentCategoryTitle(), sub.label)" (error)="imageFailed($event, currentCategoryTitle(), sub.label)" [alt]="sub.label" loading="lazy">
                     @if(sub.badge) {
                       <span class="visual-subcat-badge">{{sub.badge}}</span>
                     }
@@ -928,7 +928,7 @@
                   </div>
 
                   <div class="clean-card-img-wrap">
-                    <img [src]="imageSrc(p.image)" (error)="imageFailed($event)" [alt]="p.name" loading="lazy" referrerpolicy="no-referrer">
+                    <img [src]="imageSrc(p.image, p.category, p.name)" (error)="imageFailed($event, p.category, p.name)" [alt]="p.name" loading="lazy" referrerpolicy="no-referrer">
                   </div>
 
                   <div class="clean-card-info">

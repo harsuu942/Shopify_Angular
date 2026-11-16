@@ -813,10 +813,23 @@ class CompanyController {
   public Brand create(@RequestBody Brand b, Authentication a, HttpServletRequest req){
     b.id = null;
     if (b.name == null || b.name.isBlank()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Brand name is required");
-    var existing = brandRepo.findByNameIgnoreCase(b.name.trim());
-    if (existing.isPresent()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Brand with this name already exists");
-    if (b.code == null || b.code.isBlank()) b.code = b.name.trim().replaceAll("[^A-Za-z0-9]", "").toUpperCase();
+    String trimmedName = b.name.trim();
+    b.name = trimmedName;
+    if (b.code == null || b.code.isBlank()) {
+      b.code = trimmedName.replaceAll("[^A-Za-z0-9]", "").toUpperCase();
+      if (b.code.isBlank()) b.code = "BRAND" + System.currentTimeMillis();
+    }
     if (b.status == null || b.status.isBlank()) b.status = "ACTIVE";
+    var existing = brandRepo.findByNameIgnoreCase(trimmedName);
+    if (existing.isPresent()) {
+      var x = existing.get();
+      if (b.code != null && !b.code.isBlank()) x.code = b.code;
+      if (b.logoUrl != null) x.logoUrl = b.logoUrl;
+      if (b.website != null) x.website = b.website;
+      if (b.description != null) x.description = b.description;
+      x.status = "ACTIVE";
+      return brandRepo.save(x);
+    }
     var saved = brandRepo.save(b);
     audit.log(a, "CREATE", "BRAND", saved.id, "Created brand " + saved.name, req);
     return saved;
@@ -1129,33 +1142,143 @@ class NavigationMenuController {
 
   @PostMapping
   @PreAuthorize("hasAnyRole('ADMIN','CATALOGUE_MANAGER')")
+  @Transactional
   public NavigationMenu create(@RequestBody NavigationMenu incoming) {
-    if (incoming.menuId == null || incoming.menuId.isBlank()) {
-      incoming.menuId = incoming.title != null ? incoming.title.toLowerCase().replaceAll("[^a-z0-9]+", "-") : "menu-" + System.currentTimeMillis();
+    incoming.id = null;
+    if (incoming.title == null || incoming.title.isBlank()) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Navigation menu title is required");
     }
-    if (incoming.sortOrder == null) {
+    String slug = incoming.menuId;
+    if (slug == null || slug.isBlank()) {
+      slug = incoming.title.toLowerCase().replaceAll("[^a-z0-9]+", "-").replaceAll("^-|-$", "");
+      if (slug.isBlank()) slug = "menu-" + System.currentTimeMillis();
+    }
+    String finalSlug = slug;
+    int suffix = 1;
+    while (repo.findByMenuId(finalSlug).isPresent()) {
+      finalSlug = slug + "-" + (++suffix);
+    }
+    incoming.menuId = finalSlug;
+    if (incoming.sortOrder == null || incoming.sortOrder <= 0) {
       incoming.sortOrder = (int) repo.count() + 1;
     }
-    return repo.save(incoming);
+    if (incoming.status == null || incoming.status.isBlank()) incoming.status = "PUBLISHED";
+    var saved = repo.save(incoming);
+    normalizeSortOrders();
+    return saved;
   }
 
   @PutMapping("/{id}")
   @PreAuthorize("hasAnyRole('ADMIN','CATALOGUE_MANAGER')")
+  @Transactional
   public NavigationMenu update(@PathVariable("id") Long id, @RequestBody NavigationMenu incoming) {
     var existing = repo.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-    if (incoming.menuId != null && !incoming.menuId.isBlank()) existing.menuId = incoming.menuId;
-    if (incoming.title != null) existing.title = incoming.title;
-    existing.category = incoming.category;
-    existing.icon = incoming.icon;
-    existing.badge = incoming.badge;
-    existing.imageUrl = incoming.imageUrl;
-    existing.description = incoming.description;
-    if (incoming.sortOrder != null) existing.sortOrder = incoming.sortOrder;
+    if (incoming.menuId != null && !incoming.menuId.isBlank()) {
+      var dup = repo.findByMenuId(incoming.menuId.trim());
+      if (dup.isPresent() && !dup.get().id.equals(id)) {
+        existing.menuId = incoming.menuId.trim() + "-" + System.currentTimeMillis();
+      } else {
+        existing.menuId = incoming.menuId.trim();
+      }
+    }
+    if (incoming.title != null && !incoming.title.isBlank()) existing.title = incoming.title.trim();
+    if (incoming.category != null) existing.category = incoming.category.trim();
+    if (incoming.icon != null) existing.icon = incoming.icon;
+    if (incoming.badge != null) existing.badge = incoming.badge;
+    if (incoming.imageUrl != null) existing.imageUrl = incoming.imageUrl;
+    if (incoming.description != null) existing.description = incoming.description;
     if (incoming.status != null) existing.status = incoming.status;
-    existing.filterOptionsJson = incoming.filterOptionsJson;
-    existing.columnsJson = incoming.columnsJson;
-    existing.featuredPromoJson = incoming.featuredPromoJson;
-    return repo.save(existing);
+    if (incoming.filterOptionsJson != null) existing.filterOptionsJson = incoming.filterOptionsJson;
+    if (incoming.columnsJson != null) existing.columnsJson = incoming.columnsJson;
+    if (incoming.featuredPromoJson != null) existing.featuredPromoJson = incoming.featuredPromoJson;
+    if (incoming.sortOrder != null && incoming.sortOrder > 0) {
+      existing.sortOrder = incoming.sortOrder;
+    }
+    var saved = repo.save(existing);
+    normalizeSortOrders();
+    return saved;
+  }
+
+  @PostMapping("/{id}/move-up")
+  @PreAuthorize("hasAnyRole('ADMIN','CATALOGUE_MANAGER')")
+  @Transactional
+  public List<NavigationMenu> moveUp(@PathVariable("id") Long id) {
+    var all = repo.findAllByOrderBySortOrderAsc();
+    int idx = -1;
+    for (int i = 0; i < all.size(); i++) {
+      if (all.get(i).id.equals(id)) { idx = i; break; }
+    }
+    if (idx > 0) {
+      var current = all.get(idx);
+      var prev = all.get(idx - 1);
+      int tmp = current.sortOrder != null ? current.sortOrder : idx + 1;
+      current.sortOrder = prev.sortOrder != null ? prev.sortOrder : idx;
+      prev.sortOrder = tmp;
+      if (current.sortOrder.equals(prev.sortOrder)) {
+        current.sortOrder = idx;
+        prev.sortOrder = idx + 1;
+      }
+      repo.save(current);
+      repo.save(prev);
+    }
+    normalizeSortOrders();
+    return repo.findAllByOrderBySortOrderAsc();
+  }
+
+  @PostMapping("/{id}/move-down")
+  @PreAuthorize("hasAnyRole('ADMIN','CATALOGUE_MANAGER')")
+  @Transactional
+  public List<NavigationMenu> moveDown(@PathVariable("id") Long id) {
+    var all = repo.findAllByOrderBySortOrderAsc();
+    int idx = -1;
+    for (int i = 0; i < all.size(); i++) {
+      if (all.get(i).id.equals(id)) { idx = i; break; }
+    }
+    if (idx >= 0 && idx < all.size() - 1) {
+      var current = all.get(idx);
+      var next = all.get(idx + 1);
+      int tmp = current.sortOrder != null ? current.sortOrder : idx + 1;
+      current.sortOrder = next.sortOrder != null ? next.sortOrder : idx + 2;
+      next.sortOrder = tmp;
+      if (current.sortOrder.equals(next.sortOrder)) {
+        current.sortOrder = idx + 2;
+        next.sortOrder = idx + 1;
+      }
+      repo.save(current);
+      repo.save(next);
+    }
+    normalizeSortOrders();
+    return repo.findAllByOrderBySortOrderAsc();
+  }
+
+  @PostMapping("/reorder")
+  @PreAuthorize("hasAnyRole('ADMIN','CATALOGUE_MANAGER')")
+  @Transactional
+  public List<NavigationMenu> reorder(@RequestBody List<Map<String, Object>> items) {
+    for (var m : items) {
+      if (m.get("id") != null && m.get("sortOrder") != null) {
+        Long mid = Long.valueOf(m.get("id").toString());
+        Integer order = Integer.valueOf(m.get("sortOrder").toString());
+        repo.findById(mid).ifPresent(entity -> {
+          entity.sortOrder = order;
+          repo.save(entity);
+        });
+      }
+    }
+    normalizeSortOrders();
+    return repo.findAllByOrderBySortOrderAsc();
+  }
+
+  private void normalizeSortOrders() {
+    var all = repo.findAllByOrderBySortOrderAsc();
+    for (int i = 0; i < all.size(); i++) {
+      var item = all.get(i);
+      int properOrder = i + 1;
+      if (item.sortOrder == null || item.sortOrder != properOrder) {
+        item.sortOrder = properOrder;
+        repo.save(item);
+      }
+    }
   }
 
   @DeleteMapping("/{id}")
@@ -1273,21 +1396,61 @@ class NavigationMenuController {
 }
 
 @RestController
-@RequestMapping("/api/internal/navigation")
+@RequestMapping("/api/internal")
 class InternalNavigationController {
   private final NavigationMenuRepository repo;
   private final NavigationMenuController navCtrl;
-  InternalNavigationController(NavigationMenuRepository repo, NavigationMenuController navCtrl) {
+  private final CmsContentRepository cms;
+  InternalNavigationController(NavigationMenuRepository repo, NavigationMenuController navCtrl, CmsContentRepository cms) {
     this.repo = repo;
     this.navCtrl = navCtrl;
+    this.cms = cms;
   }
 
-  @GetMapping
+  @GetMapping({"/navigation", "/navigation/published"})
   public List<NavigationMenu> published() {
     if (repo.count() == 0) {
       navCtrl.seedDefaultMenus();
     }
     return repo.findByStatusOrderBySortOrderAsc("PUBLISHED");
+  }
+
+  @GetMapping("/banners")
+  public List<Map<String, Object>> banners() {
+    return cms.findByTypeOrderBySortOrderAsc("BANNER").stream()
+      .filter(c -> "PUBLISHED".equalsIgnoreCase(c.status))
+      .map(c -> {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id", c.id);
+        m.put("title", c.title != null ? c.title : "");
+        m.put("body", c.body != null ? c.body : "");
+        m.put("tag", c.tag != null ? c.tag : "✦ BRITISH HEATING & LUXURY BATHROOMS · 2026");
+        m.put("imageUrl", c.imageUrl != null ? c.imageUrl : "");
+        m.put("buttonText", c.buttonText != null ? c.buttonText : "Explore Heating Range →");
+        m.put("linkUrl", c.linkUrl != null ? c.linkUrl : "#new-arrivals");
+        m.put("sortOrder", c.sortOrder != null ? c.sortOrder : 1);
+        m.put("type", c.type);
+        return m;
+      }).toList();
+  }
+
+  @GetMapping("/campaigns")
+  public List<Map<String, Object>> campaigns() {
+    return cms.findByTypeOrderBySortOrderAsc("CAMPAIGN_BANNER").stream()
+      .filter(c -> "PUBLISHED".equalsIgnoreCase(c.status))
+      .map(c -> {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id", c.id);
+        m.put("title", c.title != null ? c.title : "");
+        m.put("body", c.body != null ? c.body : "");
+        m.put("tag", c.tag != null ? c.tag : "DESIGN-LED HEATING");
+        m.put("imageUrl", c.imageUrl != null ? c.imageUrl : "");
+        m.put("buttonText", c.buttonText != null ? c.buttonText : "Shop Collection →");
+        m.put("linkUrl", c.linkUrl != null ? c.linkUrl : "/category/Radiators");
+        m.put("sortOrder", c.sortOrder != null ? c.sortOrder : 1);
+        m.put("type", c.type);
+        return m;
+      }).toList();
   }
 }
 

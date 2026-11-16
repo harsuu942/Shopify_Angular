@@ -1,10 +1,12 @@
 package com.hearth.admin;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.time.Instant;
 import java.time.LocalDate;
 
 @MappedSuperclass
+@JsonIgnoreProperties(ignoreUnknown = true)
 abstract class BaseEntity {
   @Id @GeneratedValue(strategy = GenerationType.IDENTITY) public Long id;
   public Instant createdAt = Instant.now();

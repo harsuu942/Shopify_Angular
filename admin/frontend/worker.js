@@ -9,7 +9,9 @@ export default {
       try {
         const assetResp = await env.ASSETS.fetch(new Request(assetUrl, request));
         if (assetResp && assetResp.status === 200) {
-          return assetResp;
+          const res = new Response(assetResp.body, assetResp);
+          res.headers.set('Access-Control-Allow-Origin', '*');
+          return res;
         }
       } catch (_) {}
     }

@@ -28,7 +28,7 @@ server:
     enabled: true
 app:
   upload-dir: ${ADMIN_UPLOAD_DIR:./data/product-images}
-  shopify-api-url: ${SHOPIFY_API_URL:http://localhost:8080}
+  shopify-api-url: ${SHOPIFY_API_URL:https://hearth-backend-0bbo.onrender.com}
   catalogue-sync-secret: ${CATALOGUE_SYNC_SECRET:local-catalogue-sync-secret}
   jwt:
     secret: ${JWT_SECRET:local-development-signing-key-change-before-production-2026}

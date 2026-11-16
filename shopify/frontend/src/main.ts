@@ -3384,7 +3384,7 @@ export class App {
     this.chosenWidth.set(v?.widthMm);
     this.chosenPanel.set(v?.panel || '');
     const imgs = this.galleryImages(p);
-    this.activeImage.set(imgs[0] || v?.image || p.image || '');
+    this.activeImage.set(imgs[0] || v?.image || p.image || this.getDefaultProductImage(p.category, p.name));
     this.productQty.set(1);
     this.activePdpTab.set('overview');
     this.activeNavHover.set(null);
@@ -3784,8 +3784,27 @@ export class App {
     return '#6b7280';
   }
 
-  imageSrc(value?: string | null): string {
-    if (!value || !value.trim()) return '/product-placeholder.svg';
+  getDefaultProductImage(category?: string | null, title?: string | null): string {
+    const text = ((category || '') + ' ' + (title || '')).toLowerCase();
+    if (text.includes('bath') || text.includes('suite') || text.includes('basin') || text.includes('toilet') || text.includes('shower') || text.includes('tap')) {
+      return '/product-images/325c65f7-c7eb-4da9-b4e1-8a150483c9e5.jpg';
+    }
+    if (text.includes('towel') || text.includes('rail') || text.includes('ladder') || text.includes('warmer') || text.includes('alex')) {
+      return '/product-images/2a19631f-69b4-404a-8fa2-49cdc0dbed53.jpg';
+    }
+    if (text.includes('valve') || text.includes('trv') || text.includes('element') || text.includes('ktx') || text.includes('moa') || text.includes('probe') || text.includes('accessory') || text.includes('lockshield')) {
+      return '/product-images/65301fc2-1bf1-4cff-b046-589de5422312.jpg';
+    }
+    if (text.includes('electric') || text.includes('wifi') || text.includes('smart') || text.includes('digital') || text.includes('colorado')) {
+      return '/product-images/fc274807-bc10-4063-b29c-c8bde1f7dd00.png';
+    }
+    return '/product-images/610be977-0784-40d1-a857-edc5e78bc884.png';
+  }
+
+  imageSrc(value?: string | null, fallbackCategory?: string | null, fallbackTitle?: string | null): string {
+    if (!value || !value.trim()) {
+      return this.getDefaultProductImage(fallbackCategory, fallbackTitle);
+    }
     let clean = value.trim();
     if (clean.startsWith('/api/product-images/')) {
       clean = clean.replace('/api/product-images/', '/product-images/');
@@ -4156,11 +4175,12 @@ export class App {
     }
   }
 
-  imageFailed(event: Event) {
+  imageFailed(event: Event, fallbackCategory?: string | null, fallbackTitle?: string | null) {
     const img = event.target as HTMLImageElement;
-    const attempted = (img as any)._retried;
-    if (!attempted) {
-      (img as any)._retried = true;
+    const count = ((img as any)._retriedCount || 0) + 1;
+    (img as any)._retriedCount = count;
+
+    if (count === 1) {
       if (img.src.endsWith('.jpg')) {
         img.src = img.src.slice(0, -4) + '.png';
         return;
@@ -4170,6 +4190,13 @@ export class App {
         return;
       }
     }
+
+    const defaultImg = this.getDefaultProductImage(fallbackCategory, fallbackTitle || img.alt);
+    if (count <= 2 && !img.src.includes(defaultImg)) {
+      img.src = defaultImg;
+      return;
+    }
+
     if (!img.src.endsWith('/product-placeholder.svg')) {
       img.src = '/product-placeholder.svg';
     }
