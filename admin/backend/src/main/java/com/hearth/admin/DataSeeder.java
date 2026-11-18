@@ -6,7 +6,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import java.time.LocalDate;
 
-@Configuration @Profile("!prod")
+@Configuration @Profile("!prod & !render")
 class DataSeeder {
   @Bean CommandLineRunner seed(ProductRepository products,CustomerRepository customers,QuotationRepository quotes,CommerceOrderRepository orders,CmsContentRepository content,AuditLogRepository audits,AdminUserRepository users,PromotionRepository promotions,org.springframework.security.crypto.password.PasswordEncoder encoder,BlogPostRepository blogRepo,javax.sql.DataSource dataSource,ProductReviewRepository reviews){return args->{
     // Sanitize any existing products: remove "Ultraheat" branding permanently

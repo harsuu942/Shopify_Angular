@@ -192,6 +192,47 @@ class QuotationController {
   @DeleteMapping("/{id}") void delete(@PathVariable("id") Long id){repo.deleteById(id);}
 }
 
+@RestController @RequestMapping("/api/purchase-orders")
+@PreAuthorize("hasRole('ADMIN')")
+class PurchaseOrderController {
+  private final PurchaseOrderRepository repo;
+  PurchaseOrderController(PurchaseOrderRepository repo){this.repo=repo;}
+
+  @GetMapping List<PurchaseOrder> list(){return repo.findAll(Sort.by(Sort.Direction.DESC,"createdAt"));}
+
+  @PostMapping PurchaseOrder create(@RequestBody PurchaseOrder po){
+    po.id=null;
+    po.poNumber="PO-"+LocalDate.now().getYear()+"-"+String.format("%05d",repo.count()+1);
+    normalise(po);
+    return repo.save(po);
+  }
+
+  @PutMapping("/{id}") PurchaseOrder update(@PathVariable("id") Long id,@RequestBody PurchaseOrder p){
+    var po=repo.findById(id).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"Purchase order not found"));
+    po.vendorName=p.vendorName;po.vendorEmail=p.vendorEmail;po.vendorPhone=p.vendorPhone;po.vendorAddress=p.vendorAddress;
+    po.shipToName=p.shipToName;po.shipToPhone=p.shipToPhone;po.shipToAddress=p.shipToAddress;
+    po.lineItemsJson=p.lineItemsJson;po.subtotalMinor=p.subtotalMinor;po.taxMinor=p.taxMinor;po.shippingMinor=p.shippingMinor;
+    po.status=p.status;po.expectedOn=p.expectedOn;po.notes=p.notes;
+    normalise(po);
+    return repo.save(po);
+  }
+
+  @PutMapping("/{id}/status/{status}") PurchaseOrder status(@PathVariable("id") Long id,@PathVariable("status") String status){
+    var po=repo.findById(id).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"Purchase order not found"));
+    po.status=status.toUpperCase();return repo.save(po);
+  }
+
+  @DeleteMapping("/{id}") void delete(@PathVariable("id") Long id){repo.deleteById(id);}
+
+  private void normalise(PurchaseOrder po){
+    if(po.status==null||po.status.isBlank())po.status="DRAFT";
+    po.status=po.status.toUpperCase();
+    po.totalMinor=Math.max(0,po.subtotalMinor)+Math.max(0,po.taxMinor)+Math.max(0,po.shippingMinor);
+    if(po.shipToName==null||po.shipToName.isBlank())po.shipToName="The Heating & Plumbing";
+    if(po.shipToAddress==null||po.shipToAddress.isBlank())po.shipToAddress="First Floor 5-6 Chalice Close, Wallington, England, SM6 9RU";
+  }
+}
+
 @RestController @RequestMapping("/api/orders")
 @PreAuthorize("hasRole('ADMIN')")
 class OrderController {

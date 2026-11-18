@@ -138,6 +138,26 @@ class Quotation extends BaseEntity {
   @Column(length=1200) public String notes;
 }
 
+@Entity @Table(name="purchase_orders")
+class PurchaseOrder extends BaseEntity {
+  @Column(unique=true) public String poNumber;
+  public String vendorName;
+  public String vendorEmail;
+  public String vendorPhone;
+  @Column(length=1000) public String vendorAddress;
+  public String shipToName = "The Heating & Plumbing";
+  public String shipToPhone = "+44 7404 095699";
+  @Column(length=1000) public String shipToAddress = "First Floor 5-6 Chalice Close, Wallington, England, SM6 9RU";
+  @Column(columnDefinition="LONGTEXT") public String lineItemsJson;
+  public long subtotalMinor;
+  public long taxMinor;
+  public long shippingMinor;
+  public long totalMinor;
+  public String status = "DRAFT";
+  public LocalDate expectedOn;
+  @Column(length=1200) public String notes;
+}
+
 @Entity @Table(name="brands", indexes=@Index(name="idx_brand_name", columnList="name"))
 class Brand extends BaseEntity {
   @Column(unique=true, nullable=false) public String name;

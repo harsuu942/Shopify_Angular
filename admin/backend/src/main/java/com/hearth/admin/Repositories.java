@@ -36,6 +36,7 @@ interface CustomerRepository extends JpaRepository<Customer,Long> {
   Optional<Customer> findByEmailIgnoreCase(String email);
 }
 interface QuotationRepository extends JpaRepository<Quotation,Long> { long countByStatus(String status); }
+interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder,Long> { long countByStatus(String status); }
 interface CommerceOrderRepository extends JpaRepository<CommerceOrder,Long> {
   long countByOrderStatus(String status);
   long countByPaymentStatus(String status);
