@@ -11,9 +11,13 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 class ProductionBootstrap {
   @Bean CommandLineRunner bootstrapAdmin(AdminUserRepository users,PasswordEncoder encoder,
       @Value("${ADMIN_BOOTSTRAP_NAME:Production Admin}") String name,
-      @Value("${ADMIN_BOOTSTRAP_EMAIL}") String email,
-      @Value("${ADMIN_BOOTSTRAP_PASSWORD}") String password) {
+      @Value("${ADMIN_BOOTSTRAP_EMAIL:}") String email,
+      @Value("${ADMIN_BOOTSTRAP_PASSWORD:}") String password) {
     return args -> {
+      // Existing installations already have an administrator in their
+      // persistent database. Bootstrap credentials are only required when an
+      // operator explicitly wants to create or migrate that first account.
+      if(email==null || email.isBlank() || password==null || password.isBlank())return;
       if(password.length()<12)throw new IllegalStateException("ADMIN_BOOTSTRAP_PASSWORD must contain at least 12 characters");
       var configured=users.findByEmailIgnoreCase(email);
       if(configured.isPresent())return;
