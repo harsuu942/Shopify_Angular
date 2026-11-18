@@ -1131,7 +1131,7 @@ class SocialSettingsController {
     var c = repo.findAll().stream().filter(x -> "social-links".equalsIgnoreCase(x.slug)).findFirst();
     if (c.isPresent() && c.get().body != null && !c.get().body.isBlank()) {
       try {
-        var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        var mapper = new tools.jackson.databind.ObjectMapper();
         Map<String, String> map = mapper.readValue(c.get().body, Map.class);
         if (map != null) defaults.putAll(map);
       } catch (Exception ignored) {}
@@ -1149,7 +1149,7 @@ class SocialSettingsController {
     c.type = "SETTINGS";
     c.status = "PUBLISHED";
     try {
-      var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+      var mapper = new tools.jackson.databind.ObjectMapper();
       c.body = mapper.writeValueAsString(links);
     } catch (Exception e) {
       c.body = "{}";

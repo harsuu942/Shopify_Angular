@@ -180,8 +180,7 @@ public class BlogAdminController {
                 m.put("status", p.status != null ? p.status : "PUBLISHED");
                 out.add(m);
             }
-            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-            mapper.enable(com.fasterxml.jackson.databind.SerializationFeature.INDENT_OUTPUT);
+            tools.jackson.databind.ObjectMapper mapper = new tools.jackson.databind.ObjectMapper();
 
             String[] targetPaths = new String[] {
                 "/Users/harsh/Project/Mrinal-Ecommerce/Shopify_Angular/shopify/frontend/public/blogs.json",
@@ -192,7 +191,7 @@ public class BlogAdminController {
             for (String p : targetPaths) {
                 java.io.File file = new java.io.File(p);
                 if (file.getParentFile() != null && file.getParentFile().exists()) {
-                    mapper.writeValue(file, out);
+                    mapper.writerWithDefaultPrettyPrinter().writeValue(file, out);
                 }
             }
         } catch (Exception e) {

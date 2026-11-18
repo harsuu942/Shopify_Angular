@@ -27,7 +27,7 @@ class DataSeeder {
         var res = new org.springframework.core.io.ClassPathResource("blogs.json");
         if (res.exists()) {
           try (var is = res.getInputStream()) {
-            var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            var mapper = new tools.jackson.databind.ObjectMapper();
             java.util.List<java.util.Map<String, Object>> list = mapper.readValue(is, java.util.List.class);
             for (var map : list) {
               BlogPost bp = new BlogPost();
