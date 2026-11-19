@@ -741,6 +741,35 @@ a {
   min-height: 48px;
 }
 
+/* Keep every dynamic department evenly distributed after removing the legacy
+   "All Departments" trigger. */
+.nav-bar-inner > .nav-item-dropdown {
+  flex: 1 1 0;
+  min-width: max-content;
+}
+
+.nav-bar-inner > .nav-item-dropdown > .nav-category-trigger {
+  width: 100%;
+  justify-content: center;
+  padding-left: clamp(18px, 2vw, 34px);
+  padding-right: clamp(18px, 2vw, 34px);
+}
+
+.clean-add-btn:disabled,
+.btn-card-add-basket:disabled,
+.home-add-btn:disabled,
+.bh-main-add-btn:disabled {
+  cursor: not-allowed !important;
+  opacity: .58;
+  filter: grayscale(.35);
+}
+
+.clean-stock-badge.out-of-stock,
+.home-featured-stock.out-of-stock {
+  color: #b42318 !important;
+  background: #fff1f0 !important;
+}
+
 .nav-bar-inner::-webkit-scrollbar {
   display: none;
 }
@@ -7089,6 +7118,25 @@ a {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
+.stripe-element-host {
+  min-height: 50px;
+  padding: 13px 14px;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  transition: border-color .2s, box-shadow .2s;
+}
+
+.stripe-element-host:focus-within {
+  border-color: #635bff;
+  box-shadow: 0 0 0 3px rgba(99, 91, 255, .14);
+}
+
+.stripe-element-host.is-invalid {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, .1);
+}
+
 .stripe-tag-pill {
   background: #635bff;
   color: #ffffff;
@@ -12385,6 +12433,13 @@ a.checkout-btn:hover {
   font-size: 0.78rem !important;
   color: #64748b !important;
   margin-top: 2px !important;
+}
+
+/* Keep the complete CMS hero artwork visible at every viewport size. */
+.home-page-main .hero-banner {
+  background-size: contain !important;
+  background-position: center center !important;
+  background-repeat: no-repeat !important;
 }
 
 

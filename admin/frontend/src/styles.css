@@ -285,7 +285,8 @@ aside nav p { font-size: 0.72rem !important; }
   .toast {
     display: none !important;
   }
-  .modal-backdrop {
+  .modal-backdrop,
+  .overlay {
     position: static !important;
     display: block !important;
     background: none !important;
@@ -312,8 +313,9 @@ aside nav p { font-size: 0.72rem !important; }
   }
   .quote-doc-container {
     display: block !important;
-    width: 100% !important;
-    max-width: 100% !important;
+    box-sizing: border-box !important;
+    width: 186mm !important;
+    max-width: 186mm !important;
     margin: 0 !important;
     padding: 0 !important;
     overflow: visible !important;
@@ -372,6 +374,13 @@ aside nav p { font-size: 0.72rem !important; }
   .quote-doc-table tr {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
+  }
+  /* Purchase-order PDFs show only the final commercial total. */
+  .quote-doc-container:has(.quote-doc-meta > h2) .quote-doc-meta p:nth-of-type(2),
+  .quote-doc-container:has(.quote-doc-meta > h2) .quote-doc-meta p:nth-of-type(3),
+  .quote-doc-container:has(.quote-doc-meta > h2) .quote-doc-total-box p:nth-of-type(2),
+  .quote-doc-container:has(.quote-doc-meta > h2) .quote-doc-total-box p:nth-of-type(3) {
+    display: none !important;
   }
 }
 
@@ -455,4 +464,29 @@ aside nav p { font-size: 0.72rem !important; }
 .subcategory-edit-card:hover {
   border-color: #cbd5e1;
   box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+/* Purchase orders use their own modal template, but share the standard dialog shell. */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(12, 28, 25, 0.55);
+  backdrop-filter: blur(3px);
+}
+.modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 24px 26px;
+  border-bottom: 1px solid var(--line);
+}
+.modal-head > button {
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 1.6rem;
 }

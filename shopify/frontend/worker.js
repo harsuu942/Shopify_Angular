@@ -8,7 +8,8 @@ export default {
       const assetUrl = new URL(`/product-images/${filename}`, request.url);
       try {
         const assetResp = await env.ASSETS.fetch(new Request(assetUrl, request));
-        if (assetResp && assetResp.status === 200) {
+        const assetType = assetResp?.headers.get('content-type') || '';
+        if (assetResp && assetResp.status === 200 && (assetType.startsWith('image/') || assetType.startsWith('application/pdf'))) {
           const res = new Response(assetResp.body, assetResp);
           res.headers.set('Access-Control-Allow-Origin', '*');
           return res;
@@ -98,6 +99,12 @@ export default {
               headers: { 'Content-Type': 'application/json' }
             });
           }
+        }
+        if (isNavRequest || isBannerRequest || isCampaignRequest) {
+          const fresh = new Response(resp.body, resp);
+          fresh.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+          fresh.headers.set('Pragma', 'no-cache');
+          return fresh;
         }
         return resp;
       } catch (err) {

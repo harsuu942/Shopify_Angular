@@ -5,7 +5,7 @@ import {FormsModule} from '@angular/forms';
 import {bootstrapApplication, DomSanitizer, SafeHtml} from '@angular/platform-browser';
 import {catchError,finalize,forkJoin,of,throwError} from 'rxjs';
 
-type View='dashboard'|'products'|'customers'|'quotes'|'orders'|'promotions'|'inventory'|'inquiries'|'reviews'|'content'|'blogs'|'reports'|'audit'|'companies'|'banners'|'navigation';
+type View='dashboard'|'products'|'customers'|'quotes'|'purchaseOrders'|'orders'|'promotions'|'inventory'|'inquiries'|'reviews'|'content'|'blogs'|'reports'|'audit'|'companies'|'banners'|'navigation';
 interface AdminBlogPost{id?:number;slug:string;title:string;excerpt:string;content:string;coverImage:string;category:string;tags:string;author:string;publishedAt:string;status:string;readTimeMinutes?:number;syncStatus?:string;lastSyncedAt?:string}
 interface ProductVariant{id?:number;ean:string;variantSku:string;configCode?:string;colour:string;baseColour:string;colourCode:string;paintType:string;heightMm?:number;widthMm?:number;depthMm?:number;panel:string;priceMinor:number;costMinor?:number;discountPercent?:number;stock:number;availability:string;productionTime:string;leadTime:string;watts?:number;btu?:number;warrantyYears?:number;imageUrl?:string;imageUrlsJson?:string;unlimitedStock?:boolean}
 interface Product{id?:number;sku:string;name:string;brand:string;category:string;description:string;priceMinor:number;costMinor?:number;stock:number;lowStockThreshold:number;discountPercent?:number;status:string;taxClass:string;shippingClass:string;imageUrl?:string;sourceUrl?:string;updatedAt?:string;syncStatus?:string;syncError?:string;lastSyncedAt?:string;variants:ProductVariant[];availability?:string;leadTime?:string;unlimitedStock?:boolean;staticContentId?:number;staticContentSlug?:string;documentsJson?:string}
@@ -24,6 +24,13 @@ const authInterceptor=(req:any,next:any)=>{
       if(error?.status===429){
         const retryAfter=error.headers?.get('Retry-After')||'60';
         window.dispatchEvent(new CustomEvent('admin-rate-limit',{detail:{retryAfter:Number(retryAfter)||60}}));
+      }
+      if((error?.status===401 || error?.status===403) && !req.url.includes('/api/auth/login')){
+        sessionStorage.removeItem('hearth_admin_token');
+        localStorage.removeItem('hearth_admin_token');
+        sessionStorage.removeItem('hearth_admin_user');
+        localStorage.removeItem('hearth_admin_user');
+        window.dispatchEvent(new CustomEvent('admin-auth-expired'));
       }
       return throwError(()=>error);
     })
@@ -59,6 +66,7 @@ const authInterceptor=(req:any,next:any)=>{
   @if(view()==='products'){<ng-container *ngTemplateOutlet="productsView"></ng-container>}
   @if(view()==='customers'){<ng-container *ngTemplateOutlet="customersView"></ng-container>}
   @if(view()==='quotes'){<ng-container *ngTemplateOutlet="quotesView"></ng-container>}
+  @if(view()==='purchaseOrders'){<ng-container *ngTemplateOutlet="purchaseOrdersView"></ng-container>}
   @if(view()==='orders'){<ng-container *ngTemplateOutlet="ordersView"></ng-container>}
   @if(view()==='promotions'){<ng-container *ngTemplateOutlet="promotionsView"></ng-container>}
   @if(view()==='inventory'){<ng-container *ngTemplateOutlet="inventoryView"></ng-container>}
@@ -74,7 +82,7 @@ const authInterceptor=(req:any,next:any)=>{
  </main></section></div>
 }
 
-<ng-template #dashboard><div class="page-head"><div><p class="eyebrow">MONDAY, 3 AUGUST</p><h1>Good morning, {{firstName()}}</h1><p>Here’s what needs your attention across the business today.</p></div><div class="head-actions"><button class="secondary">⇩ Export report</button><button class="primary" (click)="newProduct()">＋ Add product</button></div></div>
+<ng-template #dashboard><div class="page-head"><div><p class="eyebrow">{{todayLabel}}</p><h1>Good morning, {{firstName()}}</h1><p>Here’s what needs your attention across the business today.</p></div><div class="head-actions"><button class="secondary" (click)="downloadReportCsv()">⇩ Export report</button><button class="primary" (click)="newProduct()">＋ Add product</button></div></div>
 @if(loading()){<div class="skeleton metrics"><i></i><i></i><i></i><i></i></div>}@else{<section class="metrics"><article><div><span class="metric-icon green">↗</span><small>Net sales</small></div><strong>{{dashboardData()?.revenueMinor/100|currency:'GBP'}}</strong><p class="up">↑ 12.4% <span>vs last period</span></p></article><article><div><span class="metric-icon blue">▣</span><small>Orders</small></div><strong>{{dashboardData()?.orders}}</strong><p class="up">↑ 8.2% <span>vs last period</span></p></article><article><div><span class="metric-icon gold">♙</span><small>Customers</small></div><strong>{{dashboardData()?.customers}}</strong><p><span>{{dashboardData()?.openQuotes}} open quotations</span></p></article><article><div><span class="metric-icon coral">!</span><small>Needs attention</small></div><strong>{{dashboardData()?.lowStock+dashboardData()?.paymentExceptions}}</strong><p class="warn">Low stock & payment issues</p></article></section>}
 <section class="dashboard-grid"><article class="panel chart-panel"><div class="panel-head"><div><h2>Sales overview</h2><p>Net sales across all channels</p></div><select><option>Last 7 days</option><option>Last 30 days</option></select></div><div class="chart"><div class="chart-y"><span>£8k</span><span>£6k</span><span>£4k</span><span>£2k</span><span>£0</span></div><svg viewBox="0 0 700 230" preserveAspectRatio="none"><defs><linearGradient id="fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#346f62" stop-opacity=".3"/><stop offset="1" stop-color="#346f62" stop-opacity="0"/></linearGradient></defs><path class="area" d="M0 188 C60 170,80 196,145 145 S235 162,292 108 S390 129,440 82 S540 112,590 55 S650 73,700 35 L700 230 L0 230Z"/><path class="line" d="M0 188 C60 170,80 196,145 145 S235 162,292 108 S390 129,440 82 S540 112,590 55 S650 73,700 35"/></svg><div class="chart-x"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div></div></article><article class="panel attention"><div class="panel-head"><div><h2>Needs attention</h2><p>Operational exceptions</p></div><button>View all</button></div><button (click)="go('inventory')"><span class="attention-icon coral">!</span><div><strong>Low stock products</strong><small>{{dashboardData()?.lowStock}} products below threshold</small></div><b>→</b></button><button (click)="go('orders')"><span class="attention-icon red">×</span><div><strong>Payment failures</strong><small>{{dashboardData()?.paymentExceptions}} orders need review</small></div><b>→</b></button><button (click)="go('quotes')"><span class="attention-icon gold">◷</span><div><strong>Expiring quotations</strong><small>{{dashboardData()?.openQuotes}} active quotations</small></div><b>→</b></button></article></section>
 <section class="dashboard-grid lower"><article class="panel"><div class="panel-head"><div><h2>Recent orders</h2><p>Latest activity from all channels</p></div><button (click)="go('orders')">View all orders →</button></div><div class="table-wrap"><table><thead><tr><th>Order</th><th>Customer</th><th>Status</th><th>Payment</th><th>Total</th></tr></thead><tbody>@for(o of dashboardData()?.recentOrders||[];track o.id){<tr><td><strong>{{o.orderNumber}}</strong></td><td>{{o.customerName}}</td><td><span class="status" [attr.data-status]="o.orderStatus">{{pretty(o.orderStatus)}}</span></td><td><span class="status" [attr.data-status]="o.paymentStatus">{{pretty(o.paymentStatus)}}</span></td><td><strong>{{o.totalMinor/100|currency:'GBP'}}</strong></td></tr>}</tbody></table></div></article><article class="panel quick"><div class="panel-head"><div><h2>Quick actions</h2><p>Common operational tasks</p></div></div><div><button (click)="newProduct()"><i>＋</i><span><strong>New product</strong><small>Add to catalogue</small></span></button><button (click)="newCustomer()"><i>♙</i><span><strong>New customer</strong><small>Create an account</small></span></button><button (click)="newQuote()"><i>▤</i><span><strong>New quotation</strong><small>Build an estimate</small></span></button><button (click)="go('companies')"><i>🏭</i><span><strong>Brands & Companies</strong><small>Manage catalogue</small></span></button></div></article></section></ng-template>
@@ -84,6 +92,8 @@ const authInterceptor=(req:any,next:any)=>{
 <ng-template #customersView><div class="page-head"><div><p class="eyebrow">RELATIONSHIPS</p><h1>Customers</h1><p>Customer profiles, consent, value and account status.</p></div><button class="primary" (click)="newCustomer()">＋ Add customer</button></div><div class="toolbar"><label>⌕<input placeholder="Search name or email" [(ngModel)]="query" (keyup.enter)="loadCustomers()"></label><button class="secondary" (click)="loadCustomers()">Search</button></div><section class="panel list-panel"><div class="table-wrap"><table><thead><tr><th>Customer</th><th>Contact</th><th>Location</th><th>Lifetime value</th><th>Status</th><th>Actions</th></tr></thead><tbody>@for(c of customers();track c.id){<tr><td><div class="customer-cell"><span>{{customerInitials(c.name)}}</span><strong>{{c.name}}</strong></div></td><td>{{c.email}}<small>{{c.phone}}</small></td><td>{{c.city||'—'}}</td><td><strong>{{c.lifetimeValueMinor/100|currency:'GBP'}}</strong><small>{{c.orderCount||0}} orders</small></td><td><span class="status" [attr.data-status]="c.status">{{pretty(c.status)}}</span></td><td><button [class]="c.status==='ACTIVE'?'delete-btn':'sync-row-btn'" (click)="toggleCustomerStatus(c)" [title]="c.status==='ACTIVE'?'Deactivate customer login & access':'Reactivate customer account'">{{c.status==='ACTIVE'?'⛔ Deactivate':'✓ Activate'}}</button></td></tr>}</tbody></table></div></section></ng-template>
 
 <ng-template #quotesView><div class="page-head"><div><p class="eyebrow">SALES</p><h1>Quotations</h1><p>Prepare, send and track customer estimates.</p></div><button class="primary" (click)="newQuote()">＋ New quotation</button></div><section class="metrics slim"><article><small>Active value</small><strong>{{quoteValue()/100|currency:'GBP'}}</strong></article><article><small>Sent & viewed</small><strong>{{quotes().length}}</strong></article><article><small>Conversion rate</small><strong>42%</strong></article></section><section class="panel list-panel"><div class="table-wrap"><table><thead><tr><th>Quotation #</th><th>Customer & Delivery Address</th><th>Valid Until</th><th>Status</th><th>Total (incl. 20% VAT)</th><th>Actions</th></tr></thead><tbody>@for(q of quotes();track q.id){<tr><td><strong>{{q.quoteNumber}}</strong><small>{{q.createdAt|date:'shortDate'}}</small></td><td><strong>{{q.customerName}}</strong><small>{{q.customerEmail}}</small>@if(q.customerAddress){<small class="muted" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;display:block">📍 {{q.customerAddress}}</small>}</td><td>{{q.expiresOn|date:'mediumDate'}}</td><td><span class="status" [attr.data-status]="q.status">{{pretty(q.status)}}</span></td><td><strong>{{q.totalMinor/100|currency:'GBP'}}</strong></td><td><div style="display:flex;gap:6px"><button class="sync-row-btn" (click)="viewQuoteDetails(q)">👁 View Quote</button><button class="sync-row-btn" [disabled]="sendingQuoteEmail()" (click)="sendQuoteEmail(q)" title="Email quotation">✉ Email</button><button class="sync-row-btn" (click)="editQuote(q)" title="Edit Quotation">✏ Edit</button><button class="delete-btn" (click)="deleteQuote(q)">🗑</button></div></td></tr>}</tbody></table></div></section></ng-template>
+
+<ng-template #purchaseOrdersView><div class="page-head"><div><p class="eyebrow">PROCUREMENT</p><h1>Purchase Orders</h1><p>Create, approve and print supplier purchase orders.</p></div><button class="primary" (click)="newPurchaseOrder()">＋ New purchase order</button></div><section class="metrics slim"><article><small>Total committed</small><strong>{{purchaseOrderValue()/100|currency:'GBP'}}</strong></article><article><small>Purchase orders</small><strong>{{purchaseOrders().length}}</strong></article><article><small>Awaiting delivery</small><strong>{{openPurchaseOrders()}}</strong></article></section><section class="panel list-panel"><div class="table-wrap"><table><thead><tr><th>PO Number</th><th>Vendor</th><th>Expected Date</th><th>Status</th><th>Total</th><th>Actions</th></tr></thead><tbody>@for(po of purchaseOrders();track po.id){<tr><td><strong>{{po.poNumber}}</strong><small>{{po.createdAt|date:'shortDate'}}</small></td><td><strong>{{po.vendorName}}</strong><small>{{po.vendorEmail||po.vendorPhone}}</small></td><td>{{po.expectedOn ? (po.expectedOn|date:'mediumDate') : 'Not set'}}</td><td><span class="status" [attr.data-status]="po.status">{{pretty(po.status)}}</span></td><td><strong>{{po.totalMinor/100|currency:'GBP'}}</strong></td><td><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="sync-row-btn" (click)="viewPurchaseOrder(po)">👁 View PO</button><button class="sync-row-btn" (click)="editPurchaseOrder(po)">✏ Edit</button><button class="delete-btn" (click)="deletePurchaseOrder(po)">🗑</button></div></td></tr>}@empty{<tr><td colspan="6" style="text-align:center;padding:36px"><strong>No purchase orders yet</strong><small>Create the first supplier purchase order to begin procurement tracking.</small></td></tr>}</tbody></table></div></section></ng-template>
 
 <ng-template #ordersView><div class="page-head"><div><p class="eyebrow">COMMERCE</p><h1>Orders & fulfilment</h1><p>Track payments, courier dispatch, and live delivery status.</p></div><button class="primary" (click)="loadOrders()">↻ Refresh Orders</button></div><section class="panel list-panel"><div class="table-wrap"><table><thead><tr><th>Order</th><th>Channel</th><th>Customer</th><th>Order status</th><th>Fulfilment</th><th>Courier & Tracking</th><th>Total</th><th>Actions</th></tr></thead><tbody>@for(o of orders();track o.id){<tr><td><strong>{{o.orderNumber}}</strong><small>{{o.createdAt|date:'short'}}</small></td><td><span class="badge" [class.green]="o.channel==='STOREFRONT'" [class.blue]="o.channel!=='STOREFRONT'">{{o.channel||'STOREFRONT'}}</span></td><td><strong>{{o.customerName}}</strong><small>{{o.customerEmail}}</small><small *ngIf="o.customerPhone">📞 {{o.customerPhone}}</small></td><td><span class="status" [attr.data-status]="o.orderStatus">{{pretty(o.orderStatus)}}</span></td><td><span class="status" [attr.data-status]="o.fulfilmentStatus">{{pretty(o.fulfilmentStatus||'UNFULFILLED')}}</span></td><td>@if(o.trackingNumber){<strong>{{o.carrier||'DPD Express'}}</strong><small><code>{{o.trackingNumber}}</code></small>}@else{<span class="muted small">Awaiting Dispatch</span>}</td><td><strong>{{o.totalMinor/100|currency:'GBP'}}</strong><small *ngIf="o.discountCode" class="text-success">{{o.discountCode}}</small></td><td><div style="display:flex;gap:6px"><button class="more" (click)="openDispatchModal(o)">Dispatch / Edit</button><button class="sync-row-btn" (click)="openSendOrderModal(o)" title="Send fulfilment & tracking update to customer">✉ Send to Customer</button></div></td></tr>}</tbody></table></div></section></ng-template>
 
@@ -213,7 +223,7 @@ const authInterceptor=(req:any,next:any)=>{
   </section>
 </ng-template>
 
-@if(modal()){<div class="modal-backdrop"><section class="modal" [class.product-modal]="modal()!.type==='product'" [class.product-detail-modal]="modal()!.type==='product'||modal()!.type==='productDetails'||modal()!.type==='mediaManager'||modal()!.type==='bulkProducts'||modal()!.type==='inquiryDetails'||modal()!.type==='quote'||modal()!.type==='navMenu'" (click)="$event.stopPropagation()"><header><div><p class="eyebrow">{{modal()!.kicker}}</p><h2>{{modal()!.title}}</h2></div><button (click)="closeModal()">×</button></header>
+@if(modal() && modal()!.type!=='purchaseOrder' && modal()!.type!=='purchaseOrderDetails'){<div class="modal-backdrop"><section class="modal" [class.product-modal]="modal()!.type==='product'" [class.product-detail-modal]="modal()!.type==='product'||modal()!.type==='productDetails'||modal()!.type==='mediaManager'||modal()!.type==='bulkProducts'||modal()!.type==='inquiryDetails'||modal()!.type==='quote'||modal()!.type==='navMenu'" (click)="$event.stopPropagation()"><header><div><p class="eyebrow">{{modal()!.kicker}}</p><h2>{{modal()!.title}}</h2></div><button (click)="closeModal()">×</button></header>
  @if(modal()!.type==='productDetails'){<div class="product-detail-layout"><div class="product-detail-image">@if(productDraft.imageUrl){<img [src]="productDraft.imageUrl" [alt]="productDraft.name" referrerpolicy="no-referrer">}@else{<span>{{productDraft.name.charAt(0)}}</span>}</div><div class="product-detail-info"><div class="detail-heading"><div><small>{{productDraft.brand||'Unbranded'}}</small><h3>{{productDraft.name}}</h3></div><span class="status" [attr.data-status]="productDraft.status">{{pretty(productDraft.status)}}</span></div><dl class="detail-grid"><div><dt>SKU</dt><dd>{{productDraft.sku}}</dd></div><div><dt>Category</dt><dd>{{productDraft.category||'—'}}</dd></div><div><dt>Price</dt><dd>{{productDraft.priceMinor/100|currency:'GBP'}}</dd></div><div><dt>Discount / Price drop</dt><dd>Save {{productDraft.discountPercent!=null?productDraft.discountPercent:20}}% OFF</dd></div><div><dt>Stock</dt><dd>{{productDraft.stock}} units</dd></div><div><dt>Height (mm)</dt><dd>{{productHeightSummary(productDraft)}}</dd></div><div><dt>Width (mm)</dt><dd>{{productWidthSummary(productDraft)}}</dd></div><div><dt>Tax class</dt><dd>{{pretty(productDraft.taxClass)}}</dd></div><div><dt>Shipping</dt><dd>{{pretty(productDraft.shippingClass)}}</dd></div></dl>@if(productDraft.description){<div class="detail-description"><h4>Description</h4><p>{{productDraft.description}}</p></div>}@if(productDraft.variants && productDraft.variants.length){<div class="detail-description"><h4>Variants & Sizing ({{productDraft.variants.length}})</h4><div class="table-wrap" style="max-height:180px;overflow-y:auto"><table><thead><tr><th>SKU</th><th>Height</th><th>Width</th><th>Colour</th><th>Price</th><th>Discount</th><th>Stock</th></tr></thead><tbody>@for(v of productDraft.variants;track v.variantSku||v.ean){<tr><td><code>{{v.variantSku}}</code></td><td><strong>{{v.heightMm?v.heightMm+' mm':'—'}}</strong></td><td>{{v.widthMm?v.widthMm+' mm':'—'}}</td><td>{{v.colour||'Standard'}}</td><td>{{v.priceMinor/100|currency:'GBP'}}</td><td>{{v.discountPercent?v.discountPercent+'% OFF':'0%'}}</td><td>{{v.stock}}</td></tr>}</tbody></table></div></div>}<div class="detail-actions"><button type="button" class="secondary" (click)="openStock(productDraft.id)">↕ Adjust stock</button><button class="secondary sync-row-btn" [disabled]="syncingProductId()===productDraft.id" (click)="syncSingleProduct(productDraft)"><span [class.spin]="syncingProductId()===productDraft.id">⚡</span> Sync to Storefront</button><button class="primary" (click)="editProduct(productDraft)">Edit product</button><button type="button" class="danger-btn" (click)="deleteProduct(productDraft)">🗑 Delete product</button></div></div></div>}
  @if(modal()!.type==='product'){<form (ngSubmit)="saveProduct()" class="form-grid">@if(productDraft.imageUrl){<div class="product-edit-preview full"><img [src]="productDraft.imageUrl" [alt]="productDraft.name" referrerpolicy="no-referrer"><div><strong>Current product image</strong><small>{{selectedImageName||'Uploaded or linked product image'}}</small></div></div>}<label>Product name *<input name="name" [(ngModel)]="productDraft.name" required></label><label>SKU *<input name="sku" [(ngModel)]="productDraft.sku" required></label><label>Brand<input name="brand" [(ngModel)]="productDraft.brand"></label><label>Category<input name="category" [(ngModel)]="productDraft.category"></label><label>Price (£) *<input name="price" type="number" min="0" step=".01" [(ngModel)]="productPrice" placeholder="0.00"></label><label>Discount (% Off)<input name="discountPercent" type="number" min="0" max="90" [(ngModel)]="productDraft.discountPercent" placeholder="0 (defaults to 0%)"><small class="field-hint">Calculates Was/RRP price and badge (e.g. Save 20%)</small></label><div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-size:0.68rem;font-weight:700">Stock</span><label class="checkbox-inline" style="margin:0;font-size:0.68rem"><input type="checkbox" name="unlimitedStock" [(ngModel)]="productDraft.unlimitedStock"><span>Unlimited</span></label></div><input name="stock" type="number" min="0" [(ngModel)]="productDraft.stock" [disabled]="(productDraft.variants.length > 0) || !!productDraft.unlimitedStock" placeholder="0">@if(productDraft.variants.length){<small class="field-hint" style="color:#0284c7">Auto-calculated from {{productDraft.variants.length}} variant(s)</small>}</div><label>Availability<select name="availability" [(ngModel)]="productDraft.availability"><option value="IN_STOCK">In Stock (Ready to dispatch)</option><option value="AVAILABLE_TO_ORDER">Available to Order</option><option value="MADE_TO_ORDER">Made to Order</option><option value="BACKORDER">Backorder</option></select></label><label>Lead Time<input name="leadTime" [(ngModel)]="productDraft.leadTime" placeholder="e.g. 2-3 Working Days"></label><label>Publication Status<select name="status" [(ngModel)]="productDraft.status"><option value="PUBLISHED">PUBLISHED (Visible on Storefront)</option><option value="DRAFT">DRAFT (Admin Only / Inactive)</option></select><small class="field-hint">PUBLISHED products sync live to storefront; DRAFT products remain hidden.</small></label><label class="full">Assign Buying Guide / Sizing Spec Guide<select name="staticContentGuide" [(ngModel)]="productDraft.staticContentId" (change)="onStaticGuideSelected()"><option [ngValue]="null">-- None --</option>@for(c of contents();track c.id){<option [value]="c.id">{{c.title}} (/{{c.slug}})</option>}</select></label><div class="image-upload-field full"><span>Product primary image</span><div style="display:flex;gap:10px;align-items:center;margin-top:6px"><label class="upload-dropzone" [class.uploading]="uploadingImage()" style="flex:1;margin:0"><input type="file" accept="image/jpeg,image/png,image/gif,image/webp" (change)="uploadProductImage($event)" [disabled]="uploadingImage()"><b>{{uploadingImage()?'Uploading image…':'Choose image file'}}</b><small>JPG, PNG, GIF or WebP · maximum 5 MB</small></label><button type="button" class="secondary" (click)="openMediaPicker('product')" style="white-space:nowrap;padding:16px 14px">🖼 Pick from Media Library</button></div></div><label class="full">Or use an image URL<input name="imageUrl" type="url" [(ngModel)]="productDraft.imageUrl" placeholder="https://example.com/product.jpg"></label><div class="full" style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:8px;padding:16px;margin-top:6px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div><strong style="font-size:0.92rem;color:#0f172a">Product Technical Documents & Specifications</strong><small class="d-block text-muted" style="font-size:0.76rem">Attach PDF spec sheets, installation manuals, dimensional drawings, or warranty guides.</small></div><button type="button" class="secondary" (click)="addDocToProduct()" style="font-size:0.78rem;padding:6px 12px">＋ Add Document</button></div>@for(doc of productDocuments;track $index;let dIdx=$index){<div style="display:grid;grid-template-columns:1.5fr 2fr auto auto;gap:8px;align-items:center;margin-bottom:8px;padding:8px;background:#fff;border:1px solid #e2e8f0;border-radius:6px"><input [(ngModel)]="doc.title" [name]="'doc_title_'+dIdx" placeholder="Document Title (e.g. Installation Guide)" style="font-size:0.82rem;padding:6px 10px"><input [(ngModel)]="doc.url" [name]="'doc_url_'+dIdx" placeholder="PDF URL (/api/content/files/... or https://...)" style="font-size:0.82rem;padding:6px 10px"><label class="secondary" style="margin:0;padding:6px 10px;font-size:0.78rem;cursor:pointer;white-space:nowrap" [class.uploading]="uploadingDoc()"><input type="file" accept=".pdf,application/pdf" (change)="uploadDocFile($event, doc)" style="display:none" [disabled]="uploadingDoc()"><span>{{uploadingDoc()?'Uploading…':'📁 Upload PDF'}}</span></label><button type="button" class="delete-btn" (click)="removeDocFromProduct(dIdx)" style="padding:6px 10px;margin:0" title="Remove Document">✕</button></div>}@empty{<p class="muted" style="margin:0;font-size:0.82rem;font-style:italic">No documents attached yet. Click "＋ Add Document" to attach technical spec sheets or manuals.</p>}</div><section class="variant-editor full">
   <div class="variant-head">
@@ -382,7 +392,7 @@ const authInterceptor=(req:any,next:any)=>{
 
 @if(modal()!.type==='company'){<form (ngSubmit)="saveCompany()" class="form-grid"><label>Brand / Company Name *<input name="bname" [(ngModel)]="companyDraft.name" (input)="onCompanyNameChange()" required placeholder="e.g. Hearth Luxury Radiators"></label><label>Brand Code *<input name="bcode" [(ngModel)]="companyDraft.code" required placeholder="e.g. HEARTH" style="text-transform:uppercase"></label><div class="full" style="display:flex;gap:8px;align-items:center"><label style="flex:1">Brand Logo URL<input name="blogo" [(ngModel)]="companyDraft.logoUrl" placeholder="https://... or /uploads/..."></label><button type="button" class="secondary" (click)="openMediaPicker('company')" style="margin-top:20px;white-space:nowrap">🖼 Pick Logo Image</button></div><label>Official Website<input name="bweb" type="url" [(ngModel)]="companyDraft.website" placeholder="https://brand.co.uk"></label><label>Contact Email<input name="bmail" type="email" [(ngModel)]="companyDraft.contactEmail" placeholder="support@brand.co.uk"></label><label>Contact Phone<input name="bphone" [(ngModel)]="companyDraft.contactPhone" placeholder="+44 20 ..."></label><label>Country of Origin<input name="bcountry" [(ngModel)]="companyDraft.country" placeholder="United Kingdom"></label><label>Display Sort Order<input name="bsort" type="number" [(ngModel)]="companyDraft.sortOrder" min="1"></label><label>Status<select name="bstatus" [(ngModel)]="companyDraft.status"><option value="ACTIVE">ACTIVE (Visible on Storefront)</option><option value="INACTIVE">INACTIVE</option></select></label><label class="full">Description & Manufacturer Warranty Terms<textarea name="bdesc" rows="3" [(ngModel)]="companyDraft.description" placeholder="Brief manufacturer summary, warranty coverage details, or brand ethos..."></textarea></label><div class="form-actions full"><button type="button" class="secondary" (click)="closeModal()">Cancel</button><button type="submit" class="primary" [disabled]="savingCompany()">{{savingCompany()?'Saving…':'💾 Save Brand'}}</button></div></form>}
 @if(modal()!.type==='review'){<form (ngSubmit)="saveReview()" class="form-grid"><label>Customer Name *<input name="rauthor" [(ngModel)]="reviewDraft.author" required placeholder="e.g. Sarah Jenkins"></label><label>Customer Email<input name="remail" type="email" [(ngModel)]="reviewDraft.authorEmail" placeholder="customer@example.co.uk"></label><label>Customer Role / Badge<input name="rrole" [(ngModel)]="reviewDraft.role" placeholder="e.g. Verified Homeowner, Trade Plumber"></label><label>Customer Location<input name="rloc" [(ngModel)]="reviewDraft.location" placeholder="e.g. Surrey, UK"></label><label>Rating (1 to 5 Stars) *<select name="rrating" [(ngModel)]="reviewDraft.rating"><option [ngValue]="5">★★★★★ 5 Stars (Excellent)</option><option [ngValue]="4">★★★★☆ 4 Stars (Very Good)</option><option [ngValue]="3">★★★☆☆ 3 Stars (Average)</option><option [ngValue]="2">★★☆☆☆ 2 Stars (Below Average)</option><option [ngValue]="1">★☆☆☆☆ 1 Star (Poor)</option></select></label><label>Category<input name="rcat" [(ngModel)]="reviewDraft.category" placeholder="e.g. Designer Radiators"></label><label>Associated Product / SKU<input name="rsku" [(ngModel)]="reviewDraft.productSku" placeholder="e.g. OXF-001"></label><label>Moderation Status<select name="rstatus" [(ngModel)]="reviewDraft.status"><option value="APPROVED">APPROVED (Published on Storefront)</option><option value="PENDING_APPROVAL">PENDING_APPROVAL (Pending Moderation)</option><option value="REJECTED">REJECTED (Hidden)</option></select></label><label class="checkbox-inline full" style="margin-top:4px"><input type="checkbox" name="rverified" [(ngModel)]="reviewDraft.verified"><span>Verified Genuine Purchaser</span></label><label class="full">Review Headline *<input name="rtitle" [(ngModel)]="reviewDraft.title" required placeholder="e.g. Outstanding heat output and exceptional finish!"></label><label class="full">Review Comment / Content *<textarea name="rcomment" rows="4" [(ngModel)]="reviewDraft.comment" required placeholder="Detailed customer feedback and experience..."></textarea></label><div class="form-actions full"><button type="button" class="secondary" (click)="closeModal()">Cancel</button><button class="primary" [disabled]="savingReview()">{{savingReview()?'Saving…':'💾 Save Review'}}</button></div></form>}
- @if(modal()!.type==='stock'){<form (ngSubmit)="saveStock()" class="form-grid"><label class="full"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><span>Select Product to Adjust</span><small class="muted">{{filteredStockProducts().length}} products found</small></div><div style="display:flex;gap:8px;margin-bottom:6px"><input type="text" [ngModel]="stockProductSearch()" (ngModelChange)="stockProductSearch.set($event)" name="stockSearch" placeholder="Filter by product name or SKU..." style="flex:1;padding:7px 10px;font-size:0.84rem;border:1px solid #cbd5e1;border-radius:6px">@if(stockProductSearch()){<button type="button" class="secondary" (click)="stockProductSearch.set('')" style="padding:4px 8px;font-size:0.75rem">✕ Clear</button>}</div><select name="product" [(ngModel)]="stockDraft.productId" required><option [ngValue]="null">-- Choose a product ({{filteredStockProducts().length}} options) --</option>@for(p of filteredStockProducts();track p.id){<option [ngValue]="p.id">{{p.name}} (SKU: {{p.sku}}) — Current Stock: {{p.stock}}</option>}</select></label><label>Movement Direction<select name="type" [(ngModel)]="stockDraft.type"><option value="ADD">Add Stock (+)</option><option value="REMOVE">Remove Stock (-)</option></select></label><label>Quantity<input name="qty" type="number" min="1" [(ngModel)]="stockDraft.quantity" required></label><label>Warehouse<input name="warehouse" [(ngModel)]="stockDraft.warehouse" placeholder="Main Warehouse" required></label><label>Reference / PO / RMA #<input name="ref" [(ngModel)]="stockDraft.reference" placeholder="e.g. PO-1042 or RMA-88"></label><label class="full">Reason / Audit Trail Note<input name="reason" [(ngModel)]="stockDraft.reason" required placeholder="e.g. Supplier delivery, Damaged stock write-off, Physical count correction"></label><div class="form-actions full"><button type="button" class="secondary" (click)="closeModal()">Cancel</button><button class="primary" [disabled]="saving()">{{saving()?'Recording & Syncing…':'Record adjustment'}}</button></div></form>}
+ @if(modal()!.type==='stock'){<form (ngSubmit)="saveStock()" class="form-grid"><label class="full"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><span>Select Product to Adjust</span><small class="muted">{{filteredStockProducts().length}} products found</small></div><div style="display:flex;gap:8px;margin-bottom:6px"><input type="text" [ngModel]="stockProductSearch()" (ngModelChange)="stockProductSearch.set($event)" name="stockSearch" placeholder="Filter by product name or SKU..." style="flex:1;padding:7px 10px;font-size:0.84rem;border:1px solid #cbd5e1;border-radius:6px">@if(stockProductSearch()){<button type="button" class="secondary" (click)="stockProductSearch.set('')" style="padding:4px 8px;font-size:0.75rem">✕ Clear</button>}</div><select name="product" [(ngModel)]="stockDraft.productId" (ngModelChange)="onStockProductChange($event)" required><option [ngValue]="null">-- Choose a product ({{filteredStockProducts().length}} options) --</option>@for(p of filteredStockProducts();track p.id){<option [ngValue]="p.id">{{p.name}} (SKU: {{p.sku}}) — Current Stock: {{p.stock}}</option>}</select></label>@if(selectedStockProduct()?.variants?.length){<label class="full">Select Colour / Variant<select name="variantId" [(ngModel)]="stockDraft.variantId" required><option [ngValue]="null">-- Choose the exact variant to adjust --</option>@for(v of selectedStockProduct()!.variants;track v.id||v.variantSku||v.ean){<option [ngValue]="v.id">{{v.colour||'Standard'}} · {{v.heightMm||'—'}}×{{v.widthMm||'—'}} mm · {{v.variantSku||v.ean}} — Stock: {{v.stock}}</option>}</select></label>}<label>Movement Direction<select name="type" [(ngModel)]="stockDraft.type"><option value="ADD">Add Stock (+)</option><option value="REMOVE">Remove Stock (-)</option></select></label><label>Quantity<input name="qty" type="number" min="1" [(ngModel)]="stockDraft.quantity" required></label><label>Warehouse<input name="warehouse" [(ngModel)]="stockDraft.warehouse" placeholder="Main Warehouse" required></label><label>Reference / PO / RMA #<input name="ref" [(ngModel)]="stockDraft.reference" placeholder="e.g. PO-1042 or RMA-88"></label><label class="full">Reason / Audit Trail Note<input name="reason" [(ngModel)]="stockDraft.reason" required placeholder="e.g. Supplier delivery, Damaged stock write-off, Physical count correction"></label><div class="form-actions full"><button type="button" class="secondary" (click)="closeModal()">Cancel</button><button class="primary" [disabled]="saving()">{{saving()?'Recording & Syncing…':'Record adjustment'}}</button></div></form>}
  @if(modal()!.type==='content'){<div><div style="padding:16px 26px 0"><div class="cms-modal-tabs"><button type="button" [class.active]="contentEditorTab==='editor'" (click)="contentEditorTab='editor'">✍ Editor (HTML & Content)</button><button type="button" [class.active]="contentEditorTab==='preview'" (click)="contentEditorTab='preview'">👁 Live HTML Viewer</button></div></div>@if(contentEditorTab==='editor'){<form (ngSubmit)="saveContent()" class="form-grid" style="padding-top:6px"><label>Title<input name="title" [(ngModel)]="contentDraft.title" required placeholder="e.g. Terms & Conditions"></label><label>Slug<input name="slug" [(ngModel)]="contentDraft.slug" required placeholder="e.g. terms-and-conditions"></label><label>Type<select name="ctype" [(ngModel)]="contentDraft.type"><option>PAGE</option><option>LANDING_PAGE</option><option>BANNER</option><option>FAQ</option></select></label><label>Status<select name="cstatus" [(ngModel)]="contentDraft.status"><option>PUBLISHED</option><option>DRAFT</option></select></label><label class="full">SEO Title<input name="seo" [(ngModel)]="contentDraft.seoTitle" placeholder="Page title for search engines"></label><div class="full"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><label style="margin:0;font-size:0.75rem;font-weight:700">Page Content / HTML Markup</label><small class="muted">Supports rich HTML or plain text</small></div><div class="cms-toolbar"><button type="button" class="cms-toolbar-btn" (click)="insertTag('b')"><b>B</b></button><button type="button" class="cms-toolbar-btn" (click)="insertTag('i')"><i>I</i></button><button type="button" class="cms-toolbar-btn" (click)="insertTag('h3')">H3</button><button type="button" class="cms-toolbar-btn" (click)="insertTag('p')">&para; P</button><button type="button" class="cms-toolbar-btn" (click)="insertTag('ul')">• List</button><button type="button" class="cms-toolbar-btn" (click)="insertTag('quote')">&ldquo; Quote</button><button type="button" class="cms-toolbar-btn" (click)="insertTag('table')">⊞ Table</button><button type="button" class="cms-toolbar-btn" (click)="insertTag('link')">🔗 Contact Link</button></div><textarea name="body" rows="12" [(ngModel)]="contentDraft.body" style="font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:0.86rem;line-height:1.5;white-space:pre-wrap" placeholder="Enter page text, policy terms, FAQ content, or HTML tags..."></textarea></div><div class="full" style="background:#f9fafb;border:1px solid var(--line);border-radius:0.75rem;padding:16px;margin-top:6px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div><strong style="font-size:0.82rem;color:var(--ink)">Official Document / PDF Attachment</strong><small class="d-block muted" style="font-size:0.68rem;margin-top:2px">Upload official PDF terms, policy documents, or warranty certificates. Synced to storefront for customer download.</small></div></div>@if(contentDraft.pdfFilename){<div class="cms-pdf-card"><div class="cms-pdf-info"><span style="font-size:1.6rem">📄</span><div><strong>{{contentDraft.pdfFilename}}</strong><small class="d-block" style="color:var(--green)">✓ Uploaded & Synced</small></div></div><div class="cms-pdf-actions"><a [href]="contentDraft.pdfUrl" target="_blank" class="mini-btn primary-mini" style="text-decoration:none">👁 View PDF</a><button type="button" class="mini-btn danger-mini" (click)="removeCmsPdf()">✕ Remove PDF</button></div></div>}<label class="upload-dropzone" [class.uploading]="uploadingPdf()" style="margin-top:10px;min-height:80px"><input type="file" accept="application/pdf,.pdf" (change)="uploadCmsPdf($event)" [disabled]="uploadingPdf()"><b>{{uploadingPdf()?'Uploading and syncing PDF document…':(contentDraft.pdfFilename?'Replace attached PDF file':'Choose or drop PDF document (.pdf)')}}</b><small>PDF format · up to 25 MB · instantly synced to Storefront</small></label></div><div class="form-actions full"><button type="button" class="secondary" (click)="closeModal()">Cancel</button><button class="primary" [disabled]="saving()||uploadingPdf()">{{saving()?'Saving…':(contentDraft.id?'💾 Update & Sync':'＋ Create & Sync')}}</button></div></form>}@if(contentEditorTab==='preview'){<div style="padding:10px 26px 24px"><div style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:center"><div><span class="eyebrow">{{contentDraft.type||'PAGE'}}</span><h2 style="margin:4px 0">{{contentDraft.title||'Untitled Page'}}</h2><small class="muted">Slug: <code>/{{contentDraft.slug||'slug'}}</code></small></div><span class="badge" [class.green]="contentDraft.status==='PUBLISHED'">{{contentDraft.status||'DRAFT'}}</span></div>@if(contentDraft.pdfFilename){<div class="cms-pdf-card" style="margin-bottom:16px"><div class="cms-pdf-info"><span style="font-size:1.4rem">📄</span><div><strong>Attached Official PDF: {{contentDraft.pdfFilename}}</strong><small class="d-block" style="color:var(--green)">Available for customer view & download on storefront</small></div></div><a [href]="contentDraft.pdfUrl" target="_blank" class="mini-btn primary-mini" style="text-decoration:none">👁 View PDF</a></div>}<div class="cms-live-preview-body" [innerHTML]="renderCmsHtml(contentDraft.body)"></div><div class="form-actions" style="margin-top:20px"><button type="button" class="secondary" (click)="contentEditorTab='editor'">← Back to Editor</button><button type="button" class="primary" (click)="saveContent()" [disabled]="saving()||uploadingPdf()">{{saving()?'Saving…':'💾 Save & Sync Page'}}</button></div></div>}</div>}
  @if(modal()!.type==='htmlViewer'){<div style="padding:20px 26px 24px"><div style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:center"><div><span class="eyebrow">{{modal()!.data?.type||'PAGE'}}</span><h2 style="margin:4px 0">{{modal()!.data?.title}}</h2><small class="muted">Slug: <code>/{{modal()!.data?.slug}}</code></small></div><span class="badge" [class.green]="modal()!.data?.status==='PUBLISHED'">{{modal()!.data?.status}}</span></div>@if(modal()!.data?.pdfFilename){<div class="cms-pdf-card" style="margin-bottom:16px"><div class="cms-pdf-info"><span style="font-size:1.4rem">📄</span><div><strong>Attached PDF: {{modal()!.data.pdfFilename}}</strong><small class="d-block" style="color:var(--green)">Synchronized with Storefront</small></div></div><a [href]="modal()!.data.pdfUrl" target="_blank" class="mini-btn primary-mini" style="text-decoration:none">👁 View / Download PDF</a></div>}<div class="cms-live-preview-body" style="max-height:55vh;overflow-y:auto" [innerHTML]="renderCmsHtml(modal()!.data?.body)"></div><div class="form-actions" style="margin-top:20px"><button type="button" class="secondary" (click)="closeModal()">Close Viewer</button><button type="button" class="primary" (click)="editContent(modal()!.data)">✏ Edit Page</button></div></div>}
 
@@ -393,7 +403,7 @@ const authInterceptor=(req:any,next:any)=>{
 
   @if(modal()!.type==='blog'){<form (ngSubmit)="saveBlog()" class="form-grid"><label class="full">Article Title<input name="blogTitle" [(ngModel)]="blogDraft.title" (input)="autoGenerateSlug()" required placeholder="e.g. How to Bleed a Radiator"></label><label>Slug<input name="blogSlug" [(ngModel)]="blogDraft.slug" required placeholder="e.g. how-to-bleed-a-radiator"></label><label>Category<input name="blogCategory" [(ngModel)]="blogDraft.category" required placeholder="e.g. Buying Guides, Radiators & Heating"></label><label>Author<input name="blogAuthor" [(ngModel)]="blogDraft.author" required placeholder="e.g. THP Heating Specialist"></label><label>Read Time (Minutes)<input name="blogReadTime" type="number" min="1" [(ngModel)]="blogDraft.readTimeMinutes"></label><label>Publication Date<input name="blogDate" [(ngModel)]="blogDraft.publishedAt" placeholder="e.g. 15 Oct 2026"></label><label>Status<select name="blogStatus" [(ngModel)]="blogDraft.status"><option value="PUBLISHED">PUBLISHED (Visible & Synced)</option><option value="DRAFT">DRAFT (Admin Only)</option></select></label><label class="full">Cover Image URL<input name="blogCover" type="url" [(ngModel)]="blogDraft.coverImage" placeholder="https://example.com/image.jpg"></label><label class="full">Excerpt Summary<textarea name="blogExcerpt" rows="3" [(ngModel)]="blogDraft.excerpt" placeholder="Brief summary of the article for listings..."></textarea></label><label class="full">Tags (comma-separated)<input name="blogTags" [(ngModel)]="blogDraft.tags" placeholder="e.g. Radiators, BTU, Heating Advice"></label><label class="full">HTML Content Body<textarea name="blogContent" rows="12" [(ngModel)]="blogDraft.content" required placeholder="Full HTML article content..." style="font-family:monospace;font-size:0.85rem"></textarea></label><div class="form-actions full"><button type="button" class="secondary" (click)="closeModal()">Cancel</button><button type="submit" class="primary" [disabled]="savingBlog()">{{savingBlog()?'Saving…':'💾 Save & Sync Article'}}</button></div></form>}
 
-  @if(modal()!.type==='banner'){<form (ngSubmit)="saveBanner()" class="form-grid">@if(bannerDraft.imageUrl){<div class="product-edit-preview full" style="display:flex;align-items:center;gap:16px;background:#f8fafc;padding:12px 16px;border-radius:8px;border:1px solid #e2e8f0"><img [src]="bannerDraft.imageUrl" [alt]="bannerDraft.title" style="width:120px;height:70px;object-fit:cover;border-radius:6px;border:1px solid #cbd5e1"><div style="flex:1"><strong style="font-size:0.92rem;display:block">Banner Image Preview</strong><small class="muted" style="word-break:break-all">{{bannerDraft.imageUrl}}</small></div><button type="button" class="secondary" (click)="cropExistingBanner()" style="padding:6px 12px;font-size:0.8rem">✂ Recrop Image</button><button type="button" class="delete-btn" (click)="bannerDraft.imageUrl=''" style="padding:6px 12px;font-size:0.8rem">✕ Remove</button></div>}<label class="full">Banner Section / Placement *<select name="btype" [(ngModel)]="bannerDraft.type"><option value="BANNER">Top Hero Slider Banner</option><option value="CAMPAIGN_BANNER">Second Campaign Banner (Dual Cards)</option></select></label><label class="full">Eyebrow Tag (Kicker)<input name="btag" [(ngModel)]="bannerDraft.tag" placeholder="e.g. ✦ BRITISH HEATING & LUXURY BATHROOMS · 2026 or DESIGN-LED HEATING"></label><label class="full">Banner Headline (Title) *<input name="btitle" [(ngModel)]="bannerDraft.title" required placeholder="e.g. Designer Radiators or Luxury Heating Built for Considered Homes."></label><label class="full">Subtitle / Body Description<textarea name="bbody" rows="3" [(ngModel)]="bannerDraft.body" placeholder="e.g. Architectural warmth in statement finishes with superior heat outputs..."></textarea></label><label>Primary Button Text<input name="bbtnText" [(ngModel)]="bannerDraft.buttonText" placeholder="e.g. Shop Collection → or Explore Heating Range →"></label><label>Target Link / Section Anchor<input name="blinkUrl" [(ngModel)]="bannerDraft.linkUrl" placeholder="e.g. /category/Radiators or #new-arrivals"></label><label>Slide Order (Position)<input type="number" min="1" step="1" name="bsortOrder" [(ngModel)]="bannerDraft.sortOrder" placeholder="1"></label><label>Publication Status<select name="bstatus" [(ngModel)]="bannerDraft.status"><option value="PUBLISHED">PUBLISHED (Active on Storefront)</option><option value="DRAFT">DRAFT (Hidden from Storefront)</option></select></label><div class="full image-upload-field"><span>Banner Featured / Background Image</span><div style="display:flex;gap:10px;align-items:center;margin-top:6px;flex-wrap:wrap"><input name="bimgUrl" type="url" [(ngModel)]="bannerDraft.imageUrl" placeholder="https://... or pick from media" style="flex:1;min-width:200px"><input type="file" #bannerFileInput accept="image/jpeg,image/png,image/webp" (change)="onBannerFileSelected($event)" style="display:none"><button type="button" class="primary" (click)="bannerFileInput.click()" style="white-space:nowrap;padding:10px 14px;display:flex;align-items:center;gap:6px"><span>✂</span> Upload &amp; Crop Banner</button><button type="button" class="secondary" (click)="openMediaPicker('banner')" style="white-space:nowrap;padding:10px 14px">🖼 Pick Media</button></div></div><div class="form-actions full"><button type="button" class="secondary" (click)="closeModal()">Cancel</button><button type="submit" class="primary" [disabled]="savingBanner()">{{savingBanner()?'Saving & Syncing…':'💾 Save Banner & Sync'}}</button></div></form>}
+  @if(modal()!.type==='banner'){<form (ngSubmit)="saveBanner()" class="form-grid">@if(bannerDraft.imageUrl){<div class="product-edit-preview full" style="display:flex;align-items:center;gap:16px;background:#f8fafc;padding:12px 16px;border-radius:8px;border:1px solid #e2e8f0"><img [src]="bannerDraft.imageUrl" [alt]="bannerDraft.title" style="width:120px;height:70px;object-fit:cover;border-radius:6px;border:1px solid #cbd5e1"><div style="flex:1"><strong style="font-size:0.92rem;display:block">Banner Image Preview</strong><small class="muted" style="word-break:break-all">{{bannerDraft.imageUrl}}</small></div><button type="button" class="secondary" (click)="cropExistingBanner()" style="padding:6px 12px;font-size:0.8rem">✂ Recrop Image</button><button type="button" class="delete-btn" (click)="bannerDraft.imageUrl=''" style="padding:6px 12px;font-size:0.8rem">✕ Remove</button></div>}<label class="full">Banner Section / Placement *<select name="btype" [(ngModel)]="bannerDraft.type"><option value="BANNER">Top Hero Slider Banner</option><option value="CAMPAIGN_BANNER">Second Campaign Banner (Dual Cards)</option></select></label><label class="full">Eyebrow Tag (Kicker)<input name="btag" [(ngModel)]="bannerDraft.tag" placeholder="e.g. ✦ BRITISH HEATING & LUXURY BATHROOMS · 2026 or DESIGN-LED HEATING"></label><label class="full">Banner Headline (Title) *<input name="btitle" [(ngModel)]="bannerDraft.title" required placeholder="e.g. Designer Radiators or Luxury Heating Built for Considered Homes."></label><label class="full">Subtitle / Body Description<textarea name="bbody" rows="3" [(ngModel)]="bannerDraft.body" placeholder="e.g. Architectural warmth in statement finishes with superior heat outputs..."></textarea></label><label>Primary Button Text<input name="bbtnText" [(ngModel)]="bannerDraft.buttonText" placeholder="e.g. Shop Collection → or Explore Heating Range →"></label><label>Target Link / Section Anchor<input name="blinkUrl" [(ngModel)]="bannerDraft.linkUrl" placeholder="e.g. /category/Radiators or #new-arrivals"></label><label>Slide Order (Position)<input type="number" min="1" step="1" name="bsortOrder" [(ngModel)]="bannerDraft.sortOrder" placeholder="1"></label><label>Publication Status<select name="bstatus" [(ngModel)]="bannerDraft.status"><option value="PUBLISHED">PUBLISHED (Active on Storefront)</option><option value="DRAFT">DRAFT (Hidden from Storefront)</option></select></label><div class="full image-upload-field"><span>Banner Featured / Background Image</span><div style="display:flex;gap:10px;align-items:center;margin-top:6px;flex-wrap:wrap"><input name="bimgUrl" type="text" [(ngModel)]="bannerDraft.imageUrl" placeholder="https://... or /api/product-images/..." style="flex:1;min-width:200px"><input type="file" #bannerFileInput accept="image/jpeg,image/png,image/webp" (change)="onBannerFileSelected($event)" style="display:none"><button type="button" class="primary" (click)="bannerFileInput.click()" style="white-space:nowrap;padding:10px 14px;display:flex;align-items:center;gap:6px"><span>✂</span> Upload &amp; Crop Banner</button><button type="button" class="secondary" (click)="openMediaPicker('banner')" style="white-space:nowrap;padding:10px 14px">🖼 Pick Media</button></div></div><div class="form-actions full"><button type="button" class="secondary" (click)="closeModal()">Cancel</button><button type="submit" class="primary" [disabled]="savingBanner()">{{savingBanner()?'Saving & Syncing…':'💾 Save Banner & Sync'}}</button></div></form>}
 
   @if(modal()!.type==='navMenu'){
     <form (ngSubmit)="saveNavMenu()" style="display:flex;flex-direction:column;gap:18px">
@@ -422,7 +432,7 @@ const authInterceptor=(req:any,next:any)=>{
           <div class="full image-upload-field">
             <span style="font-size:0.84rem;font-weight:600;color:#334155;display:block;margin-bottom:4px">Category Featured / Department Banner Image</span>
             <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-              <input name="nmImgUrl" type="url" [(ngModel)]="navMenuDraft.imageUrl" placeholder="https://... or pick from media" style="flex:1;min-width:200px">
+              <input name="nmImgUrl" type="text" [(ngModel)]="navMenuDraft.imageUrl" placeholder="https://... or /api/product-images/..." style="flex:1;min-width:200px">
               <input type="file" #navFileInput accept="image/jpeg,image/png,image/webp" (change)="onNavCategoryFileSelected($event)" style="display:none">
               <button type="button" class="primary" (click)="navFileInput.click()" style="white-space:nowrap;padding:10px 14px;display:flex;align-items:center;gap:6px">
                 <span>✂</span> Upload &amp; Crop Image
@@ -784,7 +794,7 @@ const authInterceptor=(req:any,next:any)=>{
           <div class="full image-upload-field">
             <span>Featured Promo Image</span>
             <div style="display:flex;gap:10px;align-items:center;margin-top:6px;flex-wrap:wrap">
-              <input name="pImg" type="url" [(ngModel)]="navMenuDraft.featuredPromo.imageUrl" placeholder="https://... or pick from media" style="flex:1;min-width:200px">
+              <input name="pImg" type="text" [(ngModel)]="navMenuDraft.featuredPromo.imageUrl" placeholder="https://... or /api/product-images/..." style="flex:1;min-width:200px">
               <input type="file" #promoFileInput accept="image/jpeg,image/png,image/webp" (change)="onNavPromoFileSelected($event)" style="display:none">
               <button type="button" class="primary" (click)="promoFileInput.click()" style="white-space:nowrap;padding:10px 14px;display:flex;align-items:center;gap:6px"><span>✂</span> Upload &amp; Crop Image</button>
               <button type="button" class="secondary" (click)="openMediaPicker('navPromo', null, navMenuDraft.category)" style="white-space:nowrap;padding:10px 14px;display:flex;align-items:center;gap:6px"><span>🖼</span> Pick Image</button>
@@ -814,72 +824,51 @@ const authInterceptor=(req:any,next:any)=>{
       <button type="button" (click)="closeCropModal()">×</button>
     </header>
     <div style="padding:18px 24px;display:flex;flex-direction:column;gap:16px">
-      <!-- Aspect Ratio Presets -->
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <span style="font-size:0.82rem;font-weight:700;color:#334155">Aspect Ratio:</span>
-        <button type="button" class="tab-btn" [class.active]="cropAspectRatio==='16:6'" (click)="setCropAspectRatio('16:6')">
-          Hero Slider (16:6 / 1920×720)
-        </button>
-        <button type="button" class="tab-btn" [class.active]="cropAspectRatio==='16:7'" (click)="setCropAspectRatio('16:7')">
-          Hero Slider (16:7 / 1920×840)
-        </button>
-        <button type="button" class="tab-btn" [class.active]="cropAspectRatio==='16:9'" (click)="setCropAspectRatio('16:9')">
-          Standard / Promo (16:9 / 1600×900)
-        </button>
-        <button type="button" class="tab-btn" [class.active]="cropAspectRatio==='4:3'" (click)="setCropAspectRatio('4:3')">
-          Card (4:3 / 1200×900)
-        </button>
-        <button type="button" class="tab-btn" [class.active]="cropAspectRatio==='1:1'" (click)="setCropAspectRatio('1:1')">
-          Square (1:1 / 1000×1000)
-        </button>
-        <button type="button" class="tab-btn" [class.active]="cropAspectRatio==='21:9'" (click)="setCropAspectRatio('21:9')">
-          Ultra-Wide (21:9 / 1920×820)
-        </button>
+      <div style="display:flex;align-items:center;gap:10px;background:#eff6ff;border:1px solid #bfdbfe;color:#1e3a8a;padding:10px 14px;border-radius:8px">
+        <span style="font-size:1rem">▣</span>
+        <span style="font-size:0.82rem;font-weight:700">Automatic storefront format: {{getCropFormatDescription()}}. Move and resize the frame; the saved image will match this screen placement automatically.</span>
       </div>
 
-      <!-- Crop Viewport Container with Guidelines & Pan/Drag -->
+      <!-- Real crop selection with draggable/resizable handles -->
       <div 
         id="banner-crop-viewport"
-        (mousedown)="onCropMouseDown($event)"
         (mousemove)="onCropMouseMove($event)"
         (mouseup)="onCropMouseUp()"
         (mouseleave)="onCropMouseUp()"
-        [style.aspectRatio]="getCssAspectRatio()"
-        style="width:100%;max-height:460px;background:#0f172a;border:2px dashed #0284c7;border-radius:8px;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:grab;user-select:none;box-shadow:inset 0 0 20px rgba(0,0,0,0.5)">
+        style="width:100%;height:460px;background:#111827;border:1px solid #334155;border-radius:8px;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;user-select:none;box-shadow:inset 0 0 24px rgba(0,0,0,0.55)">
         
-        <!-- Image being cropped -->
         <img 
           [src]="cropImageSrc" 
-          [style.transform]="'translate(' + cropPanX + 'px, ' + cropPanY + 'px) scale(' + cropZoom + ')'"
-          style="max-width:100%;max-height:100%;object-fit:contain;pointer-events:none;transform-origin:center center;transition:none">
+          (load)="onCropImageLoaded($event)"
+          style="width:100%;height:100%;object-fit:contain;pointer-events:none">
 
-        <!-- Rule of Thirds Grid Overlay -->
-        <div style="position:absolute;inset:0;pointer-events:none;display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr 1fr;border:1px solid rgba(255,255,255,0.25)">
-          <div style="border-right:1px dashed rgba(255,255,255,0.3);border-bottom:1px dashed rgba(255,255,255,0.3)"></div>
-          <div style="border-right:1px dashed rgba(255,255,255,0.3);border-bottom:1px dashed rgba(255,255,255,0.3)"></div>
-          <div style="border-bottom:1px dashed rgba(255,255,255,0.3)"></div>
-          <div style="border-right:1px dashed rgba(255,255,255,0.3);border-bottom:1px dashed rgba(255,255,255,0.3)"></div>
-          <div style="border-right:1px dashed rgba(255,255,255,0.3);border-bottom:1px dashed rgba(255,255,255,0.3)"></div>
-          <div style="border-bottom:1px dashed rgba(255,255,255,0.3)"></div>
-          <div style="border-right:1px dashed rgba(255,255,255,0.3)"></div>
-          <div style="border-right:1px dashed rgba(255,255,255,0.3)"></div>
-          <div></div>
+        <div class="crop-selection" (mousedown)="onCropBoxMouseDown($event,'move')"
+          [style.left.px]="cropX" [style.top.px]="cropY" [style.width.px]="cropWidth" [style.height.px]="cropHeight"
+          style="position:absolute;border:2px dashed #fff;cursor:move;box-shadow:0 0 0 9999px rgba(2,6,23,.62),0 0 0 1px rgba(15,23,42,.65)">
+          <div style="position:absolute;inset:0;pointer-events:none;display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr 1fr">
+            <i style="border-right:1px solid rgba(255,255,255,.55);border-bottom:1px solid rgba(255,255,255,.55)"></i><i style="border-right:1px solid rgba(255,255,255,.55);border-bottom:1px solid rgba(255,255,255,.55)"></i><i style="border-bottom:1px solid rgba(255,255,255,.55)"></i>
+            <i style="border-right:1px solid rgba(255,255,255,.55);border-bottom:1px solid rgba(255,255,255,.55)"></i><i style="border-right:1px solid rgba(255,255,255,.55);border-bottom:1px solid rgba(255,255,255,.55)"></i><i style="border-bottom:1px solid rgba(255,255,255,.55)"></i>
+            <i style="border-right:1px solid rgba(255,255,255,.55)"></i><i style="border-right:1px solid rgba(255,255,255,.55)"></i><i></i>
+          </div>
+          <button type="button" aria-label="Resize top left" (mousedown)="onCropBoxMouseDown($event,'nw')" style="position:absolute;left:-9px;top:-9px;width:18px;height:18px;border-radius:50%;border:3px solid #fff;background:#d1d5db;cursor:nwse-resize;padding:0"></button>
+          <button type="button" aria-label="Resize top right" (mousedown)="onCropBoxMouseDown($event,'ne')" style="position:absolute;right:-9px;top:-9px;width:18px;height:18px;border-radius:50%;border:3px solid #fff;background:#d1d5db;cursor:nesw-resize;padding:0"></button>
+          <button type="button" aria-label="Resize bottom left" (mousedown)="onCropBoxMouseDown($event,'sw')" style="position:absolute;left:-9px;bottom:-9px;width:18px;height:18px;border-radius:50%;border:3px solid #fff;background:#d1d5db;cursor:nesw-resize;padding:0"></button>
+          <button type="button" aria-label="Resize bottom right" (mousedown)="onCropBoxMouseDown($event,'se')" style="position:absolute;right:-9px;bottom:-9px;width:18px;height:18px;border-radius:50%;border:3px solid #fff;background:#d1d5db;cursor:nwse-resize;padding:0"></button>
+          <button type="button" aria-label="Resize top" (mousedown)="onCropBoxMouseDown($event,'n')" style="position:absolute;left:calc(50% - 8px);top:-9px;width:16px;height:16px;border-radius:50%;border:3px solid #fff;background:#d1d5db;cursor:ns-resize;padding:0"></button>
+          <button type="button" aria-label="Resize bottom" (mousedown)="onCropBoxMouseDown($event,'s')" style="position:absolute;left:calc(50% - 8px);bottom:-9px;width:16px;height:16px;border-radius:50%;border:3px solid #fff;background:#d1d5db;cursor:ns-resize;padding:0"></button>
+          <button type="button" aria-label="Resize left" (mousedown)="onCropBoxMouseDown($event,'w')" style="position:absolute;top:calc(50% - 8px);left:-9px;width:16px;height:16px;border-radius:50%;border:3px solid #fff;background:#d1d5db;cursor:ew-resize;padding:0"></button>
+          <button type="button" aria-label="Resize right" (mousedown)="onCropBoxMouseDown($event,'e')" style="position:absolute;top:calc(50% - 8px);right:-9px;width:16px;height:16px;border-radius:50%;border:3px solid #fff;background:#d1d5db;cursor:ew-resize;padding:0"></button>
         </div>
 
-        <!-- Drag instruction tag -->
         <div style="position:absolute;bottom:10px;left:12px;background:rgba(15,23,42,0.75);color:#fff;font-size:0.75rem;padding:4px 10px;border-radius:4px;pointer-events:none;backdrop-filter:blur(4px)">
-          ✋ Drag image to position · Use slider below to zoom
+          ✋ Drag the crop box · Resize using the white handles
         </div>
       </div>
 
-      <!-- Controls: Zoom Slider and Reset -->
       <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;background:#f8fafc;padding:12px 18px;border-radius:8px;border:1px solid #e2e8f0;flex-wrap:wrap">
-        <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:240px">
-          <span style="font-size:0.82rem;font-weight:700;color:#334155;white-space:nowrap">🔍 Zoom ({{cropZoom | number:'1.2-2'}}x):</span>
-          <input type="range" min="1.0" max="3.0" step="0.05" [(ngModel)]="cropZoom" style="flex:1;cursor:pointer">
-        </div>
+        <span style="font-size:0.82rem;font-weight:700;color:#334155">Selected crop: {{cropWidth | number:'1.0-0'}} × {{cropHeight | number:'1.0-0'}} px preview · Output {{getCropOutputLabel()}}</span>
         <button type="button" class="secondary" (click)="resetCropTransform()" style="padding:6px 14px;font-size:0.8rem">
-          ↺ Reset Framing
+          ↺ Reset Crop Area
         </button>
       </div>
 
@@ -982,12 +971,16 @@ const authInterceptor=(req:any,next:any)=>{
   </section>
 </div>
 }
+@if(modal()?.type==='purchaseOrder'){<div class="overlay"><section class="modal"><div class="modal-head"><div><p class="eyebrow">PROCUREMENT</p><h2>{{purchaseOrderDraft.id?'Edit Purchase Order':'New Purchase Order'}}</h2></div><button type="button" (click)="closeModal()">×</button></div><form (ngSubmit)="savePurchaseOrder()" class="form-grid"><label>Vendor name *<input name="povendor" [(ngModel)]="purchaseOrderDraft.vendorName" required></label><label>Vendor email<input name="poemail" type="email" [(ngModel)]="purchaseOrderDraft.vendorEmail"></label><label>Vendor phone<input name="pophone" [(ngModel)]="purchaseOrderDraft.vendorPhone"></label><label>Expected delivery<input name="poexpected" type="date" [(ngModel)]="purchaseOrderDraft.expectedOn"></label><label class="full">Vendor address<textarea name="poaddr" rows="3" [(ngModel)]="purchaseOrderDraft.vendorAddress"></textarea></label><label>Ship to name<input name="poshipname" [(ngModel)]="purchaseOrderDraft.shipToName"></label><label>Ship to phone<input name="poshipphone" [(ngModel)]="purchaseOrderDraft.shipToPhone"></label><label class="full">Ship to address<textarea name="poshipaddr" rows="3" [(ngModel)]="purchaseOrderDraft.shipToAddress"></textarea></label><div class="full" style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:8px;padding:16px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><strong>Purchase order items</strong><button type="button" class="secondary" (click)="addPurchaseOrderLine()">＋ Add item</button></div>@for(item of purchaseOrderDraft.lineItems;track $index;let idx=$index){<div style="display:grid;grid-template-columns:1.8fr 1fr 80px 120px 110px 38px;gap:8px;align-items:center;margin-bottom:8px"><input [(ngModel)]="item.description" [name]="'podesc_'+idx" required placeholder="Description"><input [(ngModel)]="item.itemNumber" [name]="'posku_'+idx" placeholder="Item / SKU"><input type="number" min="1" [(ngModel)]="item.quantity" [name]="'poqty_'+idx"><input type="number" min="0" step="0.01" [(ngModel)]="item.unitPrice" [name]="'poprice_'+idx"><strong>{{((item.quantity||0)*(item.unitPrice||0))|currency:'GBP'}}</strong><button type="button" class="delete-btn" [disabled]="purchaseOrderDraft.lineItems.length<=1" (click)="removePurchaseOrderLine(idx)">×</button></div>}<div style="display:flex;justify-content:flex-end;gap:16px;border-top:1px solid #cbd5e1;padding-top:12px"><label>VAT (£)<input name="potax" type="number" min="0" step="0.01" [(ngModel)]="purchaseOrderDraft.tax"></label><label>Shipping (£)<input name="poshipping" type="number" min="0" step="0.01" [(ngModel)]="purchaseOrderDraft.shipping"></label><strong style="align-self:center">Total: {{purchaseOrderTotal|currency:'GBP'}}</strong></div></div><label>Status<select name="postatus" [(ngModel)]="purchaseOrderDraft.status"><option>DRAFT</option><option>APPROVED</option><option>ORDERED</option><option>PART_RECEIVED</option><option>RECEIVED</option><option>CANCELLED</option></select></label><label class="full">Notes<textarea name="ponotes" rows="3" [(ngModel)]="purchaseOrderDraft.notes"></textarea></label><div class="form-actions full"><button type="button" class="secondary" (click)="closeModal()">Cancel</button><button class="primary" [disabled]="savingPurchaseOrder()">{{savingPurchaseOrder()?'Saving…':(purchaseOrderDraft.id?'Update Purchase Order':'Create Purchase Order')}}</button></div></form></section></div>}
+@if(modal()?.type==='purchaseOrderDetails'){<div class="overlay"><section class="modal"><div class="quote-doc-container"><div class="quote-doc-header"><div class="quote-doc-brand"><img src="/thp-logo.jpg" alt="THP Logo"><div><strong>THE HEATING & PLUMBING</strong><br><small>Dignitree Ltd • UK Specialist Heating & Plumbing</small></div></div><div class="quote-doc-meta"><h2>PURCHASE ORDER</h2><h3>{{selectedPurchaseOrder?.poNumber}}</h3><p>Date: {{selectedPurchaseOrder?.createdAt|date:'mediumDate'}}</p><p>Expected: {{selectedPurchaseOrder?.expectedOn|date:'mediumDate'}}</p><p>Status: {{selectedPurchaseOrder?.status}}</p></div></div><div class="quote-doc-addresses"><div><h4>VENDOR</h4><strong>{{selectedPurchaseOrder?.vendorName}}</strong><p>{{selectedPurchaseOrder?.vendorEmail}}</p><p>{{selectedPurchaseOrder?.vendorPhone}}</p><p style="white-space:pre-line">{{selectedPurchaseOrder?.vendorAddress}}</p></div><div><h4>SHIP TO</h4><strong>{{selectedPurchaseOrder?.shipToName}}</strong><p>{{selectedPurchaseOrder?.shipToPhone}}</p><p style="white-space:pre-line">{{selectedPurchaseOrder?.shipToAddress}}</p></div></div><table class="quote-doc-table"><thead><tr><th>Item Number</th><th>Description</th><th>Qty</th><th>Unit Price</th><th>Total</th></tr></thead><tbody>@for(item of parseQuoteLines(selectedPurchaseOrder?.lineItemsJson);track $index){<tr><td>{{item.itemNumber||'—'}}</td><td>{{item.description}}</td><td>{{item.quantity}}</td><td>{{item.unitPrice|currency:'GBP'}}</td><td><strong>{{item.quantity*item.unitPrice|currency:'GBP'}}</strong></td></tr>}</tbody></table><div class="quote-doc-total-box"><div><p>Subtotal: {{selectedPurchaseOrder?.subtotalMinor/100|currency:'GBP'}}</p><p>VAT: {{selectedPurchaseOrder?.taxMinor/100|currency:'GBP'}}</p><p>Shipping: {{selectedPurchaseOrder?.shippingMinor/100|currency:'GBP'}}</p><strong>TOTAL: {{selectedPurchaseOrder?.totalMinor/100|currency:'GBP'}}</strong></div></div><div class="form-actions btn-no-print"><button type="button" class="secondary" (click)="closeModal()">Close</button><button type="button" class="primary" (click)="printDocument()">🖨 Download PDF / Print</button></div></div></section></div>}
 @if(toast()){<div class="toast">✓ {{toast()}}</div>}
 `})
 class App {
  @ViewChild('globalSearchInput') globalSearchInput?:ElementRef<HTMLInputElement>;
+  readonly todayLabel=new Intl.DateTimeFormat('en-GB',{weekday:'long',day:'numeric',month:'long'}).format(new Date()).toUpperCase();
   private http=inject(HttpClient);private sanitizer=inject(DomSanitizer);private searchTimer?:ReturnType<typeof setTimeout>; user=signal<User|null>((()=>{try{const u=JSON.parse(sessionStorage.getItem('hearth_admin_user')||localStorage.getItem('hearth_admin_user')||'null');if(u){if(!u.name||u.name==='undefined'){u.name=u.fullName||u.email?.split('@')[0]||'Store Administrator';}return u;}}catch(_){}return null;})()); view=signal<View>('dashboard');navOpen=signal(false);loading=signal(false);saving=signal(false);uploadingImage=signal(false);uploadingPdf=signal(false);contentEditorTab:'editor'|'preview'='editor';inventorySearch='';onlyLowStock=false;importingProducts=signal(false);importingImages=signal(false);syncingAll=signal(false);syncingProductId=signal<number|null>(null);bulkImportMode=signal<'csv'|'excel'>('csv');parsedCsvProducts=signal<any[]>([]);csvRawFilename=signal('');csvAutoPublish=signal(true);uploadedMediaList=signal<any[]>([]);loadingMedia=signal(false);uploadingBulkImages=signal(false);bulkImageResults=signal<any[]>([]);mediaManagerTab=signal<'upload'|'zip'|'gallery'>('upload');selectedMediaUrl=signal('');assignTargetProductId:number|null=null;assigningImage=signal(false);allProductsList=signal<Product[]>([]);error=signal('');toast=signal('');dashboardData=signal<any>(null);imageCoverage=signal<any>(null);products=signal<Product[]>([]);productPage=signal(0);productTotalPages=signal(1);productTotalElements=signal(0);readonly productPageSize=10;customers=signal<any[]>([]);quotes=signal<any[]>([]);orders=signal<any[]>([]);promotions=signal<any[]>([]);inquiries=signal<any[]>([]);selectedInquiry=signal<any>(null);inquiryResolutionNote='';inquiryDetailStatus='CONTACTED';reviews=signal<any[]>([]);reviewFilter='';inquiryFilter='';inquirySearch='';orderDraft:any={};promoDraft:any={};promoMinBasket=0;inventory=signal<any[]>([]);contents=signal<any[]>([]);blogs=signal<AdminBlogPost[]>([]);loadingBlogs=signal(false);syncingAllBlogs=signal(false);savingBlog=signal(false);blogSearchQuery="";blogCategoryFilter="";blogStatusFilter="";blogDraft:AdminBlogPost=this.emptyBlog();audits=signal<any[]>([]);auditPage=signal(0);auditTotalPages=signal(1);auditTotalElements=signal(0);readonly auditPageSize=10;modal=signal<any>(null);searchOpen=signal(false);searching=signal(false);searchResults=signal<any[]>([]);notificationsOpen=signal(false);profileOpen=signal(false);unreadNotifications=signal(true);email='';password='';showPassword=false;globalSearch='';query='';productStatus='';productPrice=0;productCost=0;quoteSubtotal=0;quoteTax=0;selectedImageName='';
-  productDraft:Product=this.emptyProduct();customerDraft:any={};quoteDraft:any={};
+  productDraft:Product=this.emptyProduct();customerDraft:any={};quoteDraft:any={};purchaseOrderDraft:any={};
+  purchaseOrders=signal<any[]>([]);savingPurchaseOrder=signal(false);selectedPurchaseOrder:any=null;
   brands = signal<any[]>([]); loadingBrands = signal<boolean>(false); savingQuote = signal<boolean>(false); sendingQuoteEmail = signal<boolean>(false);
   companyList = signal<any[]>([]); loadingCompanies = signal<boolean>(false); savingCompany = signal<boolean>(false);
   companyDraft: any = this.emptyCompany(); reviewDraft: any = this.emptyReview(); savingReview = signal<boolean>(false);
@@ -997,14 +990,31 @@ class App {
   recentlyUploadedPickerImages = signal<any[]>([]);
   productDocuments: Array<{ title: string; url: string }> = []; uploadingDoc = signal<boolean>(false);
   banners = signal<any[]>([]); loadingBanners = signal<boolean>(false); savingBanner = signal<boolean>(false); syncingBanners = signal<boolean>(false);
-  bannerSectionFilter: string = 'ALL';
-  setBannerFilter(f: string) { this.bannerSectionFilter = f; }
-  filteredBanners = computed(() => {
+  bannerSectionFilter: 'ALL' | 'BANNER' | 'CAMPAIGN_BANNER' = 'ALL';
+  failedBannerImages = signal<Set<string>>(new Set());
+  setBannerFilter(f: 'ALL' | 'BANNER' | 'CAMPAIGN_BANNER') { this.bannerSectionFilter = f; }
+  filteredBanners = () => {
     const f = this.bannerSectionFilter;
     const list = this.banners();
     if (f === 'ALL') return list;
     return list.filter(b => (b.type || 'BANNER') === f);
-  });
+  };
+  bannerImageSrc(url: string | null | undefined) {
+    const value = (url || '').trim();
+    if (!value) return '';
+    if (value.startsWith('/product-images/')) return value.replace('/product-images/', '/api/product-images/');
+    return value;
+  }
+  bannerImageHasFailed(banner: any) { return this.failedBannerImages().has((banner?.imageUrl || '').trim()); }
+  onBannerImageError(url: string | null | undefined) {
+    const value = (url || '').trim();
+    if (!value) return;
+    this.failedBannerImages.update(current => {
+      const next = new Set(current);
+      next.add(value);
+      return next;
+    });
+  }
   bannerDraft: any = { id: null, type: 'BANNER', title: '', body: '', tag: '✦ BRITISH HEATING & LUXURY BATHROOMS · 2026', imageUrl: '', buttonText: 'Explore Heating Range →', linkUrl: '#new-arrivals', sortOrder: 1, status: 'PUBLISHED' };
   sendingCustomerNotification = signal<boolean>(false);
   assignProductSearch = signal<string>('');
@@ -1119,8 +1129,8 @@ class App {
     { filename: 'Modern Towel Rail Chrome', url: 'https://images.unsplash.com/photo-1507652313519-d4e9174996dd?auto=format&fit=crop&w=800&q=80' },
     { filename: 'Underfloor Heating Manifold', url: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?auto=format&fit=crop&w=800&q=80' }
   ];contentDraft:any={id:null,title:'',slug:'',type:'PAGE',status:'PUBLISHED',seoTitle:'',body:'',pdfUrl:'',pdfFilename:''};stockDraft:any={type:'ADD',quantity:1,warehouse:'Main Warehouse',reason:''};
-  nav: {label: string, items: {view: View, name: string, icon: string, badge?: string}[]}[] = [{label:'OVERVIEW',items:[{view:'dashboard' as View,name:'Dashboard',icon:'nav-dashboard'},{view:'reports' as View,name:'Reports & Analytics',icon:'nav-reports'}]},{label:'CATALOGUE',items:[{view:'products' as View,name:'Products',icon:'nav-products'},{view:'navigation' as View,name:'Navigation & Filters',icon:'nav-content'},{view:'companies' as View,name:'Brands & Companies',icon:'nav-inventory'},{view:'inventory' as View,name:'Inventory Positions',icon:'nav-inventory'},{view:'banners' as View,name:'Banners & Campaigns',icon:'nav-banners'},{view:'content' as View,name:'Static Content & Guides',icon:'nav-content'},{view:'blogs' as View,name:'Blog & Advice',icon:'nav-blogs'}]},{label:'COMMERCE',items:[{view:'orders' as View,name:'Orders & Fulfilment',icon:'nav-orders'},{view:'quotes' as View,name:'Quotations',icon:'nav-quotes'},{view:'promotions' as View,name:'Discounts & Coupons',icon:'nav-promotions'},{view:'reviews' as View,name:'Customer Reviews & Ratings',icon:'nav-reviews'},{view:'inquiries' as View,name:'Support & Technical Inquiries',icon:'nav-inquiries'},{view:'customers' as View,name:'Customers',icon:'nav-customers'}]},{label:'GOVERNANCE',items:[{view:'audit' as View,name:'Audit Log',icon:'nav-audit'}]}];
- initials=computed(()=>{const raw=this.user()?.name||this.user()?.email||'Store Administrator';return (raw||'SA').split(/\s+/).filter(Boolean).map((x:string)=>x[0]).join('').slice(0,2).toUpperCase()||'SA';});firstName=computed(()=>{const raw=this.user()?.name||'Administrator';return (raw||'Admin').split(/\s+/).filter(Boolean)[0]||'Administrator';});roleLabel=computed(()=>this.pretty(this.user()?.role||'ADMIN'));productPages=computed(()=>this.pageNumbers(this.productPage(),this.productTotalPages()));productRangeStart=computed(()=>this.productTotalElements()?this.productPage()*this.productPageSize+1:0);productRangeEnd=computed(()=>Math.min((this.productPage()+1)*this.productPageSize,this.productTotalElements()));auditPages=computed(()=>this.pageNumbers(this.auditPage(),this.auditTotalPages()));auditRangeStart=computed(()=>this.auditTotalElements()?this.auditPage()*this.auditPageSize+1:0);auditRangeEnd=computed(()=>Math.min((this.auditPage()+1)*this.auditPageSize,this.auditTotalElements()));quoteValue=computed(()=>this.quotes().reduce((s,q)=>s+q.totalMinor,0));
+  nav: {label: string, items: {view: View, name: string, icon: string, badge?: string}[]}[] = [{label:'OVERVIEW',items:[{view:'dashboard' as View,name:'Dashboard',icon:'nav-dashboard'},{view:'reports' as View,name:'Reports & Analytics',icon:'nav-reports'}]},{label:'CATALOGUE',items:[{view:'products' as View,name:'Products',icon:'nav-products'},{view:'navigation' as View,name:'Navigation & Filters',icon:'nav-content'},{view:'companies' as View,name:'Brands & Companies',icon:'nav-inventory'},{view:'inventory' as View,name:'Inventory Positions',icon:'nav-inventory'},{view:'banners' as View,name:'Banners & Campaigns',icon:'nav-banners'},{view:'content' as View,name:'Static Content & Guides',icon:'nav-content'},{view:'blogs' as View,name:'Blog & Advice',icon:'nav-blogs'}]},{label:'COMMERCE',items:[{view:'orders' as View,name:'Orders & Fulfilment',icon:'nav-orders'},{view:'quotes' as View,name:'Quotations',icon:'nav-quotes'},{view:'purchaseOrders' as View,name:'Purchase Orders',icon:'nav-quotes'},{view:'promotions' as View,name:'Discounts & Coupons',icon:'nav-promotions'},{view:'reviews' as View,name:'Customer Reviews & Ratings',icon:'nav-reviews'},{view:'inquiries' as View,name:'Support & Technical Inquiries',icon:'nav-inquiries'},{view:'customers' as View,name:'Customers',icon:'nav-customers'}]},{label:'GOVERNANCE',items:[{view:'audit' as View,name:'Audit Log',icon:'nav-audit'}]}];
+ initials=computed(()=>{const raw=this.user()?.name||this.user()?.email||'Store Administrator';return (raw||'SA').split(/\s+/).filter(Boolean).map((x:string)=>x[0]).join('').slice(0,2).toUpperCase()||'SA';});firstName=computed(()=>{const raw=this.user()?.name||'Administrator';return (raw||'Admin').split(/\s+/).filter(Boolean)[0]||'Administrator';});roleLabel=computed(()=>this.pretty(this.user()?.role||'ADMIN'));productPages=computed(()=>this.pageNumbers(this.productPage(),this.productTotalPages()));productRangeStart=computed(()=>this.productTotalElements()?this.productPage()*this.productPageSize+1:0);productRangeEnd=computed(()=>Math.min((this.productPage()+1)*this.productPageSize,this.productTotalElements()));auditPages=computed(()=>this.pageNumbers(this.auditPage(),this.auditTotalPages()));auditRangeStart=computed(()=>this.auditTotalElements()?this.auditPage()*this.auditPageSize+1:0);auditRangeEnd=computed(()=>Math.min((this.auditPage()+1)*this.auditPageSize,this.auditTotalElements()));quoteValue=computed(()=>this.quotes().reduce((s,q)=>s+q.totalMinor,0));purchaseOrderValue=computed(()=>this.purchaseOrders().reduce((s,po)=>s+(po.totalMinor||0),0));openPurchaseOrders=computed(()=>this.purchaseOrders().filter(po=>!['RECEIVED','CANCELLED'].includes(po.status)).length);
   categoryMatches(itemCat: string, filterCat: string): boolean {
     if (!filterCat || !filterCat.trim()) return true;
     if (!itemCat || !itemCat.trim()) return false;
@@ -1221,7 +1231,7 @@ class App {
 
     return list;
   });
- constructor(){if(this.user())this.loadDashboard();window.addEventListener('admin-rate-limit',(e:any)=>{const secs=e.detail?.retryAfter||60;this.notify(`Rate limit reached (429). Please wait ${secs}s before retrying.`);});}
+ constructor(){window.addEventListener('admin-rate-limit',(e:any)=>{const secs=e.detail?.retryAfter||60;this.notify(`Rate limit reached (429). Please wait ${secs}s before retrying.`);});window.addEventListener('admin-auth-expired',()=>{this.clearAdminSession();this.error.set('Your admin session expired. Please sign in again to load the latest data.');});if(this.user())this.loadDashboard();}
  addVariant(){this.productDraft.variants.push({ean:'',variantSku:this.productDraft.sku,configCode:'',colour:'',baseColour:'',colourCode:'',paintType:'',panel:'',priceMinor:Math.round(this.productPrice*100),costMinor:Math.round(this.productCost*100),discountPercent:this.productDraft.discountPercent||0,stock:0,availability:'LEAD TIME',productionTime:'',leadTime:''})}
  removeVariant(index:number){this.productDraft.variants.splice(index,1)}
  toMinor(value:number|string){const parsed=Number(value);return Number.isFinite(parsed)?Math.round(parsed*100):0}
@@ -1257,7 +1267,7 @@ class App {
  login(){this.loading.set(true);this.error.set('');this.http.post<any>('/api/auth/login',{email:this.email,password:this.password}).pipe(finalize(()=>this.loading.set(false)),catchError(e=>{const msg=e.error?.message||(typeof e.error==='string'&&e.error.length<120?e.error:'')||'Backend service is waking up on Render. Please retry in a few moments.';this.error.set(msg);return of(null)})).subscribe(r=>{if(!r)return;sessionStorage.setItem('hearth_admin_token',r.token);localStorage.setItem('hearth_admin_token',r.token);const displayName=r.fullName||r.name||(r.email?r.email.split('@')[0]:'')||'Store Administrator';const u={name:displayName,email:r.email||this.email,role:r.role||'ADMIN'};sessionStorage.setItem('hearth_admin_user',JSON.stringify(u));localStorage.setItem('hearth_admin_user',JSON.stringify(u));this.user.set(u);this.loadDashboard();this.loadProducts();this.loadNavigationMenus();})}
  logout(){this.http.post('/api/auth/logout',{}).pipe(catchError(()=>of(null)),finalize(()=>this.clearAdminSession())).subscribe()}
  clearAdminSession(){sessionStorage.removeItem('hearth_admin_token');localStorage.removeItem('hearth_admin_token');sessionStorage.removeItem('hearth_admin_user');localStorage.removeItem('hearth_admin_user');this.closeHeaderMenus();this.user.set(null)}
-  go(v:View){this.view.set(v);this.navOpen.set(false);this.closeHeaderMenus();this.query='';if(v==='dashboard')this.loadDashboard();if(v==='navigation')this.loadNavigationMenus();if(v==='companies'){this.loadCompanies();this.loadBrands();}if(v==='products'){this.loadCompanies();this.loadProducts();}if(v==='customers')this.loadCustomers();if(v==='quotes'){this.loadQuotes();this.loadAllProductsForAssignment();}if(v==='orders')this.loadOrders();if(v==='promotions')this.loadPromotions();if(v==='inventory'){this.loadProducts();this.loadInventory();this.loadAllProductsForAssignment();}if(v==='inquiries')this.loadInquiries();if(v==='reviews')this.loadAdminReviews();if(v==='content')this.loadContent();if(v==='banners')this.loadBanners();if(v==='blogs')this.loadBlogs();if(v==='audit')this.loadAudit()}
+  go(v:View){this.view.set(v);this.navOpen.set(false);this.closeHeaderMenus();this.query='';if(v==='dashboard')this.loadDashboard();if(v==='navigation')this.loadNavigationMenus();if(v==='companies'){this.loadCompanies();this.loadBrands();}if(v==='products'){this.loadCompanies();this.loadProducts();}if(v==='customers')this.loadCustomers();if(v==='quotes'){this.loadQuotes();this.loadAllProductsForAssignment();}if(v==='purchaseOrders')this.loadPurchaseOrders();if(v==='orders')this.loadOrders();if(v==='promotions')this.loadPromotions();if(v==='inventory'){this.loadProducts();this.loadInventory();this.loadAllProductsForAssignment();}if(v==='inquiries')this.loadInquiries();if(v==='reviews')this.loadAdminReviews();if(v==='content')this.loadContent();if(v==='banners')this.loadBanners();if(v==='blogs')this.loadBlogs();if(v==='audit')this.loadAudit()}
   loadAdminReviews(){this.fetch('/api/reviews?status='+encodeURIComponent(this.reviewFilter),(r:any)=>this.reviews.set(r||[]))}
   approveAdminReview(r:any){this.http.post<any>(`/api/reviews/${r.id}/approve`,{}).subscribe(()=>{this.notify('Approved review by '+r.author);this.loadAdminReviews()})}
   rejectAdminReview(r:any){this.http.post<any>(`/api/reviews/${r.id}/reject`,{}).subscribe(()=>{this.notify('Rejected review by '+r.author);this.loadAdminReviews()})}
@@ -1272,6 +1282,31 @@ class App {
  parseCsv(text:string){const rows:string[][]=[];let row:string[]=[],cell='',quoted=false;for(let i=0;i<text.length;i++){const char=text[i];if(char==='"'){if(quoted&&text[i+1]==='"'){cell+='"';i++}else quoted=!quoted}else if(char===','&&!quoted){row.push(cell);cell=''}else if((char==='\n'||char==='\r')&&!quoted){if(char==='\r'&&text[i+1]==='\n')i++;row.push(cell);if(row.some(x=>x.length))rows.push(row);row=[];cell=''}else cell+=char}row.push(cell);if(row.some(x=>x.length))rows.push(row);return rows}
  saveProduct(){this.saving.set(true);this.productDraft.priceMinor=Math.round(this.productPrice*100);this.productDraft.discountPercent=Number(this.productDraft.discountPercent!=null?this.productDraft.discountPercent:0);this.productDraft.documentsJson=JSON.stringify((this.productDocuments||[]).filter(d=>(d.title&&d.title.trim())||(d.url&&d.url.trim())));if(this.productDraft.variants.length){if(!this.productDraft.unlimitedStock){this.productDraft.stock=this.productDraft.variants.reduce((sum,v)=>sum+(v.unlimitedStock?0:(Number(v.stock)||0)),0);}this.productDraft.variants.forEach(v=>{v.variantSku=v.variantSku.trim();v.ean=(v.ean||'').replace(/\D/g,'');v.priceMinor=Number(v.priceMinor)||this.productDraft.priceMinor;v.discountPercent=Number(v.discountPercent)||0;if(v.unlimitedStock)v.stock=9999;})}const id=this.productDraft.id;this.http.request(id?'PUT':'POST',id?`/api/products/${id}`:'/api/products',{body:this.productDraft}).pipe(finalize(()=>this.saving.set(false)),catchError(e=>{this.notify(e.error?.message||'Product could not be saved');return of(null)})).subscribe(r=>{if(r){this.closeModal();this.notify('Product saved and synced to storefront');this.loadProducts()}})}
  newCustomer(){this.customerDraft={name:'',email:'',phone:'',city:'',status:'ACTIVE',marketingConsent:false,adminNotes:''};this.modal.set({type:'customer',kicker:'CUSTOMERS',title:'Create customer'})} saveCustomer(){this.http.post('/api/customers',this.customerDraft).subscribe(()=>{this.closeModal();this.notify('Customer created');this.loadCustomers()})} toggleCustomerStatus(c:any){const nextAction=c.status==='ACTIVE'?'deactivate':'activate';if(!confirm(`Are you sure you want to ${nextAction} customer "${c.name}" (${c.email})?`))return;this.http.put<any>(`/api/customers/${c.id}/toggle-status`,{}).subscribe({next:(res)=>{this.notify(`Customer ${res.name} is now ${res.status} (synced to storefront)`);this.loadCustomers()},error:(e)=>this.notify(e.error?.message||'Failed to update customer status')})}
+ loadPurchaseOrders(){this.fetch('/api/purchase-orders',this.purchaseOrders)}
+
+ newPurchaseOrder(){
+   this.purchaseOrderDraft={vendorName:'',vendorEmail:'',vendorPhone:'',vendorAddress:'',shipToName:'The Heating & Plumbing',shipToPhone:'+44 7404 095699',shipToAddress:'First Floor 5-6 Chalice Close, Wallington, England, SM6 9RU',expectedOn:'',status:'DRAFT',notes:'',tax:0,shipping:0,lineItems:[{description:'',itemNumber:'',quantity:1,unitPrice:0}]};
+   this.modal.set({type:'purchaseOrder'});
+ }
+ editPurchaseOrder(po:any){
+   this.purchaseOrderDraft={...po,tax:(po.taxMinor||0)/100,shipping:(po.shippingMinor||0)/100,lineItems:this.parseQuoteLines(po.lineItemsJson)};
+   if(!this.purchaseOrderDraft.lineItems.length)this.purchaseOrderDraft.lineItems=[{description:'',itemNumber:'',quantity:1,unitPrice:0}];
+   this.modal.set({type:'purchaseOrder'});
+ }
+ addPurchaseOrderLine(){this.purchaseOrderDraft.lineItems.push({description:'',itemNumber:'',quantity:1,unitPrice:0})}
+ removePurchaseOrderLine(index:number){if(this.purchaseOrderDraft.lineItems.length>1)this.purchaseOrderDraft.lineItems.splice(index,1)}
+ get purchaseOrderTotal(){return (this.purchaseOrderDraft.lineItems||[]).reduce((sum:number,item:any)=>sum+(Number(item.quantity)||0)*(Number(item.unitPrice)||0),0)+(Number(this.purchaseOrderDraft.tax)||0)+(Number(this.purchaseOrderDraft.shipping)||0)}
+ savePurchaseOrder(){
+   if(!this.purchaseOrderDraft.vendorName){this.notify('Vendor name is required');return}
+   const subtotal=(this.purchaseOrderDraft.lineItems||[]).reduce((sum:number,item:any)=>sum+(Number(item.quantity)||0)*(Number(item.unitPrice)||0),0);
+   const payload={...this.purchaseOrderDraft,lineItemsJson:JSON.stringify(this.purchaseOrderDraft.lineItems||[]),subtotalMinor:Math.round(subtotal*100),taxMinor:Math.round((Number(this.purchaseOrderDraft.tax)||0)*100),shippingMinor:Math.round((Number(this.purchaseOrderDraft.shipping)||0)*100),totalMinor:Math.round(this.purchaseOrderTotal*100)};
+   this.savingPurchaseOrder.set(true);
+   const request$=payload.id?this.http.put<any>('/api/purchase-orders/'+payload.id,payload):this.http.post<any>('/api/purchase-orders',payload);
+   request$.pipe(finalize(()=>this.savingPurchaseOrder.set(false))).subscribe({next:(saved)=>{this.closeModal();this.notify((payload.id?'Updated ':'Created ')+(saved.poNumber||'purchase order'));this.loadPurchaseOrders()},error:(e)=>this.notify(e.error?.message||'Could not save purchase order')});
+ }
+ viewPurchaseOrder(po:any){this.selectedPurchaseOrder=po;this.modal.set({type:'purchaseOrderDetails'})}
+ deletePurchaseOrder(po:any){if(confirm(`Delete purchase order ${po.poNumber}?`))this.http.delete('/api/purchase-orders/'+po.id).subscribe({next:()=>{this.notify('Purchase order deleted');this.loadPurchaseOrders()},error:(e)=>this.notify(e.error?.message||'Could not delete purchase order')})}
+
  newQuote(){
    this.quoteProductFilter.set('');
    this.quoteDraft = {
@@ -1919,7 +1954,9 @@ exportMediaManifestCsv(){
   this.notify('Media manifest CSV downloaded');
 }
  newOrder(){this.notify('Manual order workflow is ready for line-item integration')}
- openStock(productId?:number){this.loadAllProductsForAssignment();if(!this.products().length)this.loadProducts();const list=this.allProductsList().length?this.allProductsList():this.products();const targetId=productId||list[0]?.id;this.stockDraft={productId:targetId,type:'ADD',quantity:1,warehouse:'Main Warehouse',reason:'Stock receipt',reference:''};this.modal.set({type:'stock',kicker:'INVENTORY',title:'Record stock movement'})} saveStock(){if(!this.stockDraft.productId){this.notify('Please select a product');return}if(!this.stockDraft.quantity||this.stockDraft.quantity<=0){this.notify('Quantity must be greater than 0');return}if(!this.stockDraft.reason||!this.stockDraft.reason.trim()){this.notify('Reason / note is required');return}this.saving.set(true);this.http.post<any>(`/api/inventory/${this.stockDraft.productId}/adjust`,this.stockDraft).pipe(finalize(()=>this.saving.set(false)),catchError(e=>{this.notify(e.error?.message||'Stock adjustment failed');return of(null)})).subscribe(r=>{if(r){this.closeModal();this.notify(`✓ Stock updated: now ${r.afterQuantity} units (synced to storefront)`);this.loadProducts();this.loadAllProductsForAssignment();this.loadInventory()}})} filteredInventoryProducts(){const list=this.allProductsList().length?this.allProductsList():this.products();const q=this.inventorySearch.toLowerCase().trim();return list.filter(p=>{if(this.onlyLowStock&&p.stock>(p.lowStockThreshold||5))return false;if(!q)return true;return(p.name&&p.name.toLowerCase().includes(q))||(p.sku&&p.sku.toLowerCase().includes(q))})}
+ selectedStockProduct():Product|undefined{const list=this.allProductsList().length?this.allProductsList():this.products();return list.find(p=>p.id===this.stockDraft.productId)}
+ onStockProductChange(productId:number|null){this.stockDraft.productId=productId;const p=this.selectedStockProduct();this.stockDraft.variantId=p?.variants?.length===1?p.variants[0].id:null;this.stockDraft.variantSku=p?.variants?.length===1?p.variants[0].variantSku:null}
+ openStock(productId?:number){this.loadAllProductsForAssignment();if(!this.products().length)this.loadProducts();const list=this.allProductsList().length?this.allProductsList():this.products();const targetId=productId||list[0]?.id;const target=list.find(p=>p.id===targetId);this.stockDraft={productId:targetId,variantId:target?.variants?.length===1?target.variants[0].id:null,variantSku:target?.variants?.length===1?target.variants[0].variantSku:null,type:'ADD',quantity:1,warehouse:'Main Warehouse',reason:'Stock receipt',reference:''};this.modal.set({type:'stock',kicker:'INVENTORY',title:'Record stock movement'})} saveStock(){if(!this.stockDraft.productId){this.notify('Please select a product');return}const p=this.selectedStockProduct();if((p?.variants?.length||0)>1&&!this.stockDraft.variantId){this.notify('Please select the exact colour / variant to adjust');return}const v=p?.variants?.find(x=>x.id===this.stockDraft.variantId);this.stockDraft.variantSku=v?.variantSku||null;if(!this.stockDraft.quantity||this.stockDraft.quantity<=0){this.notify('Quantity must be greater than 0');return}if(!this.stockDraft.reason||!this.stockDraft.reason.trim()){this.notify('Reason / note is required');return}this.saving.set(true);this.http.post<any>(`/api/inventory/${this.stockDraft.productId}/adjust`,this.stockDraft).pipe(finalize(()=>this.saving.set(false)),catchError(e=>{this.notify(e.error?.message||'Stock adjustment failed');return of(null)})).subscribe(r=>{if(r){this.closeModal();this.notify(`✓ Stock updated: now ${r.afterQuantity} units (synced to storefront)`);this.loadProducts();this.loadAllProductsForAssignment();this.loadInventory()}})} filteredInventoryProducts(){const list=this.allProductsList().length?this.allProductsList():this.products();const q=this.inventorySearch.toLowerCase().trim();return list.filter(p=>{if(this.onlyLowStock&&p.stock>(p.lowStockThreshold||5))return false;if(!q)return true;return(p.name&&p.name.toLowerCase().includes(q))||(p.sku&&p.sku.toLowerCase().includes(q))})}
  newContent(){this.contentEditorTab='editor';this.contentDraft={id:null,title:'',slug:'',type:'PAGE',status:'PUBLISHED',seoTitle:'',body:'',pdfUrl:'',pdfFilename:''};this.modal.set({type:'content',kicker:'STOREFRONT CRM',title:'Create New Page'})}
  editContent(c:any){this.contentEditorTab='editor';this.contentDraft={...c};this.modal.set({type:'content',kicker:'STOREFRONT CRM',title:'Edit '+c.title})}
  previewCmsHtml(c:any){this.modal.set({type:'htmlViewer',kicker:'CRM HTML VIEWER',title:c.title,data:c})}
@@ -2486,7 +2523,9 @@ exportMediaManifestCsv(){
 
   newNavMenu() {
     this.navMenuDraft = this.emptyNavMenu();
-    this.navMenuDraft.sortOrder = this.navMenus().length + 1;
+    this.navMenuDraft.sortOrder = (this.navMenus().length
+      ? Math.max(...this.navMenus().map((m: any) => Number(m.sortOrder) || 0))
+      : 0) + 1;
     this.navMenuDraftTab = "general";
     this.modal.set({
       title: "Add New Storefront Navigation Menu",
@@ -2668,34 +2707,32 @@ exportMediaManifestCsv(){
 
   moveNavMenuUp(m: any) {
     if (this.isFirstNavMenu(m)) return;
+    const previous = this.navMenus().map(item => ({...item}));
     this.swapNavMenusLocally(m, -1);
-    if (m.id) {
-      this.http.post<any[]>(`/api/navigation/${m.id}/move-up`, {}).subscribe({
-        next: (res) => {
-          if (Array.isArray(res) && res.length) {
-            this.navMenus.set(res);
-          }
-          this.notify(`Moved "${m.title}" up in priority`);
-        },
-        error: () => this.loadNavigationMenus()
-      });
-    }
+    this.persistNavMenuOrder(previous, `Moved "${m.title}" up in priority`);
   }
 
   moveNavMenuDown(m: any) {
     if (this.isLastNavMenu(m)) return;
+    const previous = this.navMenus().map(item => ({...item}));
     this.swapNavMenusLocally(m, 1);
-    if (m.id) {
-      this.http.post<any[]>(`/api/navigation/${m.id}/move-down`, {}).subscribe({
-        next: (res) => {
-          if (Array.isArray(res) && res.length) {
-            this.navMenus.set(res);
-          }
-          this.notify(`Moved "${m.title}" down in priority`);
-        },
-        error: () => this.loadNavigationMenus()
-      });
-    }
+    this.persistNavMenuOrder(previous, `Moved "${m.title}" down in priority`);
+  }
+
+  persistNavMenuOrder(previous: any[], successMessage: string) {
+    const payload = this.navMenus()
+      .filter(item => item.id)
+      .map((item, index) => ({id: item.id, sortOrder: index + 1}));
+    this.http.post<any[]>('/api/navigation/reorder', payload).subscribe({
+      next: res => {
+        if (Array.isArray(res) && res.length) this.loadNavigationMenus();
+        this.notify(`✓ ${successMessage}`);
+      },
+      error: err => {
+        this.navMenus.set(previous);
+        this.notify(err.error?.message || 'Could not change navigation priority');
+      }
+    });
   }
 
   swapNavMenusLocally(m: any, direction: number) {
@@ -3075,14 +3112,24 @@ exportMediaManifestCsv(){
   cropTargetType: 'banner' | 'navCategory' | 'navPromo' | 'subcategory' = 'banner';
   cropTargetItem: any = null;
   cropImageSrc: string = '';
-  cropZoom: number = 1.0;
-  cropPanX: number = 0;
-  cropPanY: number = 0;
+  cropX = 0;
+  cropY = 0;
+  cropWidth = 320;
+  cropHeight = 180;
+  cropDisplayX = 0;
+  cropDisplayY = 0;
+  cropDisplayWidth = 0;
+  cropDisplayHeight = 0;
+  private cropNaturalWidth = 0;
+  private cropNaturalHeight = 0;
   private isDraggingCrop: boolean = false;
   private dragStartX: number = 0;
   private dragStartY: number = 0;
-  private panStartX: number = 0;
-  private panStartY: number = 0;
+  private cropStartX = 0;
+  private cropStartY = 0;
+  private cropStartWidth = 0;
+  private cropStartHeight = 0;
+  private cropAction: 'move'|'nw'|'ne'|'sw'|'se'|'n'|'s'|'e'|'w' = 'move';
 
   onBannerFileSelected(event: Event) {
     const input = event.target as HTMLInputElement;
@@ -3174,9 +3221,6 @@ exportMediaManifestCsv(){
     this.cropImageSrc = src;
     this.cropTargetType = targetType;
     this.cropTargetItem = targetItem;
-    this.cropZoom = 1.0;
-    this.cropPanX = 0;
-    this.cropPanY = 0;
     if (targetType === 'banner') {
       this.cropAspectRatio = this.bannerDraft.type === 'CAMPAIGN_BANNER' ? '16:9' : '16:6';
     } else if (targetType === 'subcategory') {
@@ -3187,15 +3231,18 @@ exportMediaManifestCsv(){
       this.cropAspectRatio = '16:9';
     }
     this.cropModalActive.set(true);
+    // Cached images can finish before Angular observes the load event. Initialise
+    // again after the modal is rendered so existing images always get a centred box.
+    setTimeout(() => {
+      const img = document.querySelector('#banner-crop-viewport img') as HTMLImageElement | null;
+      if (img?.complete && img.naturalWidth) this.initializeCropFromImage(img);
+    }, 0);
   }
 
   closeCropModal() {
     this.cropModalActive.set(false);
     this.cropImageSrc = '';
     this.cropTargetItem = null;
-    this.cropZoom = 1.0;
-    this.cropPanX = 0;
-    this.cropPanY = 0;
   }
 
   setCropAspectRatio(ratio: '16:6' | '16:7' | '16:9' | '21:9' | '4:3' | '1:1') {
@@ -3227,19 +3274,71 @@ exportMediaManifestCsv(){
     }
   }
 
-  onCropMouseDown(e: MouseEvent) {
+  onCropImageLoaded(event: Event) {
+    const img = event.target as HTMLImageElement;
+    this.initializeCropFromImage(img);
+  }
+
+  private initializeCropFromImage(img: HTMLImageElement) {
+    const viewport = document.getElementById('banner-crop-viewport');
+    if (!viewport || !img.naturalWidth || !img.naturalHeight) return;
+    this.cropNaturalWidth = img.naturalWidth;
+    this.cropNaturalHeight = img.naturalHeight;
+    const vw = viewport.clientWidth;
+    const vh = viewport.clientHeight;
+    const scale = Math.min(vw / img.naturalWidth, vh / img.naturalHeight);
+    this.cropDisplayWidth = img.naturalWidth * scale;
+    this.cropDisplayHeight = img.naturalHeight * scale;
+    this.cropDisplayX = (vw - this.cropDisplayWidth) / 2;
+    this.cropDisplayY = (vh - this.cropDisplayHeight) / 2;
+    this.resetCropTransform();
+  }
+
+  onCropBoxMouseDown(e: MouseEvent, action: 'move'|'nw'|'ne'|'sw'|'se'|'n'|'s'|'e'|'w') {
     e.preventDefault();
+    e.stopPropagation();
     this.isDraggingCrop = true;
+    this.cropAction = action;
     this.dragStartX = e.clientX;
     this.dragStartY = e.clientY;
-    this.panStartX = this.cropPanX;
-    this.panStartY = this.cropPanY;
+    this.cropStartX = this.cropX;
+    this.cropStartY = this.cropY;
+    this.cropStartWidth = this.cropWidth;
+    this.cropStartHeight = this.cropHeight;
   }
 
   onCropMouseMove(e: MouseEvent) {
     if (!this.isDraggingCrop) return;
-    this.cropPanX = this.panStartX + (e.clientX - this.dragStartX);
-    this.cropPanY = this.panStartY + (e.clientY - this.dragStartY);
+    const dx = e.clientX - this.dragStartX;
+    const dy = e.clientY - this.dragStartY;
+    const minSize = 48;
+    const left = this.cropDisplayX;
+    const top = this.cropDisplayY;
+    const right = left + this.cropDisplayWidth;
+    const bottom = top + this.cropDisplayHeight;
+    if (this.cropAction === 'move') {
+      this.cropX = Math.max(left, Math.min(right - this.cropWidth, this.cropStartX + dx));
+      this.cropY = Math.max(top, Math.min(bottom - this.cropHeight, this.cropStartY + dy));
+      return;
+    }
+
+    let x = this.cropStartX;
+    let y = this.cropStartY;
+    let w = this.cropStartWidth;
+    let h = this.cropStartHeight;
+    if (this.cropAction.includes('e')) w = Math.max(minSize, Math.min(right - x, this.cropStartWidth + dx));
+    if (this.cropAction.includes('s')) h = Math.max(minSize, Math.min(bottom - y, this.cropStartHeight + dy));
+    if (this.cropAction.includes('w')) { const nx = Math.max(left, Math.min(this.cropStartX + this.cropStartWidth - minSize, this.cropStartX + dx)); w = this.cropStartWidth + (this.cropStartX - nx); x = nx; }
+    if (this.cropAction.includes('n')) { const ny = Math.max(top, Math.min(this.cropStartY + this.cropStartHeight - minSize, this.cropStartY + dy)); h = this.cropStartHeight + (this.cropStartY - ny); y = ny; }
+
+    const ratio = this.getNumericAspectRatio();
+    if (this.cropAction === 'n' || this.cropAction === 's') w = h * ratio;
+    else h = w / ratio;
+    if (x + w > right) { w = right - x; h = w / ratio; }
+    if (y + h > bottom) { h = bottom - y; w = h * ratio; }
+    if (this.cropAction.includes('w')) x = Math.max(left, this.cropStartX + this.cropStartWidth - w);
+    if (this.cropAction.includes('n')) y = Math.max(top, this.cropStartY + this.cropStartHeight - h);
+    this.cropX = x; this.cropY = y; this.cropWidth = w; this.cropHeight = h;
   }
 
   onCropMouseUp() {
@@ -3247,9 +3346,33 @@ exportMediaManifestCsv(){
   }
 
   resetCropTransform() {
-    this.cropZoom = 1.0;
-    this.cropPanX = 0;
-    this.cropPanY = 0;
+    if (!this.cropDisplayWidth || !this.cropDisplayHeight) return;
+    const ratio = this.getNumericAspectRatio();
+    let width = this.cropDisplayWidth * 0.82;
+    let height = width / ratio;
+    if (height > this.cropDisplayHeight * 0.82) {
+      height = this.cropDisplayHeight * 0.82;
+      width = height * ratio;
+    }
+    this.cropWidth = width;
+    this.cropHeight = height;
+    this.cropX = this.cropDisplayX + (this.cropDisplayWidth - width) / 2;
+    this.cropY = this.cropDisplayY + (this.cropDisplayHeight - height) / 2;
+  }
+
+  getCropOutputLabel() {
+    let width = 1920;
+    if (this.cropAspectRatio === '16:9') width = 1600;
+    else if (this.cropAspectRatio === '4:3') width = 1200;
+    else if (this.cropAspectRatio === '1:1') width = 1000;
+    return `${width}×${Math.round(width / this.getNumericAspectRatio())}`;
+  }
+
+  getCropFormatDescription() {
+    if (this.cropTargetType === 'banner') return this.bannerDraft.type === 'CAMPAIGN_BANNER' ? 'Campaign card · 16:9 · 1600×900' : 'Desktop hero · 16:6 · 1920×720';
+    if (this.cropTargetType === 'subcategory') return 'Subcategory tile · square · 1000×1000';
+    if (this.cropTargetType === 'navPromo') return 'Mega-menu promotion · 16:9 · 1600×900';
+    return 'Navigation category · 16:9 · 1600×900';
   }
 
   applyCropAndUpload() {
@@ -3282,42 +3405,13 @@ exportMediaManifestCsv(){
       img.crossOrigin = 'anonymous';
     }
     img.onload = () => {
-      const vpRect = viewport.getBoundingClientRect();
-      const vpWidth = vpRect.width;
-      const vpHeight = vpRect.height;
-
-      const scaleX = targetWidth / vpWidth;
-      const scaleY = targetHeight / vpHeight;
-
-      ctx.fillStyle = '#0f172a';
-      ctx.fillRect(0, 0, targetWidth, targetHeight);
-
-      const imgAspect = img.naturalWidth / img.naturalHeight;
-      const vpAspect = vpWidth / vpHeight;
-
-      let baseDrawWidth = vpWidth;
-      let baseDrawHeight = vpHeight;
-
-      if (imgAspect > vpAspect) {
-        baseDrawWidth = vpWidth;
-        baseDrawHeight = vpWidth / imgAspect;
-      } else {
-        baseDrawHeight = vpHeight;
-        baseDrawWidth = vpHeight * imgAspect;
-      }
-
-      const zoomedWidth = baseDrawWidth * this.cropZoom;
-      const zoomedHeight = baseDrawHeight * this.cropZoom;
-
-      const centerX = (vpWidth / 2) + this.cropPanX;
-      const centerY = (vpHeight / 2) + this.cropPanY;
-
-      const drawX = (centerX - (zoomedWidth / 2)) * scaleX;
-      const drawY = (centerY - (zoomedHeight / 2)) * scaleY;
-      const drawW = zoomedWidth * scaleX;
-      const drawH = zoomedHeight * scaleY;
-
-      ctx.drawImage(img, drawX, drawY, drawW, drawH);
+      const sourceScaleX = img.naturalWidth / this.cropDisplayWidth;
+      const sourceScaleY = img.naturalHeight / this.cropDisplayHeight;
+      const sourceX = Math.max(0, (this.cropX - this.cropDisplayX) * sourceScaleX);
+      const sourceY = Math.max(0, (this.cropY - this.cropDisplayY) * sourceScaleY);
+      const sourceWidth = Math.min(img.naturalWidth - sourceX, this.cropWidth * sourceScaleX);
+      const sourceHeight = Math.min(img.naturalHeight - sourceY, this.cropHeight * sourceScaleY);
+      ctx.drawImage(img, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, targetWidth, targetHeight);
 
       canvas.toBlob((blob) => {
         if (!blob) {

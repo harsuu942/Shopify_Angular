@@ -46,7 +46,8 @@ class SecurityConfig {
       .build();
   }
   @Bean @org.springframework.context.annotation.Primary CorsConfigurationSource cors(@Value("${app.cors-origin}") String origins) {
-    var c=new CorsConfiguration(); c.setAllowedOriginPatterns(List.of("*")); c.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS")); c.setAllowedHeaders(List.of("Authorization","Content-Type"));c.setExposedHeaders(List.of("X-RateLimit-Limit","X-RateLimit-Remaining","Retry-After"));c.setAllowCredentials(false);c.setMaxAge(3600L);
+    var allowed=java.util.Arrays.stream(origins.split(",")).map(String::trim).filter(s->!s.isBlank()).toList();
+    var c=new CorsConfiguration(); c.setAllowedOrigins(allowed); c.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS")); c.setAllowedHeaders(List.of("Authorization","Content-Type","Idempotency-Key"));c.setExposedHeaders(List.of("X-RateLimit-Limit","X-RateLimit-Remaining","Retry-After"));c.setAllowCredentials(false);c.setMaxAge(3600L);
     var source=new UrlBasedCorsConfigurationSource(); source.registerCorsConfiguration("/**",c); return source;
   }
 }

@@ -3,7 +3,9 @@ import {HttpClient, HttpHeaders, provideHttpClient, withInterceptors, HttpInterc
 import {Component, HostListener, computed, inject, signal, effect} from '@angular/core';
 import {FormsModule} from '@angular/forms';
 import {bootstrapApplication, Title, Meta, DomSanitizer, SafeHtml} from '@angular/platform-browser';
-import {catchError, throwError, of} from 'rxjs';
+import {catchError, throwError, of, forkJoin} from 'rxjs';
+
+declare const Stripe: any;
 
 export const rateLimitInterceptor: HttpInterceptorFn = (req, next) => {
   return next(req).pipe(
@@ -47,6 +49,7 @@ export interface ProductVariant {
   warrantyYears?: number;
   image?: string;
   discountPercent?: number;
+  unlimitedStock?: boolean;
 }
 
 export interface Product {
@@ -68,6 +71,7 @@ export interface Product {
   variants: ProductVariant[];
   _previewImage?: string;
   discountPercent?: number;
+  unlimitedStock?: boolean;
 }
 
 export interface Line {
@@ -762,10 +766,15 @@ export class App {
 
   // Payment Method Selection - Direct Card Processing via Stripe
   paymentMethod = signal<'card'>('card');
-  stripePublishableKey = signal<string>('pk_test_51MockStripePublishableKeyForDevHearthRadiators009');
+  stripePublishableKey = signal<string>('');
   stripeMode = signal<string>('sandbox_test');
   stripePaymentIntentId = signal<string>('');
+  private checkoutIdempotencyKey = crypto.randomUUID();
   isTestCardPopulated = signal<boolean>(false);
+  private stripe: any = null;
+  private stripeElements: any = null;
+  private stripeCardElement: any = null;
+  stripeCardComplete = signal<boolean>(false);
 
   // 3D Secure (SCA) Challenge Modal Signals
   scaModalOpen = signal<boolean>(false);
@@ -838,6 +847,37 @@ export class App {
 
   populateTestCard() {
     this.fillTestCard('success');
+  }
+
+  mountStripeCard(attempt = 0) {
+    const host = document.getElementById('stripe-card-element');
+    const key = this.stripePublishableKey();
+    if (!host || typeof Stripe === 'undefined' || !key || key.includes('Mock')) {
+      if (attempt < 30) setTimeout(() => this.mountStripeCard(attempt + 1), 150);
+      else this.cardNumberError.set('Secure card fields could not be loaded. Please refresh and try again.');
+      return;
+    }
+    try {
+      if (this.stripeCardElement) {
+        try { this.stripeCardElement.unmount(); } catch (_) {}
+      }
+      this.stripe = Stripe(key);
+      this.stripeElements = this.stripe.elements();
+      this.stripeCardElement = this.stripeElements.create('card', {
+        hidePostalCode: true,
+        style: {
+          base: { color: '#0f172a', fontFamily: 'Inter, system-ui, sans-serif', fontSize: '16px', lineHeight: '24px', '::placeholder': { color: '#94a3b8' } },
+          invalid: { color: '#dc2626', iconColor: '#dc2626' }
+        }
+      });
+      this.stripeCardElement.mount('#stripe-card-element');
+      this.stripeCardElement.on('change', (event: any) => {
+        this.stripeCardComplete.set(!!event.complete);
+        this.cardNumberError.set(event.error?.message || '');
+      });
+    } catch (_) {
+      this.cardNumberError.set('Secure Stripe card fields could not be initialized. Please refresh and try again.');
+    }
   }
 
   approveScaAuthentication() {
@@ -1342,13 +1382,26 @@ export class App {
     }
     const cleaned = raw.replace(/[\s\-\(\)\.]/g, '');
     const isUkMobile = /^(?:07\d{9}|\+447\d{9})$/.test(cleaned);
-    const isIntlPhone = /^\+?[1-9]\d{9,14}$/.test(cleaned);
-    if (!isUkMobile && !isIntlPhone) {
-      this.phoneError.set('Please enter a valid mobile number (e.g. 07123 456789 or +44 7123 456789).');
+    if (!isUkMobile) {
+      this.phoneError.set('Enter a valid UK mobile number beginning 07 or +44 7 (for example 07123 456789).');
       return false;
     }
     this.phoneError.set('');
     return true;
+  }
+
+  onCheckoutPhoneInput(event: Event) {
+    const input = event.target as HTMLInputElement;
+    let value = input.value.replace(/[^\d+\s()-]/g, '');
+    value = value.replace(/(?!^)\+/g, '');
+    const compact = value.replace(/[^\d+]/g, '');
+    if (compact.startsWith('+44')) {
+      value = compact.slice(0, 13);
+    } else {
+      value = compact.replace(/^44(?=7)/, '+44').slice(0, 11);
+    }
+    this.checkoutPhone = value;
+    this.phoneError.set('');
   }
 
   validateAddress(): boolean {
@@ -2080,6 +2133,11 @@ export class App {
     return this.inMemoryAuth();
   }
 
+  private authorizationValue(): string {
+    const token=this.sessionAuth||'';
+    return token.split('.').length===3 ? `Bearer ${token}` : `Basic ${token}`;
+  }
+
   // Dynamic Facet Options
   availableCategories = computed(() => {
     const counts: Record<string, number> = {};
@@ -2396,7 +2454,7 @@ export class App {
       (!this.chosenWidth() || v.widthMm === this.chosenWidth())
     ) || p.variants.find(v =>
       (!this.chosenHeight() || v.heightMm === this.chosenHeight())
-    ) || p.variants[0];
+    ) || this.firstAvailableVariant(p) || p.variants[0];
   });
 
   compatibleValves = computed(() => {
@@ -2545,7 +2603,7 @@ export class App {
 
     if (this.sessionAuth) {
       this.savedAddresses.set(this.read<SavedAddress[]>(this.addressStorageKey, []));
-      const headers = new HttpHeaders({ Authorization: 'Basic ' + this.sessionAuth });
+      const headers = new HttpHeaders({ Authorization: this.authorizationValue() });
       this.http.get<any>('/api/me', { headers }).subscribe({
         next: m => {
           this.isAdmin.set(!!m.admin);
@@ -2611,6 +2669,7 @@ export class App {
         if (cfg?.mode) {
           this.stripeMode.set(cfg.mode);
         }
+        if (this.view() === 'checkout') setTimeout(() => this.mountStripeCard(), 0);
       },
       error: () => {}
     });
@@ -2645,7 +2704,8 @@ export class App {
   }
 
   loadCmsBanner() {
-    this.http.get<any[]>('/api/cms/banners').subscribe({
+    const refreshKey=Date.now();
+    this.http.get<any[]>(`/api/cms/banners?_t=${refreshKey}`).subscribe({
       next: (banners) => {
         if (banners && banners.length) {
           this.heroBanners.set(banners);
@@ -2656,7 +2716,7 @@ export class App {
       },
       error: () => {}
     });
-    this.http.get<any[]>('/api/cms/campaigns').subscribe({
+    this.http.get<any[]>(`/api/cms/campaigns?_t=${refreshKey}`).subscribe({
       next: (campaigns) => {
         if (campaigns && campaigns.length) {
           this.campaignBanners.set(campaigns);
@@ -3377,7 +3437,7 @@ export class App {
   // Product Selection & PDP
   select(p: Product, push = true) {
     this.selected.set(p);
-    const v = p.variants?.[0];
+    const v = this.firstAvailableVariant(p) || p.variants?.[0];
     const availColours = this.colours(p);
     this.chosenColour.set(v?.colour || p.colour || availColours[0] || 'Traffic White (RAL 9016)');
     this.chosenHeight.set(v?.heightMm || this.extractHeightFromName(p) || 600);
@@ -3805,11 +3865,11 @@ export class App {
     if (!value || !value.trim()) {
       return this.getDefaultProductImage(fallbackCategory, fallbackTitle);
     }
-    let clean = value.trim();
-    if (clean.startsWith('/api/product-images/')) {
-      clean = clean.replace('/api/product-images/', '/product-images/');
-    }
-    return clean;
+    // Keep uploaded images on the API route. The Cloudflare worker resolves
+    // packaged assets first and then falls back to Render for new uploads.
+    // Rewriting this to /product-images/ makes the static SPA fallback return
+    // index.html when an upload is not part of the deployed asset bundle.
+    return value.trim();
   }
 
   hasImage(p: Product): boolean {
@@ -4250,10 +4310,30 @@ export class App {
     this.addToCart(p, this.productQty());
   }
 
-  addToCart(p: Product, quantity: number) {
+  isProductOutOfStock(p: Product): boolean {
+    if (!p) return true;
+    if (p.unlimitedStock) return false;
+    const variants = p.variants || [];
+    if (variants.length) {
+      return !variants.some(v => v.unlimitedStock || Number(v.stock || 0) > 0);
+    }
+    return Number(p.stock || 0) <= 0;
+  }
+
+  private firstAvailableVariant(p: Product): ProductVariant | undefined {
+    return (p.variants || []).find(v => p.unlimitedStock || v.unlimitedStock || Number(v.stock || 0) > 0);
+  }
+
+  isSelectedConfigurationOutOfStock(p: Product): boolean {
+    const variant = this.selected()?.id === p.id ? this.chosenVariant() : undefined;
+    if (variant) return !variant.unlimitedStock && Number(variant.stock || 0) <= 0;
+    return this.isProductOutOfStock(p);
+  }
+
+  addToCart(p: Product, quantity: number): boolean {
     const isPdp = this.selected()?.id === p.id;
-    const variant = isPdp ? this.chosenVariant() || undefined : p.variants?.[0];
-    const chosenColour = isPdp ? (this.chosenColour() || p.colour || 'Traffic White (RAL 9016)') : (p.colour || 'Traffic White (RAL 9016)');
+    const variant = isPdp ? this.chosenVariant() || undefined : this.firstAvailableVariant(p);
+    const chosenColour = isPdp ? (this.chosenColour() || p.colour || 'Traffic White (RAL 9016)') : (variant?.colour || p.colour || 'Traffic White (RAL 9016)');
     const chosenHeight = isPdp ? this.currentHeight(p) : (variant?.heightMm || p.variants?.[0]?.heightMm);
     const chosenWidth = isPdp ? this.currentWidth(p) : (variant?.widthMm || p.variants?.[0]?.widthMm);
 
@@ -4264,13 +4344,27 @@ export class App {
       l.chosenHeight === chosenHeight &&
       l.chosenWidth === chosenWidth
     );
+    const unlimited = Boolean(p.unlimitedStock || variant?.unlimitedStock);
+    const available = Number(variant?.stock ?? p.stock ?? 0);
+    const requested = Math.max(1, Number(quantity) || 1);
+    const alreadyInBasket = found?.quantity || 0;
+    if (!unlimited && available <= 0) {
+      this.showToast(`${p.name} is out of stock`, '');
+      return false;
+    }
+    if (!unlimited && alreadyInBasket + requested > available) {
+      const remaining = Math.max(0, available - alreadyInBasket);
+      this.showToast(remaining > 0 ? `Only ${remaining} more available for ${p.name}` : `Maximum available quantity (${available}) is already in your basket`, 'cart');
+      return false;
+    }
     if (found) {
-      found.quantity += quantity;
+      found.quantity += requested;
     } else {
-      this.cart.update(v => [...v, { product: p, variant, quantity, chosenColour, chosenHeight, chosenWidth }]);
+      this.cart.update(v => [...v, { product: p, variant, quantity: requested, chosenColour, chosenHeight, chosenWidth }]);
     }
     this.touchCart();
     this.showToast(`Added to basket: ${p.name}`, 'cart');
+    return true;
   }
 
   removeLine(line: Line) {
@@ -4365,7 +4459,11 @@ export class App {
     }).subscribe({
       next: (v: any) => {
         this.authSubmitting.set(false);
-        const token = v.token || btoa(`${this.email}:${this.password}`);
+        const token = v.token;
+        if (!token || token.split('.').length !== 3) {
+          this.error.set('Secure sign-in token was not returned. Please try again.');
+          return;
+        }
         this.inMemoryAuth.set(token);
         sessionStorage.removeItem('auth');
         localStorage.setItem('email', this.email);
@@ -4373,6 +4471,7 @@ export class App {
         this.savedAddresses.set(this.read<SavedAddress[]>(this.addressStorageKey, []));
         if (this.checkoutPending) {
           this.view.set('checkout');
+          setTimeout(() => this.mountStripeCard(), 0);
         } else {
           this.loadAccount();
         }
@@ -4402,13 +4501,7 @@ export class App {
     this.http.post<any>('/api/auth/forgot-password', { email: this.email.trim() }).subscribe({
       next: (res: any) => {
         this.authSubmitting.set(false);
-        if (res.devCode) {
-          this.resetDevCode.set(res.devCode);
-          this.resetCode.set(res.devCode);
-          this.success.set(`Verification code generated: ${res.devCode}. Enter your new password below.`);
-        } else {
-          this.success.set(res.message || 'Verification code sent to your email.');
-        }
+        this.success.set(res.message || 'If the account exists, a verification code was sent to its email address.');
         this.authMode.set('reset');
       },
       error: (err: any) => {
@@ -4430,8 +4523,8 @@ export class App {
       this.error.set('Please enter the 6-digit verification code.');
       return;
     }
-    if (!newPass || newPass.length < 6) {
-      this.error.set('New password must be at least 6 characters long.');
+    if (!newPass || newPass.length < 12) {
+      this.error.set('New password must be at least 12 characters long.');
       return;
     }
     if (newPass !== confirmPass) {
@@ -4516,15 +4609,7 @@ export class App {
   }
 
   expressBuyNow(p: Product) {
-    const variant = this.selected()?.id === p.id ? this.chosenVariant() || undefined : p.variants?.[0];
-    const found = this.cart().find(l => l.product.id === p.id && l.variant?.id === variant?.id);
-    if (found) {
-      found.quantity += this.productQty();
-    } else {
-      this.cart.update(v => [...v, { product: p, variant, quantity: this.productQty() }]);
-    }
-    this.touchCart();
-    this.beginCheckout();
+    if (this.addToCart(p, this.productQty())) this.beginCheckout();
   }
 
   beginCheckout() {
@@ -4560,6 +4645,7 @@ export class App {
     }
     // Guest & logged-in checkout directly proceeds without requiring login
     this.view.set('checkout');
+    setTimeout(() => this.mountStripeCard(), 0);
     scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -4841,7 +4927,7 @@ export class App {
       message: this.supportQueryMessage.trim()
     };
 
-    const headers = this.sessionAuth ? new HttpHeaders({ Authorization: 'Basic ' + this.sessionAuth }) : undefined;
+    const headers = this.sessionAuth ? new HttpHeaders({ Authorization: this.authorizationValue() }) : undefined;
     this.http.post<any>('/api/inquiries', payload, { headers }).subscribe({
       next: res => {
         this.supportSubmitted.set(false);
@@ -4876,7 +4962,7 @@ export class App {
       return;
     }
     this.loadingCustomerTickets.set(true);
-    const headers = new HttpHeaders({ Authorization: 'Basic ' + this.sessionAuth });
+    const headers = new HttpHeaders({ Authorization: this.authorizationValue() });
     this.http.get<any[]>('/api/inquiries/my', { headers }).subscribe({
       next: list => {
         this.customerTickets.set(list || []);
@@ -4894,7 +4980,7 @@ export class App {
     return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
   }
 
-  placeOrder() {
+  placeOrder(stockValidated = false) {
     if (this.orderSubmitting()) return;
     if (this.rateLimitActive()) {
       this.error.set(`Rate limit active. Please wait ${this.rateLimitSeconds()} seconds before placing your order.`);
@@ -4913,9 +4999,10 @@ export class App {
     const v5 = this.validateCity();
     const v6 = this.validatePostcode();
     const v7 = this.validateCardName();
-    const v8 = this.validateCardNumber();
-    const v9 = this.validateCardExpiry();
-    const v10 = this.validateCardCvc();
+    const v8 = !!this.stripeCardElement && this.stripeCardComplete();
+    if (!v8) this.cardNumberError.set('Please complete the secure card number, expiry date and CVC fields.');
+    const v9 = true;
+    const v10 = true;
     const v11 = this.validateTerms();
 
     if (!v1 || !v2 || !v3 || !v4 || !v5 || !v6 || !v7 || !v8 || !v9 || !v10 || !v11) {
@@ -4929,39 +5016,85 @@ export class App {
       return;
     }
 
+    if (!stockValidated) {
+      this.orderSubmitting.set(true);
+      const lines = this.cart();
+      forkJoin(lines.map(line => this.http.get<Product>(`/api/products/${line.product.id}`))).subscribe({
+        next: latestProducts => {
+          this.orderSubmitting.set(false);
+          const unavailableIndex = latestProducts.findIndex((latest, index) => {
+            const line = lines[index];
+            const variant = line.variant?.id ? latest.variants?.find(v => v.id === line.variant!.id) : undefined;
+            if (latest.unlimitedStock || variant?.unlimitedStock) return false;
+            const available = variant ? Number(variant.stock || 0) : Number(latest.stock || 0);
+            return available < line.quantity;
+          });
+          if (unavailableIndex >= 0) {
+            this.error.set(`“${lines[unavailableIndex].product.name}” is no longer available in the requested quantity. Your card has not been charged. Please update your basket.`);
+            return;
+          }
+          this.placeOrder(true);
+        },
+        error: () => {
+          this.orderSubmitting.set(false);
+          this.error.set('We could not verify current stock. Your card has not been charged. Please try again.');
+        }
+      });
+      return;
+    }
+
     this.orderSubmitting.set(true);
 
-    const expParts = (this.cardExpiry || '').split('/');
-    const expMonth = expParts[0] ? expParts[0].trim() : '';
-    const expYear = expParts[1] ? ('20' + expParts[1].trim()).slice(-4) : '';
-
     const intentPayload = {
-      amountMinor: Math.round(this.grandTotal() * 100),
-      currency: 'gbp',
+      items: this.cart().map(l => ({
+        productId: l.product.id,
+        variantId: l.variant?.id,
+        quantity: l.quantity
+      })),
+      discountCode: this.appliedCoupon()?.code || null,
       customerEmail: this.email.trim(),
-      customerName: this.checkoutName.trim(),
-      cardNumber: this.cardNumber.replace(/[\s\-\•]/g, ''),
-      cardExpMonth: expMonth,
-      cardExpYear: expYear,
-      cardCvc: this.cardCvc.trim()
+      customerName: this.checkoutName.trim()
     };
 
-    this.http.post<any>('/api/checkout/stripe/create-payment-intent', intentPayload).subscribe({
+    const paymentHeaders = new HttpHeaders({ 'Idempotency-Key': this.checkoutIdempotencyKey });
+    this.http.post<any>('/api/checkout/stripe/create-payment-intent', intentPayload, { headers: paymentHeaders }).subscribe({
       next: (intentRes) => {
         const paymentIntentId = intentRes?.paymentIntentId || ('pi_stripe_' + Date.now());
         this.stripePaymentIntentId.set(paymentIntentId);
-
-        if (intentRes?.status === 'requires_action') {
-          // 3D Secure SCA challenge required
+        if (!this.stripe || !this.stripeCardElement || !intentRes?.clientSecret) {
           this.orderSubmitting.set(false);
-          this.scaPendingIntentId.set(paymentIntentId);
-          this.scaClientSecret.set(intentRes.clientSecret || '');
-          this.scaError.set('');
-          this.scaModalOpen.set(true);
+          this.error.set('Secure Stripe payment fields are unavailable. Please refresh and try again.');
           return;
         }
-
-        this.executeOrderSubmission(paymentIntentId);
+        this.stripe.confirmCardPayment(intentRes.clientSecret, {
+          payment_method: {
+            card: this.stripeCardElement,
+            billing_details: {
+              name: this.cardName.trim(),
+              email: this.email.trim(),
+              phone: this.checkoutPhone.trim(),
+              address: { line1: this.addressLine.trim(), city: this.city.trim(), postal_code: this.postcode.trim(), country: 'GB' }
+            }
+          }
+        }).then((result: any) => {
+          if (result.error) {
+            this.orderSubmitting.set(false);
+            const msg = result.error.message || 'Payment authorisation failed. Please check your card details.';
+            this.cardNumberError.set(msg);
+            this.error.set(msg);
+            return;
+          }
+          const intent = result.paymentIntent;
+          if (!intent || intent.status !== 'requires_capture') {
+            this.orderSubmitting.set(false);
+            this.error.set('Stripe could not complete this payment. Please try another card.');
+            return;
+          }
+          this.executeOrderSubmission(intent.id || paymentIntentId);
+        }).catch(() => {
+          this.orderSubmitting.set(false);
+          this.error.set('Secure payment confirmation failed. Please try again.');
+        });
       },
       error: (err) => {
         this.orderSubmitting.set(false);
@@ -4990,7 +5123,7 @@ export class App {
   private executeOrderSubmission(stripePaymentIntentId: string) {
     let headers = new HttpHeaders();
     if (this.sessionAuth) {
-      headers = headers.set('Authorization', 'Basic ' + this.sessionAuth);
+      headers = headers.set('Authorization', this.authorizationValue());
     }
     const shippingAddress = `${this.checkoutName.trim()}, ${this.addressLine.trim()}, ${this.city.trim()} ${this.postcode.trim()}`;
 
@@ -5006,14 +5139,13 @@ export class App {
       customerPhone: this.checkoutPhone.trim(),
       discountCode: this.appliedCoupon()?.code || null,
       discountAmount: this.discountTotal() > 0 ? this.discountTotal() : null,
-      paymentMethod: 'STRIPE',
-      paymentStatus: 'PAID',
       stripePaymentIntentId: stripePaymentIntentId
     };
 
     this.http.post<Order>('/api/orders', orderPayload, { headers }).subscribe({
       next: order => {
         this.completedOrder.set(order);
+        this.checkoutIdempotencyKey = crypto.randomUUID();
         this.cart.set([]);
         this.touchCart();
         this.appliedCoupon.set(null);
@@ -5030,7 +5162,9 @@ export class App {
         if (!msg && typeof err.error === 'string') {
           msg = err.error;
         }
-        if (!msg) {
+        if (err.status === 409) {
+          msg = 'One or more basket items became unavailable while payment was being processed. Your card payment was accepted, but the order needs assistance. Please contact support with the payment reference shown in your Stripe receipt.';
+        } else if (!msg) {
           msg = 'Order could not be processed. Please check your information and try again.';
         }
         this.error.set(msg);
@@ -5043,7 +5177,7 @@ export class App {
       this.view.set('login');
       return;
     }
-    const headers = new HttpHeaders({ Authorization: 'Basic ' + this.sessionAuth });
+    const headers = new HttpHeaders({ Authorization: this.authorizationValue() });
     this.http.get<any>('/api/me', { headers }).subscribe({
       next: m => {
         this.email = m.email;

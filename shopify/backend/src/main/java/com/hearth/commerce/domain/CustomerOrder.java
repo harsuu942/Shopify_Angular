@@ -22,7 +22,7 @@ public class CustomerOrder {
   private BigDecimal discountAmount = BigDecimal.ZERO;
   private String paymentMethod = "STRIPE";
   private String paymentStatus = "PAID";
-  @com.fasterxml.jackson.annotation.JsonIgnore private String stripePaymentIntentId;
+  @Column(unique=true) @com.fasterxml.jackson.annotation.JsonIgnore private String stripePaymentIntentId;
   @com.fasterxml.jackson.annotation.JsonIgnore private String stripeClientSecret;
   @Column(nullable=false) private Instant createdAt;
   private String shippingAddress;

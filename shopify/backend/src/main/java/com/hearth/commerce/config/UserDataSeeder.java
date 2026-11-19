@@ -9,7 +9,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-@Configuration @Profile("!prod")
+@Configuration @Profile("!prod & !render")
 public class UserDataSeeder {
   @Bean CommandLineRunner seedUsers(AppUserRepository users,PasswordEncoder encoder,
       @Value("${app.auth.customer-email:customer@example.com}") String customerEmail,
@@ -20,5 +20,15 @@ public class UserDataSeeder {
       if(!users.existsByEmailIgnoreCase(customerEmail)) users.save(new AppUser("Demo Customer",customerEmail,encoder.encode(customerPassword),"CUSTOMER"));
       if(!users.existsByEmailIgnoreCase(adminEmail)) users.save(new AppUser("Store Administrator",adminEmail,encoder.encode(adminPassword),"ADMIN"));
     };
+  }
+}
+
+@Configuration @Profile("render")
+class ProductionUserHardening {
+  @Bean CommandLineRunner disableDocumentedDemoAdmin(AppUserRepository users, PasswordEncoder encoder) {
+    return args -> users.findByEmailIgnoreCase("admin@example.com")
+        .filter(user -> "ADMIN".equalsIgnoreCase(user.getRole()))
+        .filter(user -> encoder.matches("Admin123!", user.getPasswordHash()))
+        .ifPresent(user -> { user.setEnabled(false); users.save(user); });
   }
 }

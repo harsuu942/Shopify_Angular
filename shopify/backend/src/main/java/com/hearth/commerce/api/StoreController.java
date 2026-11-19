@@ -48,7 +48,7 @@ public class StoreController {
                   @Value("${app.admin-api-url}") String adminApiUrl,
                   @Value("${app.catalogue-sync-secret}") String syncSecret,
                   @Value("${app.upload-dir:./data/product-images}") String uploadDir,
-                  @Value("${app.stripe.publishable-key:pk_test_51MockStripePublishableKeyForDevHearthRadiators009}") String stripePublishableKey,
+                  @Value("${app.stripe.publishable-key:}") String stripePublishableKey,
                   @Value("${app.stripe.secret-key:}") String stripeSecretKey,
                   @Value("${app.stripe.webhook-secret:}") String stripeWebhookSecret){
     this.products = products;
@@ -186,22 +186,30 @@ public class StoreController {
       BigDecimal lineTotal = itemPrice.multiply(BigDecimal.valueOf(item.quantity()));
       subtotal = subtotal.add(lineTotal);
 
-      itemDetails.add(Map.of(
-        "productId", product.getId(),
-        "sku", product.getSku(),
-        "name", product.getName(),
-        "variant", variantInfo,
-        "quantity", item.quantity(),
-        "price", itemPrice
-      ));
+      Map<String,Object> detail = new LinkedHashMap<>();
+      detail.put("productId", product.getId());
+      detail.put("productSku", product.getSku());
+      detail.put("sku", product.getSku()); // retained for older admin deployments
+      detail.put("name", product.getName());
+      detail.put("variant", variantInfo.trim());
+      if (variant != null) {
+        detail.put("variantSku", variant.getVariantSku());
+        detail.put("variantEan", variant.getEan());
+      }
+      detail.put("quantity", item.quantity());
+      detail.put("price", itemPrice);
+      itemDetails.add(detail);
 
-      syncItems.add(Map.of(
-        "productId", product.getId(),
-        "variantId", item.variantId() != null ? item.variantId() : 0L,
-        "sku", product.getSku(),
-        "quantity", item.quantity(),
-        "priceMinor", itemPrice.multiply(BigDecimal.valueOf(100)).longValue()
-      ));
+      Map<String,Object> syncItem = new LinkedHashMap<>();
+      syncItem.put("productId", product.getId());
+      syncItem.put("productSku", product.getSku());
+      syncItem.put("sku", product.getSku()); // backwards compatibility
+      syncItem.put("variantId", item.variantId());
+      syncItem.put("variantSku", variant != null ? variant.getVariantSku() : null);
+      syncItem.put("variantEan", variant != null ? variant.getEan() : null);
+      syncItem.put("quantity", item.quantity());
+      syncItem.put("priceMinor", itemPrice.multiply(BigDecimal.valueOf(100)).longValue());
+      syncItems.add(syncItem);
     }
 
     CalculatedDiscount calc = computeDiscount(request.discountCode(), subtotal);
@@ -211,7 +219,14 @@ public class StoreController {
     BigDecimal shipping = freeShip ? BigDecimal.ZERO : new BigDecimal("24.99");
     BigDecimal grandTotal = subtotal.subtract(discount).max(BigDecimal.ZERO).add(shipping);
 
-    String orderNumber = "ORD-2026-" + String.format("%05d", (int)(orders.count() + 101));
+    String stripeId = Optional.ofNullable(request.stripePaymentIntentId()).orElse("").trim();
+    verifyStripePayment(stripeId, grandTotal);
+    if (orders.findByStripePaymentIntentId(stripeId).isPresent()) {
+      throw new ResponseStatusException(HttpStatus.CONFLICT, "This payment has already been used for an order");
+    }
+
+    String orderNumber = "ORD-" + java.time.Year.now().getValue() + "-" +
+        UUID.randomUUID().toString().replace("-", "").substring(0, 10).toUpperCase();
     String itemsJson;
     try {
       itemsJson = objectMapper.writeValueAsString(itemDetails);
@@ -220,16 +235,15 @@ public class StoreController {
     }
     String custName = (request.customerName() != null && !request.customerName().isBlank()) ? request.customerName().trim() : email;
     String custPhone = request.customerPhone();
-    String pMethod = (request.paymentMethod() != null && !request.paymentMethod().isBlank()) ? request.paymentMethod().trim() : "STRIPE";
-    String pStatus = (request.paymentStatus() != null && !request.paymentStatus().isBlank()) ? request.paymentStatus().trim() : "PAID";
-    String stripeId = request.stripePaymentIntentId();
+    String pMethod = "STRIPE";
+    String pStatus = "PAID";
 
     String safeAddress = request.shippingAddress() != null ? request.shippingAddress().trim() : "";
     if (safeAddress.length() > 500) {
       safeAddress = safeAddress.substring(0, 500);
     }
 
-    CustomerOrder saved = orders.save(new CustomerOrder(
+    CustomerOrder saved = orders.saveAndFlush(new CustomerOrder(
       orderNumber,
       email,
       custName,
@@ -243,6 +257,7 @@ public class StoreController {
       pStatus,
       stripeId
     ));
+    captureStripePayment(stripeId);
 
     // Resilient sync to Admin backend via SyncRetryService
     Map<String,Object> adminPayload = Map.of(
@@ -282,80 +297,40 @@ public class StoreController {
   }
 
   @PostMapping("/checkout/stripe/create-payment-intent")
-  public ResponseEntity<Map<String, Object>> createPaymentIntent(@RequestBody Map<String, Object> body) {
-    long amountMinor = 0L;
-    if (body.get("amountMinor") != null) {
-      amountMinor = Long.parseLong(body.get("amountMinor").toString());
-    } else if (body.get("amount") != null) {
-      BigDecimal amt = new BigDecimal(body.get("amount").toString());
-      amountMinor = amt.multiply(BigDecimal.valueOf(100)).longValue();
+  public ResponseEntity<Map<String, Object>> createPaymentIntent(
+      @Valid @RequestBody PaymentIntentRequest body,
+      @RequestHeader(value="Idempotency-Key", required=false) String idempotencyKey) {
+    BasketPrice basket = calculateBasket(body.items(), body.discountCode());
+    long amountMinor = basket.total().movePointRight(2).longValueExact();
+    String currency = "gbp";
+    String email = Optional.ofNullable(body.customerEmail()).orElse("").trim().toLowerCase();
+    String name = Optional.ofNullable(body.customerName()).orElse("").trim();
+    String safeIdempotencyKey = Optional.ofNullable(idempotencyKey).orElse("").trim();
+    if (!safeIdempotencyKey.matches("[A-Za-z0-9._:-]{16,128}")) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A valid checkout idempotency key is required");
     }
-    if (amountMinor <= 0) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid amount for payment intent");
-    }
-
-    String currency = Optional.ofNullable(body.get("currency")).map(Object::toString).orElse("gbp").toLowerCase();
-    String email = Optional.ofNullable(body.get("customerEmail")).map(Object::toString).orElse("");
-    String name = Optional.ofNullable(body.get("customerName")).map(Object::toString).orElse("");
-    String paymentMethodId = Optional.ofNullable(body.get("paymentMethodId")).map(Object::toString).orElse("");
-    String cardNumber = Optional.ofNullable(body.get("cardNumber")).map(Object::toString).map(s -> s.replaceAll("[\\s\\-\\•]", "")).orElse("");
-    String cardExpMonth = Optional.ofNullable(body.get("cardExpMonth")).map(Object::toString).orElse("");
-    String cardExpYear = Optional.ofNullable(body.get("cardExpYear")).map(Object::toString).orElse("");
-    String cardCvc = Optional.ofNullable(body.get("cardCvc")).map(Object::toString).orElse("");
 
     // If real Stripe secret key is present, attempt live or test call to api.stripe.com
     if (stripeSecretKey != null && !stripeSecretKey.isBlank() && !stripeSecretKey.contains("Mock")) {
       try {
         RestClient stripeClient = RestClient.builder().baseUrl("https://api.stripe.com").build();
 
-        // If raw card details submitted and no paymentMethodId yet, create a PaymentMethod first
-        if (paymentMethodId.isBlank() && !cardNumber.isBlank()) {
-          org.springframework.util.MultiValueMap<String, String> pmForm = new org.springframework.util.LinkedMultiValueMap<>();
-          pmForm.add("type", "card");
-          pmForm.add("card[number]", cardNumber);
-          if (!cardExpMonth.isBlank()) pmForm.add("card[exp_month]", cardExpMonth);
-          if (!cardExpYear.isBlank()) pmForm.add("card[exp_year]", cardExpYear);
-          if (!cardCvc.isBlank()) pmForm.add("card[cvc]", cardCvc);
-          if (!name.isBlank()) pmForm.add("billing_details[name]", name);
-          if (!email.isBlank()) pmForm.add("billing_details[email]", email);
-
-          try {
-            Map<String, Object> pmResp = stripeClient.post()
-              .uri("/v1/payment_methods")
-              .header("Authorization", "Bearer " + stripeSecretKey)
-              .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-              .body(pmForm)
-              .retrieve()
-              .body(new ParameterizedTypeReference<Map<String, Object>>() {});
-
-            if (pmResp != null && pmResp.containsKey("id")) {
-              paymentMethodId = String.valueOf(pmResp.get("id"));
-            }
-          } catch (org.springframework.web.client.RestClientResponseException ex) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(parseStripeError(ex.getResponseBodyAsString()));
-          }
-        }
-
         org.springframework.util.MultiValueMap<String, String> form = new org.springframework.util.LinkedMultiValueMap<>();
         form.add("amount", String.valueOf(amountMinor));
         form.add("currency", currency);
+        form.add("capture_method", "manual");
         if (!email.isBlank()) form.add("receipt_email", email);
         if (!name.isBlank()) form.add("metadata[customerName]", name);
         form.add("metadata[integration]", "hearth_express_checkout");
 
-        if (!paymentMethodId.isBlank()) {
-          form.add("payment_method", paymentMethodId);
-          form.add("confirm", "true");
-          form.add("automatic_payment_methods[enabled]", "true");
-          form.add("automatic_payment_methods[allow_redirects]", "never");
-        } else {
-          form.add("payment_method_types[]", "card");
-        }
+        form.add("payment_method_types[]", "card");
+        form.add("metadata[checkoutKey]", safeIdempotencyKey);
 
         try {
           Map<String, Object> resp = stripeClient.post()
             .uri("/v1/payment_intents")
             .header("Authorization", "Bearer " + stripeSecretKey)
+              .header("Idempotency-Key", safeIdempotencyKey)
             .contentType(MediaType.APPLICATION_FORM_URLENCODED)
             .body(form)
             .retrieve()
@@ -377,73 +352,11 @@ public class StoreController {
         } catch (org.springframework.web.client.RestClientResponseException ex) {
           return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(parseStripeError(ex.getResponseBodyAsString()));
         }
-      } catch (Exception ignored) {
-        // Fall back to sandbox simulation below
+      } catch (Exception ex) {
+        throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Stripe is temporarily unavailable", ex);
       }
     }
-
-    // Default Sandbox / Mock Payment Intent for local development & testing
-    String mockPiId = "pi_3" + UUID.randomUUID().toString().replace("-", "").substring(0, 20);
-    String mockSecret = mockPiId + "_secret_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16);
-
-    // Realistic card simulation in development mode:
-    if (!cardNumber.isBlank()) {
-      if (cardNumber.endsWith("0002")) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
-          "error", "Your card has insufficient funds.",
-          "message", "Your card has insufficient funds.",
-          "code", "insufficient_funds",
-          "decline_code", "insufficient_funds"
-        ));
-      } else if (cardNumber.endsWith("0069")) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
-          "error", "Your card has expired. Please check the expiration date or use another card.",
-          "message", "Your card has expired. Please check the expiration date or use another card.",
-          "code", "expired_card",
-          "decline_code", "expired_card"
-        ));
-      } else if (cardNumber.endsWith("0127")) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
-          "error", "Your card's security code is incorrect.",
-          "message", "Your card's security code is incorrect.",
-          "code", "incorrect_cvc",
-          "decline_code", "incorrect_cvc"
-        ));
-      } else if (cardNumber.endsWith("0005") || cardNumber.endsWith("0341")) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
-          "error", "Your card was declined by the card issuer.",
-          "message", "Your card was declined by the card issuer.",
-          "code", "card_declined",
-          "decline_code", "generic_decline"
-        ));
-      } else if (cardNumber.endsWith("0119")) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
-          "error", "An error occurred while processing your card. Please try again later.",
-          "message", "An error occurred while processing your card. Please try again later.",
-          "code", "processing_error",
-          "decline_code", "processing_error"
-        ));
-      } else if (cardNumber.endsWith("3155") || cardNumber.endsWith("3220")) {
-        // 3D Secure / SCA Challenge required
-        return ResponseEntity.ok(Map.of(
-          "clientSecret", mockSecret,
-          "paymentIntentId", mockPiId,
-          "status", "requires_action",
-          "publishableKey", stripePublishableKey,
-          "mode", "sandbox_test",
-          "requires3DS", true,
-          "message", "3D Secure SCA authentication required by issuing bank."
-        ));
-      }
-    }
-
-    return ResponseEntity.ok(Map.of(
-      "clientSecret", mockSecret,
-      "paymentIntentId", mockPiId,
-      "status", "succeeded",
-      "publishableKey", stripePublishableKey,
-      "mode", "sandbox_test"
-    ));
+    throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Stripe payment processing is not configured");
   }
 
   @PostMapping("/checkout/stripe/confirm-payment")
@@ -495,10 +408,11 @@ public class StoreController {
       @RequestHeader(value = "Stripe-Signature", required = false) String signature,
       @RequestBody String rawPayload) {
     try {
-      if (stripeWebhookSecret != null && !stripeWebhookSecret.isBlank()) {
-        if (!verifyStripeSignature(signature, rawPayload, stripeWebhookSecret)) {
-          return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "Invalid Stripe webhook signature"));
-        }
+      if (stripeWebhookSecret == null || stripeWebhookSecret.isBlank()) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of("error", "Stripe webhook is not configured"));
+      }
+      if (!verifyStripeSignature(signature, rawPayload, stripeWebhookSecret)) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "Invalid Stripe webhook signature"));
       }
 
       var root = objectMapper.readTree(rawPayload);
@@ -585,6 +499,8 @@ public class StoreController {
         }
       }
       if (timestamp == null || signatures.isEmpty()) return false;
+      long eventTime = Long.parseLong(timestamp);
+      if (Math.abs(java.time.Instant.now().getEpochSecond() - eventTime) > 300) return false;
 
       String signedPayload = timestamp + "." + rawPayload;
       javax.crypto.Mac mac = javax.crypto.Mac.getInstance("HmacSHA256");
@@ -623,6 +539,54 @@ public class StoreController {
       }
     } catch (Exception ignored) {}
     return Map.of("error", "Your card was declined.", "message", "Your card was declined.", "code", "card_declined", "decline_code", "generic_decline");
+  }
+
+  private void verifyStripePayment(String paymentIntentId, BigDecimal expectedTotal) {
+    if (paymentIntentId == null || !paymentIntentId.matches("pi_[A-Za-z0-9_]{8,}")) {
+      throw new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED, "A valid Stripe payment is required");
+    }
+    if (stripeSecretKey == null || stripeSecretKey.isBlank()) {
+      throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Stripe payment processing is not configured");
+    }
+    try {
+      Map<String,Object> intent = RestClient.builder().baseUrl("https://api.stripe.com").build().get()
+          .uri("/v1/payment_intents/" + paymentIntentId)
+          .header("Authorization", "Bearer " + stripeSecretKey)
+          .retrieve().body(new ParameterizedTypeReference<Map<String,Object>>() {});
+      if (intent == null || !"requires_capture".equals(String.valueOf(intent.get("status")))) {
+        throw new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED, "Stripe payment has not been authorised for capture");
+      }
+      long expectedMinor = expectedTotal.movePointRight(2).longValueExact();
+      long paidMinor = Long.parseLong(String.valueOf(intent.getOrDefault("amount", 0)));
+      String currency = String.valueOf(intent.getOrDefault("currency", ""));
+      if (paidMinor != expectedMinor || !"gbp".equalsIgnoreCase(currency)) {
+        throw new ResponseStatusException(HttpStatus.CONFLICT, "Payment amount does not match the current order total");
+      }
+    } catch (ResponseStatusException ex) {
+      throw ex;
+    } catch (org.springframework.web.client.RestClientResponseException ex) {
+      throw new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED, "Stripe could not verify this payment");
+    } catch (Exception ex) {
+      throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Stripe payment verification failed", ex);
+    }
+  }
+
+  private void captureStripePayment(String paymentIntentId) {
+    try {
+      Map<String,Object> captured = RestClient.builder().baseUrl("https://api.stripe.com").build().post()
+          .uri("/v1/payment_intents/" + paymentIntentId + "/capture")
+          .header("Authorization", "Bearer " + stripeSecretKey)
+          .header("Idempotency-Key", "capture-" + paymentIntentId)
+          .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+          .retrieve().body(new ParameterizedTypeReference<Map<String,Object>>() {});
+      if (captured == null || !"succeeded".equals(String.valueOf(captured.get("status")))) {
+        throw new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED, "Stripe could not capture the authorised payment");
+      }
+    } catch (ResponseStatusException ex) {
+      throw ex;
+    } catch (Exception ex) {
+      throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Stripe capture failed; no order was placed", ex);
+    }
   }
 
   public record OrderTrackingResponse(
@@ -689,6 +653,43 @@ public class StoreController {
   }
 
   private record CalculatedDiscount(BigDecimal discount, boolean freeShipping, String validCode) {}
+  private record BasketPrice(BigDecimal subtotal, BigDecimal discount, BigDecimal shipping, BigDecimal total) {}
+
+  private BasketPrice calculateBasket(List<CartLine> lines, String discountCode) {
+    if (lines == null || lines.isEmpty()) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cart is empty");
+    }
+    BigDecimal subtotal = BigDecimal.ZERO;
+    for (CartLine line : lines) {
+      Product product = products.findById(line.productId())
+          .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid product: " + line.productId()));
+      BigDecimal price = product.getPrice();
+      int available = product.getStock();
+      boolean unlimited = product.isUnlimitedStock();
+      if (line.variantId() != null) {
+        ProductVariant variant = product.getVariants().stream()
+            .filter(v -> line.variantId().equals(v.getId())).findFirst()
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid variant: " + line.variantId()));
+        price = variant.getPrice();
+        available = Optional.ofNullable(variant.getStock()).orElse(0);
+        unlimited = unlimited || variant.isUnlimitedStock();
+      }
+      if (price == null || price.signum() < 0) {
+        throw new ResponseStatusException(HttpStatus.CONFLICT, "Product pricing is unavailable");
+      }
+      if (!unlimited && available < line.quantity()) {
+        throw new ResponseStatusException(HttpStatus.CONFLICT, "Insufficient stock for " + product.getName());
+      }
+      subtotal = subtotal.add(price.multiply(BigDecimal.valueOf(line.quantity())));
+    }
+    subtotal = subtotal.setScale(2, java.math.RoundingMode.HALF_UP);
+    CalculatedDiscount calculated = computeDiscount(discountCode, subtotal);
+    BigDecimal discount = calculated.discount().setScale(2, java.math.RoundingMode.HALF_UP);
+    boolean freeShipping = calculated.freeShipping() || subtotal.compareTo(new BigDecimal("500.00")) >= 0;
+    BigDecimal shipping = freeShipping ? BigDecimal.ZERO.setScale(2) : new BigDecimal("24.99");
+    return new BasketPrice(subtotal, discount, shipping,
+        subtotal.subtract(discount).max(BigDecimal.ZERO).add(shipping).setScale(2, java.math.RoundingMode.HALF_UP));
+  }
 
   private CalculatedDiscount computeDiscount(String promoCode, BigDecimal subtotal) {
     if (promoCode == null || promoCode.isBlank()) {
@@ -1452,6 +1453,12 @@ public class StoreController {
   }
 
   public record CartLine(@NotNull Long productId, Long variantId, @Min(1) @Max(99) int quantity){}
+  public record PaymentIntentRequest(
+    @NotEmpty List<@Valid CartLine> items,
+    String discountCode,
+    @Email @Size(max=190) String customerEmail,
+    @Size(max=120) String customerName
+  ){}
   public record CheckoutRequest(
     @NotEmpty List<@Valid CartLine> items,
     @NotBlank @Size(max=1000) String shippingAddress,
@@ -1460,8 +1467,6 @@ public class StoreController {
     String customerPhone,
     String discountCode,
     BigDecimal discountAmount,
-    String paymentMethod,
-    String paymentStatus,
     String stripePaymentIntentId
   ){}
   public record CreateReviewRequest(

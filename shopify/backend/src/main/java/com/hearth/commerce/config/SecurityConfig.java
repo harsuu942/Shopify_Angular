@@ -10,6 +10,7 @@ import org.springframework.security.core.userdetails.*;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.header.writers.StaticHeadersWriter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -26,7 +27,7 @@ public class SecurityConfig {
       var builder=User.withUsername(account.getEmail()).password(account.getPasswordHash()).disabled(!account.isEnabled());
       return "ADMIN".equals(account.getRole())?builder.roles("CUSTOMER","ADMIN").build():builder.roles("CUSTOMER").build();};
   }
-  @Bean SecurityFilterChain filterChain(HttpSecurity http,CorsConfigurationSource cors) throws Exception {
+  @Bean SecurityFilterChain filterChain(HttpSecurity http,CorsConfigurationSource cors, StoreJwtFilter jwt) throws Exception {
     return http
       .csrf(csrf->csrf.disable()).cors(c->c.configurationSource(cors))
       .sessionManagement(s->s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -47,6 +48,7 @@ public class SecurityConfig {
         .requestMatchers("/api/admin/**").hasRole("ADMIN")
         .requestMatchers("/api/**").authenticated()
         .anyRequest().permitAll())
+      .addFilterBefore(jwt, UsernamePasswordAuthenticationFilter.class)
       .exceptionHandling(e -> e.authenticationEntryPoint((request, response, authException) -> {
         response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType("application/json");
@@ -59,7 +61,29 @@ public class SecurityConfig {
       })).build();
   }
   @Bean @Primary CorsConfigurationSource cors(@Value("${app.cors-origin}") String origins){
-    var c=new CorsConfiguration();c.setAllowedOriginPatterns(List.of("*"));c.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS"));c.setAllowedHeaders(List.of("Authorization","Content-Type"));c.setExposedHeaders(List.of("X-RateLimit-Limit","X-RateLimit-Remaining","Retry-After"));c.setAllowCredentials(false);c.setMaxAge(3600L);
+    var allowed=Arrays.stream(origins.split(",")).map(String::trim).filter(s->!s.isBlank()).toList();
+    var c=new CorsConfiguration();c.setAllowedOrigins(allowed);c.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS"));c.setAllowedHeaders(List.of("Authorization","Content-Type","Idempotency-Key"));c.setExposedHeaders(List.of("X-RateLimit-Limit","X-RateLimit-Remaining","Retry-After"));c.setAllowCredentials(false);c.setMaxAge(3600L);
     var source=new UrlBasedCorsConfigurationSource();source.registerCorsConfiguration("/**",c);return source;
+  }
+}
+
+@org.springframework.stereotype.Component
+class StoreJwtFilter extends org.springframework.web.filter.OncePerRequestFilter {
+  private final StoreJwtService jwt;
+  StoreJwtFilter(StoreJwtService jwt){this.jwt=jwt;}
+  @Override protected void doFilterInternal(jakarta.servlet.http.HttpServletRequest req,
+      jakarta.servlet.http.HttpServletResponse res,jakarta.servlet.FilterChain chain)
+      throws java.io.IOException,jakarta.servlet.ServletException {
+    String header=req.getHeader(org.springframework.http.HttpHeaders.AUTHORIZATION);
+    if(header!=null && header.startsWith("Bearer ")) {
+      try {
+        var claims=jwt.parse(header.substring(7).trim());
+        String role=String.valueOf(claims.get("role"));
+        var authentication=new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+            claims.getSubject(),null,List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_"+role)));
+        org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(authentication);
+      } catch(Exception ignored) {}
+    }
+    chain.doFilter(req,res);
   }
 }

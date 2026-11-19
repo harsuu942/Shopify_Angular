@@ -8,12 +8,17 @@ export default {
       const assetUrl = new URL(`/product-images/${filename}`, request.url);
       try {
         const assetResp = await env.ASSETS.fetch(new Request(assetUrl, request));
-        if (assetResp && assetResp.status === 200) {
+        const assetType = assetResp?.headers.get('content-type') || '';
+        if (assetResp && assetResp.status === 200 && (assetType.startsWith('image/') || assetType.startsWith('application/pdf'))) {
           const res = new Response(assetResp.body, assetResp);
           res.headers.set('Access-Control-Allow-Origin', '*');
           return res;
         }
       } catch (_) {}
+
+      // The static-assets binding uses SPA fallback and returns index.html with
+      // HTTP 200 for unknown files. If the response above was not an actual
+      // image, continue to Render where dynamic uploads are stored.
     }
 
     // Forward API and actuator requests to Render Admin Backend with automatic fallback
@@ -86,8 +91,18 @@ export default {
       }
     }
 
-    // Fallback to static assets
-    return env.ASSETS.fetch(request);
+    // Never retain the SPA shell: each refresh must discover the newest hashed
+    // JavaScript bundle. Immutable image/script assets keep their normal cache.
+    const assetResponse = await env.ASSETS.fetch(request);
+    const assetType = assetResponse.headers.get('content-type') || '';
+    if (assetType.includes('text/html')) {
+      const freshHtml = new Response(assetResponse.body, assetResponse);
+      freshHtml.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+      freshHtml.headers.set('Pragma', 'no-cache');
+      freshHtml.headers.set('Expires', '0');
+      return freshHtml;
+    }
+    return assetResponse;
   },
 
   // Keep-alive cron trigger to prevent Render backends from sleeping

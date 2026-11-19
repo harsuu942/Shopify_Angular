@@ -12,18 +12,24 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.client.RestClient;
 import java.util.Map;
+import com.hearth.commerce.config.StoreJwtService;
 
 @RestController @RequestMapping("/api/auth")
 public class AuthController {
   private final AppUserRepository users;
   private final PasswordEncoder encoder;
   private final SyncRetryService syncRetryService;
+  private final PasswordResetMailService passwordResetMailService;
+  private final StoreJwtService jwtService;
 
   AuthController(AppUserRepository users, PasswordEncoder encoder,
-                 SyncRetryService syncRetryService){
+                 SyncRetryService syncRetryService, PasswordResetMailService passwordResetMailService,
+                 StoreJwtService jwtService){
     this.users = users;
     this.encoder = encoder;
     this.syncRetryService = syncRetryService;
+    this.passwordResetMailService = passwordResetMailService;
+    this.jwtService = jwtService;
   }
 
   @PostMapping("/signup")
@@ -53,7 +59,7 @@ public class AuthController {
     if (!encoder.matches(password, user.getPasswordHash())) {
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Invalid email or password."));
     }
-    String token = java.util.Base64.getEncoder().encodeToString((user.getEmail() + ":" + password).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    String token = jwtService.create(user);
     return ResponseEntity.ok(Map.of(
       "id", user.getId(),
       "email", user.getEmail(),
@@ -78,10 +84,18 @@ public class AuthController {
     String code = String.format("%06d", new java.security.SecureRandom().nextInt(1_000_000));
     user.setResetToken(code, java.time.Instant.now().plus(15, java.time.temporal.ChronoUnit.MINUTES));
     users.save(user);
+    // Never return the reset credential to the caller. Delivery must happen
+    // through the configured mail provider so possession of the mailbox is
+    // part of the recovery proof.
+    if (!passwordResetMailService.send(user.getEmail(), code)) {
+      user.clearResetToken();
+      users.save(user);
+      return ResponseEntity.ok(Map.of(
+        "message", "If an account exists with this email address, a password reset code has been sent."
+      ));
+    }
     return ResponseEntity.ok(Map.of(
-      "message", "A 6-digit password reset verification code has been generated.",
-      "devCode", code,
-      "email", user.getEmail()
+      "message", "If an account exists with this email address, a password reset code has been sent."
     ));
   }
 
@@ -93,8 +107,8 @@ public class AuthController {
     if (email.isBlank() || code.isBlank() || newPassword.isBlank()) {
       return ResponseEntity.badRequest().body(Map.of("message", "Email, verification code, and new password are required."));
     }
-    if (newPassword.length() < 6) {
-      return ResponseEntity.badRequest().body(Map.of("message", "New password must be at least 6 characters long."));
+    if (newPassword.length() < 12) {
+      return ResponseEntity.badRequest().body(Map.of("message", "New password must be at least 12 characters long."));
     }
     var userOpt = users.findByEmailIgnoreCase(email);
     if (userOpt.isEmpty()) {
@@ -113,5 +127,5 @@ public class AuthController {
   public record SignupRequest(
       @NotBlank(message="Full name is required") @Size(min=2,max=120,message="Full name must be at least 2 characters") String fullName,
       @NotBlank(message="Email address is required") @Email(message="Please enter a valid email address") @Size(max=190) String email,
-      @NotBlank(message="Password is required") @Size(min=6,max=72,message="Password must be at least 6 characters") String password){}
+      @NotBlank(message="Password is required") @Size(min=12,max=72,message="Password must be at least 12 characters") String password){}
 }

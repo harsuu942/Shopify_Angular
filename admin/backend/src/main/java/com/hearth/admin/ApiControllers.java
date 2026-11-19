@@ -26,7 +26,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 record LoginRequest(@NotBlank @Email String email,@NotBlank String password) {}
 record LoginResponse(String token,String name,String email,String role) {}
-record StockRequest(@Positive int quantity,String type,@NotBlank String warehouse,@NotBlank String reason,String reference) {}
+record StockRequest(@Positive int quantity,String type,@NotBlank String warehouse,@NotBlank String reason,String reference,
+                    Long variantId,String variantSku) {}
 
 @RestController @RequestMapping("/api/auth")
 class AuthController {
@@ -282,8 +283,8 @@ class OrderController {
     List<RestockItem> itemsToRestock = parseItems(order.itemsJson);
     for (RestockItem item : itemsToRestock) {
       if (item.quantity() <= 0) continue;
-      Optional<Product> pOpt = item.sku() != null && !item.sku().isBlank()
-          ? products.findBySku(item.sku())
+      Optional<Product> pOpt = item.productSku() != null && !item.productSku().isBlank()
+          ? products.findBySku(item.productSku())
           : (item.productId() != null ? products.findById(item.productId()) : Optional.empty());
       if (pOpt.isPresent()) {
         Product prod = pOpt.get();
@@ -291,7 +292,8 @@ class OrderController {
         prod.stock += item.quantity();
         if (prod.variants != null && !prod.variants.isEmpty()) {
           for (var v : prod.variants) {
-            if (item.sku() != null && (item.sku().equalsIgnoreCase(v.variantSku) || item.sku().equalsIgnoreCase(v.ean))) {
+            if ((item.variantSku() != null && item.variantSku().equalsIgnoreCase(v.variantSku))
+                || (item.variantEan() != null && item.variantEan().equalsIgnoreCase(v.ean))) {
               v.stock = (v.stock != null ? v.stock : 0) + item.quantity();
               break;
             }
@@ -332,14 +334,16 @@ class OrderController {
           if (node.has("productId")) prodId = node.get("productId").asLong();
           else if (node.has("id")) prodId = node.get("id").asLong();
 
-          String sku = null;
-          if (node.has("sku")) sku = node.get("sku").asText();
+          String productSku = textValue(node, "productSku");
+          if (productSku == null) productSku = textValue(node, "sku");
+          String variantSku = textValue(node, "variantSku");
+          String variantEan = textValue(node, "variantEan");
 
           int qty = 1;
           if (node.has("quantity")) qty = node.get("quantity").asInt(1);
           else if (node.has("qty")) qty = node.get("qty").asInt(1);
 
-          list.add(new RestockItem(prodId, sku, qty));
+          list.add(new RestockItem(prodId, productSku, variantSku, variantEan, qty));
         }
         return list;
       }
@@ -362,11 +366,17 @@ class OrderController {
         var qtyM = java.util.regex.Pattern.compile("(?:quantity|qty)[=:\"]+\\s*([0-9]+)").matcher(block);
         if (qtyM.find()) qty = Integer.parseInt(qtyM.group(1).trim());
 
-        list.add(new RestockItem(prodId, sku, qty));
+        list.add(new RestockItem(prodId, sku, null, null, qty));
       }
     } catch (Exception ignored) {}
 
     return list;
+  }
+
+  private String textValue(tools.jackson.databind.JsonNode node, String field) {
+    if (!node.has(field) || node.get(field).isNull()) return null;
+    String value = node.get(field).asText();
+    return value == null || value.isBlank() ? null : value;
   }
 
   @PostMapping("/{id}/send-customer-update")
@@ -377,7 +387,7 @@ class OrderController {
     return Map.of("success", true, "sentTo", order.customerEmail != null ? order.customerEmail : "customer", "carrier", carrier, "trackingNumber", tracking, "message", "Dispatch consignment notification sent to customer.");
   }
 }
-record RestockItem(Long productId, String sku, int quantity) {}
+record RestockItem(Long productId, String productSku, String variantSku, String variantEan, int quantity) {}
 
 @RestController @RequestMapping("/api/inventory")
 @PreAuthorize("hasAnyRole('ADMIN','CATALOGUE_MANAGER')")
@@ -388,23 +398,33 @@ class InventoryController {
   @PostMapping("/{productId}/adjust") @Transactional InventoryTransaction adjust(@PathVariable("productId") Long productId,@Valid @RequestBody StockRequest r,Authentication auth,HttpServletRequest req){
     var p=products.findById(productId).orElseThrow();
     int delta="REMOVE".equalsIgnoreCase(r.type())?-r.quantity():r.quantity();
-    if(p.stock+delta<0)throw new ResponseStatusException(HttpStatus.CONFLICT,"Insufficient stock");
+    ProductVariant selectedVariant = null;
+    if(p.variants!=null&&!p.variants.isEmpty()){
+      selectedVariant=p.variants.stream().filter(v ->
+          (r.variantId()!=null&&r.variantId().equals(v.id))
+          || (r.variantSku()!=null&&!r.variantSku().isBlank()&&r.variantSku().equalsIgnoreCase(v.variantSku)))
+        .findFirst().orElse(null);
+      if(selectedVariant==null&&p.variants.size()>1)throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Select a product variant to adjust");
+      if(selectedVariant==null)selectedVariant=p.variants.get(0);
+      int variantStock=selectedVariant.stock!=null?selectedVariant.stock:0;
+      if(variantStock+delta<0)throw new ResponseStatusException(HttpStatus.CONFLICT,"Insufficient stock for selected variant");
+    } else if(p.stock+delta<0)throw new ResponseStatusException(HttpStatus.CONFLICT,"Insufficient stock");
     var t=new InventoryTransaction();
     t.productId=p.id;
-    t.sku=p.sku;
-    t.productName=p.name;
+    t.sku=selectedVariant!=null&&selectedVariant.variantSku!=null?selectedVariant.variantSku:p.sku;
+    t.productName=p.name+(selectedVariant!=null&&selectedVariant.colour!=null?" — "+selectedVariant.colour:"");
     t.warehouse=r.warehouse();
     t.type=r.type().toUpperCase();
     t.quantityChange=delta;
-    t.beforeQuantity=p.stock;
-    t.afterQuantity=p.stock+delta;
+    t.beforeQuantity=selectedVariant!=null?(selectedVariant.stock!=null?selectedVariant.stock:0):p.stock;
+    t.afterQuantity=t.beforeQuantity+delta;
     t.reason=r.reason();
     t.reference=r.reference();
     t.performedBy=auth.getName();
-    p.stock=t.afterQuantity;
-    if(p.variants!=null&&!p.variants.isEmpty()&&p.variants.size()==1){
-      p.variants.get(0).stock=p.stock;
-    }
+    if(selectedVariant!=null){
+      selectedVariant.stock=t.afterQuantity;
+      p.stock=p.variants.stream().mapToInt(v->v.stock!=null?v.stock:0).sum();
+    }else p.stock=t.afterQuantity;
     products.save(p);
     txs.save(t);
     sync.sync(p);
@@ -560,7 +580,9 @@ class InternalSyncController {
   public Map<String,Object> syncOrder(@RequestHeader("X-Catalogue-Sync-Secret") String supplied,
                                       @RequestBody StorefrontOrderPayload payload){
     checkSecret(supplied);
-    CommerceOrder order = orders.findByOrderNumber(payload.orderNumber()).orElseGet(CommerceOrder::new);
+    var existingOrder = orders.findByOrderNumber(payload.orderNumber());
+    boolean newOrder = existingOrder.isEmpty();
+    CommerceOrder order = existingOrder.orElseGet(CommerceOrder::new);
     order.orderNumber = payload.orderNumber();
     order.customerName = payload.customerName();
     order.customerEmail = payload.customerEmail();
@@ -571,12 +593,14 @@ class InternalSyncController {
     order.discountMinor = payload.discountMinor();
     order.itemsJson = payload.itemsJson();
     order.channel = "STOREFRONT";
-    order.orderStatus = "PROCESSING";
-    order.paymentStatus = "PAID";
-    order.fulfilmentStatus = "UNFULFILLED";
-    order.carrier = "DPD Express";
-    order.trackingNumber = "DPD-GB-" + String.format("%08d", Math.abs(payload.orderNumber().hashCode() % 100000000));
-    order.estimatedDelivery = java.time.LocalDate.now().plusDays(2).toString();
+    if (newOrder) {
+      order.orderStatus = "PROCESSING";
+      order.paymentStatus = "PAID";
+      order.fulfilmentStatus = "UNFULFILLED";
+      order.carrier = "DPD Express";
+      order.trackingNumber = "DPD-GB-" + String.format("%08d", Math.abs(payload.orderNumber().hashCode() % 100000000));
+      order.estimatedDelivery = java.time.LocalDate.now().plusDays(2).toString();
+    }
     var saved = orders.save(order);
 
     // Sync to Customer CRM
@@ -588,7 +612,7 @@ class InternalSyncController {
         cust.phone = payload.customerPhone();
         cust.status = "ACTIVE";
         cust.lifetimeValueMinor = payload.totalMinor();
-      } else {
+      } else if (newOrder) {
         cust.lifetimeValueMinor += payload.totalMinor();
         if (payload.customerPhone() != null && !payload.customerPhone().isBlank()) cust.phone = payload.customerPhone();
       }
@@ -596,17 +620,20 @@ class InternalSyncController {
     }
 
     // Deduct stock in Admin and record InventoryTransaction
-    if (payload.items() != null) {
+    if (newOrder && payload.items() != null) {
       for (var item : payload.items()) {
-        Optional<Product> pOpt = item.sku() != null ? products.findBySku(item.sku()) : (item.productId() != null ? products.findById(item.productId()) : Optional.empty());
+        String productSku = item.productSku() != null && !item.productSku().isBlank() ? item.productSku() : item.sku();
+        Optional<Product> pOpt = productSku != null && !productSku.isBlank()
+            ? products.findBySku(productSku)
+            : (item.productId() != null ? products.findById(item.productId()) : Optional.empty());
         if (pOpt.isPresent()) {
           Product p = pOpt.get();
           int before = p.stock;
           p.stock = Math.max(0, p.stock - item.quantity());
           if (p.variants != null && !p.variants.isEmpty()) {
             for (var v : p.variants) {
-              if ((item.variantId() != null && item.variantId().equals(v.id))
-                  || (item.sku() != null && (item.sku().equalsIgnoreCase(v.variantSku) || item.sku().equalsIgnoreCase(v.ean)))) {
+              if ((item.variantSku() != null && item.variantSku().equalsIgnoreCase(v.variantSku))
+                  || (item.variantEan() != null && item.variantEan().equalsIgnoreCase(v.ean))) {
                 v.stock = Math.max(0, (v.stock != null ? v.stock : 0) - item.quantity());
                 break;
               }
@@ -962,7 +989,8 @@ class CompanyController {
 record StorefrontOrderPayload(String orderNumber, String customerName, String customerEmail, String customerPhone,
                               long totalMinor, String deliveryAddress, String discountCode, Long discountMinor,
                               String itemsJson, List<StorefrontOrderItem> items){}
-record StorefrontOrderItem(Long productId, Long variantId, String sku, int quantity, long priceMinor){}
+record StorefrontOrderItem(Long productId, Long variantId, String sku, String productSku,
+                           String variantSku, String variantEan, int quantity, long priceMinor){}
 
 @RestController @RequestMapping("/api/content")
 @PreAuthorize("hasAnyRole('ADMIN','CATALOGUE_MANAGER')")

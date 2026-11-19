@@ -38,8 +38,8 @@ app:
     auth-per-minute: ${AUTH_RATE_LIMIT_PER_MINUTE:120}
   stripe:
     publishable-key: ${STRIPE_PUBLISHABLE_KEY:pk_test_51ULcRRISETK50H4IRJKAgxMw7Ktuz0fm5ccnJrMXndcvWtf3qqsIpsbB7w8cUHRaq6XpyShgIHFgChbqHw5LXWlt00bvStm85m}
-    secret-key: ${STRIPE_SECRET_KEY:sk_test_51ULcRRISETK50H4I8dAp1gP7cgRfQeH21A9rCcMOEbB0svAkBBcB6EyWHFzyyLlu92vIUJbsUE4qL3vpnSYjuZ5s00biikadZL}
-    webhook-secret: ${STRIPE_WEBHOOK_SECRET:whsec_keFfE8jGDhZMiPcbtGtBHe2Xytlirqe2}
+    secret-key: ${STRIPE_SECRET_KEY:}
+    webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
   auth:
     customer-email: customer@example.com
     customer-password: Customer123!

@@ -21,35 +21,23 @@ const ADMIN_PREFIXES = [
 ];
 
 const server = http.createServer((req, res) => {
-  // CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.setHeader('Access-Control-Allow-Headers', '*');
-
-  if (req.method === 'OPTIONS') {
-    res.writeHead(204);
-    res.end();
-    return;
-  }
-
-  // Healthcheck for Render & UptimeRobot
-  if (req.url === '/healthz' || req.url === '/actuator/health') {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ status: 'UP', service: 'unified-gateway', timestamp: new Date().toISOString() }));
-    return;
-  }
-
-  // Debug status for process diagnostics
-  if (req.url === '/api/internal/debug-status') {
-    const { execSync } = require('child_process');
-    let ps = '';
-    let adminLog = '';
-    let storeLog = '';
-    try { ps = execSync('ps aux', { encoding: 'utf8' }); } catch(e){ ps = e.message; }
-    try { adminLog = require('fs').readFileSync('/tmp/admin.log', 'utf8').slice(-3000); } catch(e){ adminLog = e.message; }
-    try { storeLog = require('fs').readFileSync('/tmp/store.log', 'utf8').slice(-3000); } catch(e){ storeLog = e.message; }
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ status: 'OK', ps, adminLog, storeLog }));
+  // Health is only UP when both application processes answer.  The previous
+  // unconditional response allowed Render to keep routing traffic while one
+  // of the two APIs was dead.
+  if (req.url === '/healthz') {
+    const check = port => new Promise(resolve => {
+      const probe = http.get({ hostname: '127.0.0.1', port, path: '/actuator/health', timeout: 2500 }, response => {
+        response.resume();
+        resolve(response.statusCode >= 200 && response.statusCode < 300);
+      });
+      probe.on('error', () => resolve(false));
+      probe.on('timeout', () => { probe.destroy(); resolve(false); });
+    });
+    Promise.all([check(STOREFRONT_PORT), check(ADMIN_PORT)]).then(([storefront, admin]) => {
+      const healthy = storefront && admin;
+      res.writeHead(healthy ? 200 : 503, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+      res.end(JSON.stringify({ status: healthy ? 'UP' : 'DOWN', storefront, admin }));
+    });
     return;
   }
 

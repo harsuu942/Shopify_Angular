@@ -13,6 +13,14 @@ spring:
     multipart:
       max-request-size: 20MB
       max-file-size: 20MB
+  mail:
+    host: ${SMTP_HOST:}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
 server:
   port: 8080
   error:
@@ -35,16 +43,21 @@ app:
   cors-origin: ${CORS_ORIGIN:http://localhost:4200}
   rate-limit:
     requests-per-minute: ${RATE_LIMIT_PER_MINUTE:300}
-    auth-per-minute: ${AUTH_RATE_LIMIT_PER_MINUTE:120}
+    auth-per-minute: ${AUTH_RATE_LIMIT_PER_MINUTE:10}
   stripe:
-    publishable-key: ${STRIPE_PUBLISHABLE_KEY:pk_test_51ULcRRISETK50H4IRJKAgxMw7Ktuz0fm5ccnJrMXndcvWtf3qqsIpsbB7w8cUHRaq6XpyShgIHFgChbqHw5LXWlt00bvStm85m}
-    secret-key: ${STRIPE_SECRET_KEY:sk_test_51ULcRRISETK50H4I8dAp1gP7cgRfQeH21A9rCcMOEbB0svAkBBcB6EyWHFzyyLlu92vIUJbsUE4qL3vpnSYjuZ5s00biikadZL}
-    webhook-secret: ${STRIPE_WEBHOOK_SECRET:whsec_keFfE8jGDhZMiPcbtGtBHe2Xytlirqe2}
+    publishable-key: ${STRIPE_PUBLISHABLE_KEY:}
+    secret-key: ${STRIPE_SECRET_KEY:}
+    webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+  jwt:
+    secret: ${JWT_SECRET:local-development-storefront-signing-key-change-now-2026}
+    expiration-minutes: ${JWT_EXPIRATION_MINUTES:60}
   auth:
     customer-email: customer@example.com
     customer-password: Customer123!
     admin-email: admin@example.com
     admin-password: Admin123!
+  mail:
+    from: ${SMTP_FROM:}
 ---
 spring:
   config:

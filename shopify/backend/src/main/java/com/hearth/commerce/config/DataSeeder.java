@@ -6,7 +6,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.*;
 import java.util.List;
 
-@Configuration @Profile("!prod")
+@Configuration @Profile("!prod & !render")
 public class DataSeeder {
  @Bean CommandLineRunner seed(ProductRepository r, PromotionRepository promoRepo){return args->{
   List<String> dummySkus = List.of("RAD-WIN-600","TOW-ARC-1200","VAL-TRV-001","BTH-FRE-1700","PLB-MIX-015","RAD-ARLO-600","TWL-AVA-1200","BTH-SORA-1700","PLB-VALVE-01");

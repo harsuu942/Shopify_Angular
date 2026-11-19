@@ -167,71 +167,6 @@
   <!-- MULTI-LEVEL PRIMARY NAVIGATION BAR (Click to Expand / Collapse) -->
   <nav class="primary-nav-bar">
     <div class="container-fluid nav-bar-inner">
-      <!-- Department Trigger -->
-      <div class="nav-item-dropdown" (mouseenter)="openNavMenu('all')" (mouseleave)="closeNavMenu('all')">
-        <button 
-          type="button"
-          class="nav-category-trigger all-dept-btn" 
-          [class.expanded]="activeNavHover() === 'all'"
-          (click)="toggleNavMenu('all', $event)"
-          aria-haspopup="true"
-          [attr.aria-expanded]="activeNavHover() === 'all'">
-          <span class="hamburger-bars">
-            <span></span>
-            <span></span>
-            <span></span>
-          </span>
-          <div class="all-dept-label">
-            <span class="top-line">All</span>
-            <span class="bot-line">Departments</span>
-          </div>
-          <span class="dropdown-chevron" [class.rotated]="activeNavHover() === 'all'">▼</span>
-        </button>
-
-        @if(activeNavHover() === 'all') {
-          <div class="child-mega-menu all-departments-mega" (mouseenter)="keepNavMenuOpen()" (click)="$event.stopPropagation()">
-            <div class="mega-inner-container">
-              <div class="mega-grid-wrapper">
-                @for(menu of dynamicNavigationMenu(); track menu.id) {
-                  <div class="mega-col mega-dept-col">
-                    <div class="mega-heading" (click)="chooseParentCategory(menu.category)">
-                      @if(menu.imageUrl) {
-                        <img [src]="imageSrc(menu.imageUrl)" class="mega-mini-cat-thumb" [alt]="menu.title" (error)="imageFailed($event)">
-                      } @else {
-                        <span>{{menu.icon}}</span>
-                      }
-                      <h4>{{menu.title}}</h4>
-                    </div>
-                    
-                    @for(col of menu.columns; track col.title) {
-                      <div class="dept-subgroup">
-                        <h6 class="dept-subgroup-title">{{col.title}}</h6>
-                        <ul class="mega-sub-list">
-                          @for(item of col.items.slice(0, 3); track item.label) {
-                            <li>
-                              <button type="button" (click)="selectChildItem(item, menu.category)">
-                                <span class="subitem-label">{{item.label}}</span>
-                                @if(item.badge) { <span class="nav-chip" [class.trending]="item.badge==='HOT' || item.badge==='TRENDING'">{{item.badge}}</span> }
-                              </button>
-                            </li>
-                          }
-                        </ul>
-                      </div>
-                    }
-
-                    <div class="dept-col-footer">
-                      <button type="button" class="dept-view-all-link" (click)="chooseParentCategory(menu.category)">
-                        View All {{menu.title}} →
-                      </button>
-                    </div>
-                  </div>
-                }
-              </div>
-            </div>
-          </div>
-        }
-      </div>
-
       <!-- Main Category Nav Items with Click-to-Expand/Collapse Mega Menus -->
       @for(menu of dynamicNavigationMenu(); track menu.id) {
         <div class="nav-item-dropdown" (mouseenter)="openNavMenu(menu.id)" (mouseleave)="closeNavMenu(menu.id)">
@@ -504,7 +439,7 @@
             <article class="clean-product-card" (click)="select(p)">
               <div class="clean-card-img-wrap">
                 <img [src]="imageSrc(p.image, p.category, p.name)" (error)="imageFailed($event, p.category, p.name)" [alt]="p.name" loading="lazy" referrerpolicy="no-referrer">
-                <span class="clean-stock-badge">In Stock</span>
+                <span class="clean-stock-badge" [class.out-of-stock]="isProductOutOfStock(p)">{{isProductOutOfStock(p) ? 'Out of Stock' : 'In Stock'}}</span>
               </div>
               <div class="clean-card-info">
                 <span class="clean-brand-kicker">{{p.brand || 'THP UK'}}</span>
@@ -521,7 +456,7 @@
                       <button type="button" class="qty-btn plus" (click)="incrementCartQty(p, $event)" aria-label="Increase quantity">＋</button>
                     </div>
                   } @else {
-                    <button type="button" class="clean-add-btn" (click)="$event.stopPropagation();add(p)">＋ Add</button>
+                    <button type="button" class="clean-add-btn" [disabled]="isProductOutOfStock(p)" (click)="$event.stopPropagation();add(p)">{{isProductOutOfStock(p) ? 'Out of Stock' : '＋ Add'}}</button>
                   }
                 </div>
               </div>
@@ -949,7 +884,7 @@
                     </div>
                     <div class="card-delivery-perk">
                       <span class="perk-check">✓</span>
-                      <span>In Stock - Next Day Delivery</span>
+                      <span>{{isProductOutOfStock(p) ? 'Out of Stock' : 'In Stock - Next Day Delivery'}}</span>
                     </div>
                     @if(getCartQty(p) > 0) {
                       <div class="card-qty-stepper w-100" (click)="$event.stopPropagation()">
@@ -958,13 +893,13 @@
                         <button type="button" class="qty-btn plus" (click)="incrementCartQty(p, $event)" aria-label="Increase quantity">＋</button>
                       </div>
                     } @else {
-                      <button type="button" class="btn-card-add-basket" (click)="$event.stopPropagation();add(p)">
+                      <button type="button" class="btn-card-add-basket" [disabled]="isProductOutOfStock(p)" (click)="$event.stopPropagation();add(p)">
                         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                           <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
                           <line x1="3" y1="6" x2="21" y2="6"></line>
                           <path d="M16 10a4 4 0 0 1-8 0"></path>
                         </svg>
-                        <span>Add to Basket</span>
+                        <span>{{isProductOutOfStock(p) ? 'Out of Stock' : 'Add to Basket'}}</span>
                       </button>
                     }
                   </div>
@@ -1121,7 +1056,7 @@
               <span class="home-featured-brand">{{p.brand || 'THP Heating'}}</span>
               <h3 (click)="select(p)">{{p.name}}</h3>
               <div class="home-featured-price"><strong>{{displayPrice(p) | currency:'GBP'}}</strong><small> inc. VAT</small></div>
-              <div class="home-featured-stock"><i></i>{{p.stock > 0 ? 'In Stock' : 'Made to Order'}}</div>
+              <div class="home-featured-stock" [class.out-of-stock]="isProductOutOfStock(p)"><i></i>{{isProductOutOfStock(p) ? 'Out of Stock' : 'In Stock'}}</div>
               @if((!p.variants || p.variants.length <= 1) && getCartQty(p) > 0) {
                 <div class="card-qty-stepper w-100" (click)="$event.stopPropagation()">
                   <button type="button" class="qty-btn minus" (click)="decrementCartQty(p, $event)" aria-label="Decrease quantity">−</button>
@@ -1129,7 +1064,7 @@
                   <button type="button" class="qty-btn plus" (click)="incrementCartQty(p, $event)" aria-label="Increase quantity">＋</button>
                 </div>
               } @else {
-                <button class="home-add-btn" (click)="p.variants.length > 1 ? select(p) : add(p)">{{p.variants.length > 1 ? 'Select Options' : 'Add to Basket'}} →</button>
+                <button class="home-add-btn" [disabled]="isProductOutOfStock(p)" (click)="p.variants.length > 1 ? select(p) : add(p)">{{isProductOutOfStock(p) ? 'Out of Stock' : (p.variants.length > 1 ? 'Select Options' : 'Add to Basket')}} →</button>
               }
             </article>
           }
@@ -1558,20 +1493,20 @@
                 <span>{{productQty()}}</span>
                 <button type="button" (click)="increaseQty()" aria-label="Increase quantity">＋</button>
               </div>
-              <button type="button" class="bh-main-add-btn" (click)="addMany(p)">
+              <button type="button" class="bh-main-add-btn" [disabled]="isSelectedConfigurationOutOfStock(p)" (click)="addMany(p)">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
                   <line x1="3" y1="6" x2="21" y2="6"></line>
                   <path d="M16 10a4 4 0 0 1-8 0"></path>
                 </svg>
-                <span>Add to Basket</span>
+                <span>{{isSelectedConfigurationOutOfStock(p) ? 'Out of Stock' : 'Add to Basket'}}</span>
               </button>
             </div>
 
             <!-- In Stock Indicator -->
             <div class="bh-stock-row">
               <span class="bh-green-bullet">●</span>
-              <strong>In stock</strong>
+              <strong>{{isSelectedConfigurationOutOfStock(p) ? 'Out of stock' : 'In stock'}}</strong>
               <span class="bh-stock-sep">—</span>
               <span class="bh-dispatch-msg">Dispatched via specialist tracked courier.</span>
             </div>
@@ -2553,7 +2488,7 @@
               </div>
               <div class="col-12">
                 <label class="auth-label">Mobile Number (SMS delivery notifications) <span class="text-danger">*</span></label>
-                <input [(ngModel)]="checkoutPhone" (input)="phoneError.set('')" [class.is-invalid]="phoneError()" class="auth-input" placeholder="e.g. 07123 456789 or +44 7123 456789" maxlength="25" required>
+                <input [(ngModel)]="checkoutPhone" (input)="onCheckoutPhoneInput($event)" (blur)="validatePhone()" [class.is-invalid]="phoneError()" class="auth-input" inputmode="tel" autocomplete="tel" placeholder="e.g. 07123456789 or +447123456789" maxlength="13" required>
                 @if(phoneError()) {
                   <div class="field-error-text">{{phoneError()}}</div>
                 }
@@ -2733,29 +2668,10 @@
                 </div>
               </div>
 
-              <!-- Quick Test Card Selector Toolbar -->
+              <!-- Stripe-hosted fields: card data never touches this application -->
               <div class="mb-3 p-2 bg-white rounded border">
-                <div class="d-flex align-items-center justify-content-between mb-1">
-                  <span class="small fw-bold text-muted">Stripe Test Card Presets:</span>
-                  <span class="small text-muted" style="font-size: 0.72rem;">Click to simulate payment outcomes</span>
-                </div>
-                <div class="d-flex flex-wrap gap-1">
-                  <button type="button" class="btn btn-sm btn-outline-success py-1 px-2" style="font-size: 0.78rem;" (click)="fillTestCard('success')">
-                    Success (4242)
-                  </button>
-                  <button type="button" class="btn btn-sm btn-outline-danger py-1 px-2" style="font-size: 0.78rem;" (click)="fillTestCard('funds')">
-                    Insufficient Funds (0002)
-                  </button>
-                  <button type="button" class="btn btn-sm btn-outline-warning text-dark py-1 px-2" style="font-size: 0.78rem;" (click)="fillTestCard('expired')">
-                    Expired Card (0069)
-                  </button>
-                  <button type="button" class="btn btn-sm btn-outline-danger py-1 px-2" style="font-size: 0.78rem;" (click)="fillTestCard('cvc')">
-                    Wrong CVC (0127)
-                  </button>
-                  <button type="button" class="btn btn-sm btn-outline-primary py-1 px-2" style="font-size: 0.78rem;" (click)="fillTestCard('sca')">
-                    3DS SCA Challenge (3155)
-                  </button>
-                </div>
+                <span class="small fw-bold text-muted">Stripe test mode:</span>
+                <span class="small text-muted ms-1">enter <strong>4242 4242 4242 4242</strong>, any future expiry and any CVC in the secure field below.</span>
               </div>
 
               <div class="row g-3">
@@ -2767,27 +2683,10 @@
                   }
                 </div>
                 <div class="col-12">
-                  <label class="auth-label">Card Number <span class="text-danger">*</span></label>
-                  <div class="position-relative">
-                    <input [(ngModel)]="cardNumber" (input)="onCardNumberInput($event)" [class.is-invalid]="cardNumberError()" class="auth-input" maxlength="23" placeholder="4242 4242 4242 4242" required>
-                    <span class="position-absolute end-0 top-50 translate-middle-y pe-3 text-muted small fw-bold">VISA / MC</span>
-                  </div>
+                  <label class="auth-label">Card details <span class="text-danger">*</span></label>
+                  <div id="stripe-card-element" class="stripe-element-host" [class.is-invalid]="cardNumberError()"></div>
                   @if(cardNumberError()) {
                     <div class="field-error-text">{{cardNumberError()}}</div>
-                  }
-                </div>
-                <div class="col-md-6">
-                  <label class="auth-label">Expiry Date <span class="text-danger">*</span></label>
-                  <input [(ngModel)]="cardExpiry" (input)="onCardExpiryInput($event)" [class.is-invalid]="cardExpiryError()" class="auth-input" placeholder="MM/YY" maxlength="5" required>
-                  @if(cardExpiryError()) {
-                    <div class="field-error-text">{{cardExpiryError()}}</div>
-                  }
-                </div>
-                <div class="col-md-6">
-                  <label class="auth-label">Security Code (CVC) <span class="text-danger">*</span></label>
-                  <input [(ngModel)]="cardCvc" (input)="onCardCvcInput($event)" [class.is-invalid]="cardCvcError()" class="auth-input" maxlength="4" placeholder="123" required>
-                  @if(cardCvcError()) {
-                    <div class="field-error-text">{{cardCvcError()}}</div>
                   }
                 </div>
               </div>
@@ -3026,7 +2925,7 @@
               <tbody>
                 @for(o of orders(); track o.id) {
                   <tr>
-                    <td><code>#{{o.id.slice(0,8).toUpperCase()}}</code></td>
+                    <td><code>{{o.orderNumber || ('#' + o.id.slice(0,8).toUpperCase())}}</code></td>
                     <td>{{o.createdAt | date:'mediumDate'}}</td>
                     <td><span class="status-pill completed">{{o.status}}</span></td>
                     <td>
@@ -3779,7 +3678,7 @@
           </div>
           <div class="d-flex justify-content-between mb-2">
             <span class="text-muted">Payment Method:</span>
-            <span>Card ending in <strong>{{cardNumber.slice(-4)}}</strong></span>
+            <span><strong>Stripe-secured card payment</strong></span>
           </div>
           <div class="d-flex justify-content-between">
             <span class="text-muted">Verification Protocol:</span>
