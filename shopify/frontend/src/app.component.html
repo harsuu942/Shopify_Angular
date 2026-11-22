@@ -998,9 +998,10 @@
               <label>Room Type</label>
               <select [(ngModel)]="btuRoomType" (change)="calculateBtu()">
                 <option value="living">Living Room / Lounge</option>
+                <option value="dining">Dining Room</option>
                 <option value="bathroom">Bathroom / Wetroom (Extra Warm)</option>
                 <option value="bedroom">Bedroom</option>
-                <option value="kitchen">Kitchen / Dining</option>
+                <option value="kitchen">Kitchen</option>
                 <option value="hallway">Hallway / Corridor</option>
               </select>
             </div>
@@ -1017,33 +1018,21 @@
               <input type="number" min="1.8" max="8" step="0.1" [(ngModel)]="btuHeight" (input)="calculateBtu()">
             </div>
             <div class="btu-field">
-              <label>Insulation & Glazing</label>
-              <select [(ngModel)]="btuInsulation" (change)="calculateBtu()">
-                <option value="high">Modern Cavity & Double Glazing</option>
-                <option value="standard">Standard Domestic (Good)</option>
-                <option value="period">Period Property / High Ceilings</option>
-              </select>
-            </div>
-            <div class="btu-field">
-              <label>Window Glazing</label>
+              <label>Double Glazed Windows?</label>
               <select [(ngModel)]="btuGlazing" (change)="calculateBtu()">
-                <option value="single">Single Glazed</option><option value="double">Double Glazed</option><option value="triple">Triple Glazed</option>
+                <option value="double">Yes</option><option value="single">No</option>
               </select>
             </div>
             <div class="btu-field">
-              <label>Number of Windows</label>
-              <input type="number" min="0" max="12" [(ngModel)]="btuWindows" (input)="calculateBtu()">
+              <label>North Facing Wall?</label>
+              <select [(ngModel)]="btuNorthFacing" (change)="calculateBtu()">
+                <option [ngValue]="false">No</option><option [ngValue]="true">Yes</option>
+              </select>
             </div>
             <div class="btu-field">
-              <label>External Walls</label>
-              <input type="number" min="0" max="4" [(ngModel)]="btuExternalWalls" (input)="calculateBtu()">
-            </div>
-            <div class="btu-field">
-              <label>Desired Comfort Level</label>
-              <select [(ngModel)]="btuTemp" (change)="calculateBtu()">
-                <option value="21">Comfortable (21°C)</option>
-                <option value="23">Extra Warm (23°C - Recommended for Bathrooms)</option>
-                <option value="18">Eco / Ambient (18°C)</option>
+              <label>French Windows / Patio Doors?</label>
+              <select [(ngModel)]="btuPatioDoors" (change)="calculateBtu()">
+                <option [ngValue]="false">No</option><option [ngValue]="true">Yes</option>
               </select>
             </div>
           </div>
@@ -1051,9 +1040,9 @@
 
         <div class="btu-output-panel">
           <span class="output-label">RECOMMENDED HEAT OUTPUT</span>
-          <div class="btu-large-number">{{estimatedBtu() | number}}</div>
-          <span class="btu-unit">BTU (Delta T50)</span>
-          <div class="btu-watt-note">Approx. <strong>{{estimatedWatts() | number}} Watts</strong> required</div>
+          <div class="btu-large-number">{{estimatedBtuMin() | number}}–{{estimatedBtuMax() | number}}</div>
+          <span class="btu-unit">BTU required</span>
+          <div class="btu-watt-note"><strong>{{estimatedWattsMin() | number}}–{{estimatedWattsMax() | number}} Watts</strong></div>
           <button class="btu-browse-btn" (click)="filterByBtu()">
             Browse Matching Radiators ({{estimatedWatts()}}W ±20%) →
           </button>

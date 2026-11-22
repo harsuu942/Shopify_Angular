@@ -727,9 +727,14 @@ export class App {
   btuInsulation = 'standard';
   btuCeiling = 'heated';
   btuPatioDoors = false;
+  btuNorthFacing = false;
   btuTemp = '21';
   estimatedBtu = signal(5120);
   estimatedWatts = signal(1500);
+  estimatedBtuMin = signal(4608);
+  estimatedBtuMax = signal(5632);
+  estimatedWattsMin = signal(1350);
+  estimatedWattsMax = signal(1650);
   btuModalOpen = signal(false);
 
   // Floating Help & Complaint Modal State
@@ -3434,49 +3439,115 @@ export class App {
   scrollToBtu() {
     this.activeNavHover.set(null);
     this.mobileNavOpen.set(false);
-    this.view.set('shop');
+    if (this.view() !== 'shop') {
+      this.view.set('shop');
+      this.category = '';
+      this.query = '';
+    }
     setTimeout(() => {
       document.getElementById('btu-calculator')?.scrollIntoView({ behavior: 'smooth' });
-    }, 50);
+    }, 80);
   }
 
-  // BTU Calculator Logic
+  openBtuModal() {
+    this.btuModalOpen.set(true);
+    this.calculateBtu();
+  }
+
+  closeBtuModal() {
+    this.btuModalOpen.set(false);
+  }
+
+  setBtuUnit(unit: 'm' | 'ft') {
+    if (this.btuUnit === unit) return;
+    this.btuUnit = unit;
+    if (unit === 'ft') {
+      this.btuLength = Math.round(this.btuLength * 3.28084 * 10) / 10;
+      this.btuWidth = Math.round(this.btuWidth * 3.28084 * 10) / 10;
+      this.btuHeight = Math.round(this.btuHeight * 3.28084 * 10) / 10;
+    } else {
+      this.btuLength = Math.round((this.btuLength / 3.28084) * 10) / 10;
+      this.btuWidth = Math.round((this.btuWidth / 3.28084) * 10) / 10;
+      this.btuHeight = Math.round((this.btuHeight / 3.28084) * 10) / 10;
+    }
+    this.calculateBtu();
+  }
+
+  // Designer Radiators Direct-style quick sizing calculation:
+  // room volume in ft³ × room factor, then heat-loss adjustments.
   calculateBtu() {
-    const length = Math.max(1, Number(this.btuLength) || 4);
-    const width = Math.max(1, Number(this.btuWidth) || 3.75);
-    const height = Math.max(1.8, Number(this.btuHeight) || 2.4);
-    this.btuArea = Math.round(length * width * 100) / 100;
-    const volume = length * width * height;
-    let roomFactor = 1;
-    if (this.btuRoomType === 'bathroom') roomFactor = 1.15;
-    else if (this.btuRoomType === 'kitchen') roomFactor = 0.9;
-    else if (this.btuRoomType === 'bedroom') roomFactor = 0.95;
-    else if (this.btuRoomType === 'hallway') roomFactor = 0.9;
-    const insulationFactor = this.btuInsulation === 'high' ? 0.82 : this.btuInsulation === 'period' ? 1.28 : 1;
-    const glazingFactor = this.btuGlazing === 'single' ? 1.18 : this.btuGlazing === 'triple' ? 0.9 : 1;
-    const temperatureFactor = Math.max(0.8, Math.min(1.25, Number(this.btuTemp) / 21));
-    const windowFactor = 1 + Math.max(0, Number(this.btuWindows) || 0) * 0.05;
-    const wallFactor = 1 + Math.max(0, (Number(this.btuExternalWalls) || 0) - 1) * 0.08;
-    const watts = Math.round(volume * 40 * roomFactor * insulationFactor * glazingFactor * temperatureFactor * windowFactor * wallFactor);
-    const btu = Math.round(watts * 3.412);
-    this.estimatedWatts.set(watts);
-    this.estimatedBtu.set(btu);
+    const rawL = Math.max(0.5, Number(this.btuLength) || (this.btuUnit === 'ft' ? 13 : 4));
+    const rawW = Math.max(0.5, Number(this.btuWidth) || (this.btuUnit === 'ft' ? 12 : 3.75));
+    const rawH = Math.max(0.5, Number(this.btuHeight) || (this.btuUnit === 'ft' ? 8 : 2.4));
+
+    // Normalise dimensions to metres for display and cubic feet for the formula.
+    const lengthM = this.btuUnit === 'ft' ? rawL * 0.3048 : rawL;
+    const widthM = this.btuUnit === 'ft' ? rawW * 0.3048 : rawW;
+    const heightM = this.btuUnit === 'ft' ? rawH * 0.3048 : rawH;
+
+    this.btuArea = Math.round(lengthM * widthM * 10) / 10;
+    const volumeFt3 = lengthM * widthM * heightM * 35.3147;
+    let roomMultiplier = 4;
+    if (this.btuRoomType === 'bedroom' || this.btuRoomType === 'kitchen' || this.btuRoomType === 'hallway') roomMultiplier = 3;
+
+    let btu = volumeFt3 * roomMultiplier;
+    if (this.btuNorthFacing) btu *= 1.15;
+    if (this.btuPatioDoors) btu *= 1.20;
+    if (this.btuGlazing === 'double' || this.btuGlazing === 'triple') btu *= 0.90;
+
+    const roundedBtu = Math.max(1000, Math.round(btu));
+    const roundedWatts = Math.round(roundedBtu / 3.412);
+    this.estimatedBtu.set(roundedBtu);
+    this.estimatedWatts.set(roundedWatts);
+    this.estimatedBtuMin.set(Math.round(roundedBtu * 0.90));
+    this.estimatedBtuMax.set(Math.round(roundedBtu * 1.10));
+    this.estimatedWattsMin.set(Math.round(roundedWatts * 0.90));
+    this.estimatedWattsMax.set(Math.round(roundedWatts * 1.10));
+  }
+
+  toggleComplaintModal() {
+    this.complaintModalOpen.update(v => !v);
+    if (this.complaintModalOpen()) {
+      this.complaintSubmitted.set(false);
+    }
+  }
+
+  closeComplaintModal() {
+    this.complaintModalOpen.set(false);
+  }
+
+  submitComplaintForm() {
+    const email = this.complaintEmail.trim();
+    if (!this.complaintName.trim() || !email || !/^\S+@\S+\.\S+$/.test(email) || !this.complaintPhone.trim() || !this.complaintDetails.trim()) {
+      this.showToast('Please complete your name, valid email, phone number and details.');
+      return;
+    }
+    this.complaintSubmitting.set(true);
+    const ticketId = 'TKT-' + Math.floor(100000 + Math.random() * 900000);
+    this.http.post<any>('/api/inquiries', {
+      name: this.complaintName.trim(),
+      email,
+      phone: this.complaintPhone.trim(),
+      category: this.complaintCategory || 'Customer Help / Complaint',
+      orderNumber: this.complaintOrderNumber.trim() || null,
+      message: this.complaintDetails.trim(),
+      ticketNumber: ticketId
+    }).pipe(
+      finalize(() => this.complaintSubmitting.set(false))
+    ).subscribe({
+      next: (res) => {
+        this.complaintTicketNumber.set(res?.ticketNumber || ticketId);
+        this.complaintSubmitted.set(true);
+        this.complaintDetails = '';
+        this.complaintOrderNumber = '';
+        this.showToast('✓ Thank you! Your help ticket #' + (res?.ticketNumber || ticketId) + ' has been submitted.');
+      },
+      error: () => this.showToast('Could not submit help form. Please contact our team on WhatsApp.')
+    });
   }
 
   submitComplianceForm() {
-    const email = this.complianceEmail.trim();
-    if (!this.complianceName.trim() || !email || !/^\S+@\S+\.\S+$/.test(email) || !this.compliancePhone.trim() || !this.complianceDetails.trim()) {
-      this.showToast('Please complete name, valid email, phone number and details.');
-      return;
-    }
-    this.complianceSubmitting.set(true);
-    this.http.post<any>('/api/inquiries', {
-      name: this.complianceName.trim(), email, phone: this.compliancePhone.trim(),
-      category: 'Compliance / General Enquiry', message: this.complianceDetails.trim()
-    }).pipe(finalize(() => this.complianceSubmitting.set(false))).subscribe({
-      next: () => { this.complianceSent.set(true); this.complianceDetails = ''; this.showToast('Your enquiry has been submitted successfully.'); },
-      error: () => this.showToast('We could not submit the form. Please try again or use WhatsApp.')
-    });
+    this.submitComplaintForm();
   }
 
   filterByBtu() {
