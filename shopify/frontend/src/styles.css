@@ -12695,6 +12695,10 @@ a.checkout-btn:hover {
 .btu-rec-item:not(:last-child) {
   border-bottom: 1px dashed #cbd5e1;
 }
+.dynamic-tech-summary h4{margin:0 0 14px;color:#0f2630;font-size:1.15rem}
+.dynamic-schematic-card{margin:16px 0;padding:20px;background:#fff;border:1px solid #dbe4e2;border-radius:14px;text-align:center;overflow:auto}
+.dynamic-schematic-card img{display:block;max-width:100%;object-fit:contain;margin:0 auto;background:#f8fafc}
+.dynamic-schematic-card figcaption{margin-top:12px;color:#64748b;font-size:.88rem}
 
 @media(max-width: 768px) {
   .floating-support-container {

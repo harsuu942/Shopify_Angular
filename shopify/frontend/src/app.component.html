@@ -1570,6 +1570,22 @@
               </div>
               <p class="panel-sub">All technical dimensions and thermal performance metrics dynamically correspond to your selected configuration:</p>
 
+              @if(productTechnicalData(p)?.enabled) {
+                <div class="dynamic-tech-summary">
+                  <h4>{{productTechnicalData(p)?.sectionTitle || 'Technical specifications'}}</h4>
+                  <div class="specs-table-wrapper">
+                    <table class="specs-table"><tbody>
+                      @for(spec of productTechnicalData(p)?.specs || []; track $index) {
+                        @if(spec.label || spec.value) {<tr><th>{{spec.label}}</th><td><strong>{{spec.value || '—'}}</strong></td></tr>}
+                      }
+                      @if(productTechnicalData(p)?.dimensions?.height){<tr><th>Height</th><td><strong>{{productTechnicalData(p)?.dimensions?.height}}</strong></td></tr>}
+                      @if(productTechnicalData(p)?.dimensions?.width){<tr><th>Width</th><td><strong>{{productTechnicalData(p)?.dimensions?.width}}</strong></td></tr>}
+                      @if(productTechnicalData(p)?.dimensions?.depth){<tr><th>Depth</th><td><strong>{{productTechnicalData(p)?.dimensions?.depth}}</strong></td></tr>}
+                      @if(productTechnicalData(p)?.dimensions?.pipeCentres){<tr><th>Pipe centres</th><td><strong>{{productTechnicalData(p)?.dimensions?.pipeCentres}}</strong></td></tr>}
+                    </tbody></table>
+                  </div>
+                </div>
+              } @else {
               <div class="specs-table-wrapper">
                 <table class="specs-table">
                   <tbody>
@@ -1656,6 +1672,7 @@
                   </tbody>
                 </table>
               </div>
+              }
             </div>
           }
 
@@ -1670,6 +1687,15 @@
                 </button>
               </div>
 
+              @if(productTechnicalData(p)?.enabled && productTechnicalData(p)?.schematic?.imageUrl) {
+                <figure class="dynamic-schematic-card">
+                  <img [src]="productTechnicalData(p)?.schematic?.imageUrl"
+                       [alt]="productTechnicalData(p)?.schematic?.alt || (p.name + ' technical drawing')"
+                       [style.width.px]="productTechnicalData(p)?.schematic?.displayWidth || 900"
+                       [style.height.px]="productTechnicalData(p)?.schematic?.displayHeight || 600">
+                  @if(productTechnicalData(p)?.schematic?.caption){<figcaption>{{productTechnicalData(p)?.schematic?.caption}}</figcaption>}
+                </figure>
+              } @else {
               <div class="schematic-layout-grid">
                 <div class="svg-diagram-card">
                   <div class="diagram-svg-wrap">
@@ -1770,6 +1796,7 @@
                   </ul>
                 </div>
               </div>
+              }
             </div>
           }
 

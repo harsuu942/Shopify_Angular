@@ -23,6 +23,7 @@ public class Product {
   private boolean unlimitedStock;
   private String staticContentSlug;
   @Column(length=4000) private String documentsJson;
+  @Column(length=16000) private String technicalDataJson;
   private Integer discountPercent = 20;
   @OneToMany(mappedBy="product",cascade=CascadeType.ALL,orphanRemoval=true,fetch=FetchType.EAGER) @OrderBy("id asc") private List<ProductVariant> variants=new ArrayList<>();
   public Product() {}
@@ -33,11 +34,12 @@ public class Product {
   public boolean isUnlimitedStock(){return unlimitedStock;} public void setUnlimitedStock(boolean u){this.unlimitedStock=u;}
   public String getStaticContentSlug(){return staticContentSlug;} public void setStaticContentSlug(String s){this.staticContentSlug=s;}
   public String getDocumentsJson(){return documentsJson;} public void setDocumentsJson(String d){this.documentsJson=d;}
+  public String getTechnicalDataJson(){return technicalDataJson;} public void setTechnicalDataJson(String d){this.technicalDataJson=d;}
   public Integer getDiscountPercent(){return discountPercent!=null?discountPercent:20;} public void setDiscountPercent(Integer d){this.discountPercent=d!=null?d:20;}
   public List<ProductVariant> getVariants(){return variants;}
-  public void apply(String sku,String name,String brand,String category,String description,BigDecimal price,int stock,String colour,String finish,int warrantyYears,int watts,int btu,String image,boolean unlimitedStock,String staticContentSlug,String documentsJson,Integer discountPercent,List<ProductVariant> incoming){
+  public void apply(String sku,String name,String brand,String category,String description,BigDecimal price,int stock,String colour,String finish,int warrantyYears,int watts,int btu,String image,boolean unlimitedStock,String staticContentSlug,String documentsJson,String technicalDataJson,Integer discountPercent,List<ProductVariant> incoming){
     this.sku=sku;this.name=name;this.brand=brand;this.category=category;this.description=description;this.price=price;this.stock=stock;this.colour=colour;this.finish=finish;this.warrantyYears=warrantyYears;this.watts=watts;this.btu=btu;this.image=image;
-    this.unlimitedStock=unlimitedStock;this.staticContentSlug=staticContentSlug;this.documentsJson=documentsJson;
+    this.unlimitedStock=unlimitedStock;this.staticContentSlug=staticContentSlug;this.documentsJson=documentsJson;this.technicalDataJson=technicalDataJson;
     this.discountPercent=discountPercent!=null?discountPercent:20;
     var byEan=new HashMap<String,ProductVariant>();var bySku=new HashMap<String,ProductVariant>();
     for(var current:variants){if(current.getEan()!=null)byEan.put(current.getEan(),current);if(current.getVariantSku()!=null)bySku.put(current.getVariantSku(),current);}

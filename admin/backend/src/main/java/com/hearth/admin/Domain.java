@@ -47,6 +47,7 @@ class Product extends BaseEntity {
   public Long staticContentId;
   public String staticContentSlug;
   @Column(length=4000) public String documentsJson;
+  @Column(length=16000) public String technicalDataJson;
   public String syncStatus = "PENDING";
   @Column(length=1000) public String syncError;
   public Instant lastSyncedAt;

@@ -72,6 +72,8 @@ export interface Product {
   _previewImage?: string;
   discountPercent?: number;
   unlimitedStock?: boolean;
+  documentsJson?: string;
+  technicalDataJson?: string;
 }
 
 export interface Line {
@@ -3584,7 +3586,16 @@ export class App {
     scrollTo({ top: 0, behavior: 'smooth' });
   }
 
+  productTechnicalData(p: Product): any | null {
+    try {
+      const data=p.technicalDataJson?JSON.parse(p.technicalDataJson):null;
+      return data&&typeof data==='object'?data:null;
+    } catch { return null; }
+  }
+
   dimensionsImage(p: Product): string {
+    const custom=this.productTechnicalData(p)?.schematic?.imageUrl;
+    if(custom) return custom;
     const name = (p.name || '').toUpperCase();
     const type = (p.type || '').toUpperCase();
     const sku = (p.sku || '').toUpperCase();

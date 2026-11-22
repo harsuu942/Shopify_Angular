@@ -8,7 +8,9 @@ import {catchError,finalize,forkJoin,of,throwError} from 'rxjs';
 type View='dashboard'|'products'|'customers'|'quotes'|'purchaseOrders'|'orders'|'promotions'|'inventory'|'inquiries'|'reviews'|'content'|'blogs'|'reports'|'audit'|'companies'|'banners'|'navigation';
 interface AdminBlogPost{id?:number;slug:string;title:string;excerpt:string;content:string;coverImage:string;category:string;tags:string;author:string;publishedAt:string;status:string;readTimeMinutes?:number;syncStatus?:string;lastSyncedAt?:string}
 interface ProductVariant{id?:number;ean:string;variantSku:string;configCode?:string;colour:string;baseColour:string;colourCode:string;paintType:string;heightMm?:number;widthMm?:number;depthMm?:number;panel:string;priceMinor:number;costMinor?:number;discountPercent?:number;stock:number;availability:string;productionTime:string;leadTime:string;watts?:number;btu?:number;warrantyYears?:number;imageUrl?:string;imageUrlsJson?:string;unlimitedStock?:boolean}
-interface Product{id?:number;sku:string;name:string;brand:string;category:string;description:string;priceMinor:number;costMinor?:number;stock:number;lowStockThreshold:number;discountPercent?:number;status:string;taxClass:string;shippingClass:string;imageUrl?:string;sourceUrl?:string;updatedAt?:string;syncStatus?:string;syncError?:string;lastSyncedAt?:string;variants:ProductVariant[];availability?:string;leadTime?:string;unlimitedStock?:boolean;staticContentId?:number;staticContentSlug?:string;documentsJson?:string}
+interface Product{id?:number;sku:string;name:string;brand:string;category:string;description:string;priceMinor:number;costMinor?:number;stock:number;lowStockThreshold:number;discountPercent?:number;status:string;taxClass:string;shippingClass:string;imageUrl?:string;sourceUrl?:string;updatedAt?:string;syncStatus?:string;syncError?:string;lastSyncedAt?:string;variants:ProductVariant[];availability?:string;leadTime?:string;unlimitedStock?:boolean;staticContentId?:number;staticContentSlug?:string;documentsJson?:string;technicalDataJson?:string}
+interface TechnicalSpecItem{label:string;value:string}
+interface ProductTechnicalData{enabled:boolean;template:string;sectionTitle:string;specs:TechnicalSpecItem[];dimensions:{height:string;width:string;depth:string;pipeCentres:string};schematic:{imageUrl:string;displayWidth:number;displayHeight:number;alt:string;caption:string}}
 interface User{name:string;email:string;role:string}
 
 const authInterceptor=(req:any,next:any)=>{
@@ -813,6 +815,30 @@ const authInterceptor=(req:any,next:any)=>{
 
  </section></div>}
 
+@if(modal()?.type==='product'){
+  <button type="button" class="primary technical-builder-launch" (click)="openTechnicalEditor()">⚙ Technical spec &amp; dimensions</button>
+}
+
+@if(technicalEditorOpen()){
+<div class="modal-backdrop" style="z-index:2300" (click)="technicalEditorOpen.set(false)">
+  <section class="modal technical-builder-modal" (click)="$event.stopPropagation()">
+    <header><div><p class="eyebrow">PRODUCT CONTENT BUILDER</p><h2>Technical specifications &amp; schematic</h2></div><button type="button" (click)="technicalEditorOpen.set(false)">×</button></header>
+    <div class="technical-builder-body">
+      <label class="checkbox-inline"><input type="checkbox" [(ngModel)]="productTechnicalData.enabled"><span>Show technical specification section on storefront</span></label>
+      <div class="technical-builder-grid">
+        <label>Specification template<select [(ngModel)]="productTechnicalData.template" (change)="applyTechnicalTemplate()"><option value="radiator">Radiator</option><option value="towel">Towel radiator</option><option value="bathroom">Bathroom product</option><option value="valve">Valve / accessory</option><option value="custom">Custom</option></select></label>
+        <label>Section heading<input [(ngModel)]="productTechnicalData.sectionTitle" placeholder="Technical specifications"></label>
+      </div>
+      <div class="technical-builder-section"><div class="document-lines-head"><div><strong>Specification rows</strong><small>Choose a template, then add, remove or edit rows.</small></div><button type="button" class="secondary" (click)="addTechnicalSpec()">＋ Add row</button></div>
+        @for(spec of productTechnicalData.specs;track $index;let i=$index){<div class="technical-spec-row"><input [(ngModel)]="spec.label" placeholder="Specification name"><input [(ngModel)]="spec.value" placeholder="Value"><button type="button" class="delete-btn" (click)="removeTechnicalSpec(i)">×</button></div>}
+      </div>
+      <div class="technical-builder-section"><strong>Product dimensions</strong><div class="technical-builder-grid dimensions"><label>Height<input [(ngModel)]="productTechnicalData.dimensions.height" placeholder="e.g. 600 mm"></label><label>Width<input [(ngModel)]="productTechnicalData.dimensions.width" placeholder="e.g. 1000 mm"></label><label>Depth<input [(ngModel)]="productTechnicalData.dimensions.depth" placeholder="e.g. 102 mm"></label><label>Pipe centres<input [(ngModel)]="productTechnicalData.dimensions.pipeCentres" placeholder="e.g. 910 mm"></label></div></div>
+      <div class="technical-builder-section"><strong>Schematic / technical drawing</strong><div class="technical-builder-grid"><label>Image URL<input [(ngModel)]="productTechnicalData.schematic.imageUrl" placeholder="/api/product-images/drawing.png"></label><label class="secondary technical-upload"><input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" (change)="uploadTechnicalImage($event)" [disabled]="uploadingTechnicalImage()"><span>{{uploadingTechnicalImage()?'Uploading…':'Upload schematic image'}}</span></label><label>Display width (px)<input type="number" min="240" max="1800" [(ngModel)]="productTechnicalData.schematic.displayWidth"></label><label>Display height (px)<input type="number" min="180" max="1400" [(ngModel)]="productTechnicalData.schematic.displayHeight"></label><label>Accessible image description<input [(ngModel)]="productTechnicalData.schematic.alt"></label><label>Caption<input [(ngModel)]="productTechnicalData.schematic.caption"></label></div>@if(productTechnicalData.schematic.imageUrl){<div class="technical-image-preview"><img [src]="productTechnicalData.schematic.imageUrl" [alt]="productTechnicalData.schematic.alt"></div>}</div>
+      <div class="form-actions"><button type="button" class="secondary" (click)="technicalEditorOpen.set(false)">Cancel</button><button type="button" class="primary" (click)="saveTechnicalEditor()">Save technical content</button></div>
+    </div>
+  </section>
+</div>}
+
 @if(cropModalActive()){
 <div class="modal-backdrop" style="z-index:2200" (click)="closeCropModal()">
   <section class="modal" style="max-width:960px;width:95%;z-index:2201" (click)="$event.stopPropagation()">
@@ -1016,6 +1042,9 @@ class App {
   uploadingPickerImage = signal<boolean>(false);
   recentlyUploadedPickerImages = signal<any[]>([]);
   productDocuments: Array<{ title: string; url: string }> = []; uploadingDoc = signal<boolean>(false);
+  technicalEditorOpen = signal(false);
+  uploadingTechnicalImage = signal(false);
+  productTechnicalData: ProductTechnicalData = this.emptyTechnicalData();
   banners = signal<any[]>([]); loadingBanners = signal<boolean>(false); savingBanner = signal<boolean>(false); syncingBanners = signal<boolean>(false);
   bannerSectionFilter: 'ALL' | 'BANNER' | 'CAMPAIGN_BANNER' = 'ALL';
   failedBannerImages = signal<Set<string>>(new Set());
@@ -1900,6 +1929,52 @@ uploadDocFile(event: any, doc: { title: string; url: string }) {
       this.notify('✓ PDF uploaded: ' + file.name);
     }
   });
+}
+
+emptyTechnicalData(): ProductTechnicalData {
+  return {enabled:true,template:'radiator',sectionTitle:'Technical specifications',specs:[
+    {label:'Material',value:''},{label:'Finish',value:''},{label:'Working pressure',value:''},{label:'Guarantee',value:''}
+  ],dimensions:{height:'',width:'',depth:'',pipeCentres:''},schematic:{imageUrl:'',displayWidth:900,displayHeight:600,alt:'Product dimensional drawing',caption:''}};
+}
+
+openTechnicalEditor() {
+  try {
+    const parsed=this.productDraft.technicalDataJson?JSON.parse(this.productDraft.technicalDataJson):null;
+    this.productTechnicalData=parsed&&typeof parsed==='object'?{
+      ...this.emptyTechnicalData(),...parsed,
+      dimensions:{...this.emptyTechnicalData().dimensions,...(parsed.dimensions||{})},
+      schematic:{...this.emptyTechnicalData().schematic,...(parsed.schematic||{})},
+      specs:Array.isArray(parsed.specs)?parsed.specs:[]
+    }:this.emptyTechnicalData();
+  } catch { this.productTechnicalData=this.emptyTechnicalData(); }
+  this.technicalEditorOpen.set(true);
+}
+
+applyTechnicalTemplate() {
+  const presets:Record<string,TechnicalSpecItem[]>={
+    radiator:[{label:'Material',value:'Steel'},{label:'Finish',value:'Powder coated'},{label:'Maximum working pressure',value:'10 bar'},{label:'Connections',value:'½″ BSP'},{label:'Guarantee',value:'10 years'}],
+    towel:[{label:'Material',value:'Steel'},{label:'Finish',value:'Powder coated'},{label:'Connections',value:'½″ BSP'},{label:'Fuel type',value:'Central heating'},{label:'Guarantee',value:'5 years'}],
+    bathroom:[{label:'Material',value:''},{label:'Finish',value:''},{label:'Installation type',value:''},{label:'Waste included',value:''},{label:'Guarantee',value:''}],
+    valve:[{label:'Material',value:'Brass'},{label:'Finish',value:''},{label:'Connection size',value:'½″ BSP'},{label:'Valve type',value:''},{label:'Guarantee',value:''}],
+    custom:[]
+  };
+  this.productTechnicalData.specs=(presets[this.productTechnicalData.template]||[]).map(x=>({...x}));
+}
+
+addTechnicalSpec(){this.productTechnicalData.specs.push({label:'',value:''})}
+removeTechnicalSpec(index:number){this.productTechnicalData.specs.splice(index,1)}
+saveTechnicalEditor(){
+  this.productTechnicalData.specs=this.productTechnicalData.specs.filter(x=>x.label.trim()||x.value.trim());
+  this.productDraft.technicalDataJson=JSON.stringify(this.productTechnicalData);
+  this.technicalEditorOpen.set(false);
+  this.notify('Technical specification saved to this product');
+}
+
+uploadTechnicalImage(event:Event){
+  const input=event.target as HTMLInputElement;const file=input.files?.[0];if(!file)return;
+  if(file.size>8*1024*1024){this.notify('Schematic image must be 8 MB or smaller');input.value='';return}
+  const form=new FormData();form.append('file',file);this.uploadingTechnicalImage.set(true);
+  this.http.post<{url:string}>('/api/products/images',form).pipe(finalize(()=>this.uploadingTechnicalImage.set(false)),catchError(e=>{this.notify(e.error?.message||'Schematic upload failed');return of(null)})).subscribe(r=>{if(r?.url){this.productTechnicalData.schematic.imageUrl=r.url;this.notify('Schematic image uploaded')}});
 }
 
 openSendOrderModal(o: any){

@@ -32,7 +32,7 @@ public class CatalogueSyncController {
     if(source.archived()||!"PUBLISHED".equalsIgnoreCase(source.status())){products.findBySku(source.sku()).ifPresent(products::delete);return ResponseEntity.noContent().build();}
     Product target=products.findBySku(source.sku()).orElseGet(Product::new);var variants=Optional.ofNullable(source.variants()).orElse(List.of()).stream().map(this::variant).toList();
     var primary=variants.stream().findFirst();
-    target.apply(source.sku(),source.name(),source.brand(),source.category(),source.description(),money(source.priceMinor()),source.stock(),primary.map(ProductVariant::getColour).orElse(""),primary.map(ProductVariant::getPaintType).orElse(""),primary.map(v->Optional.ofNullable(v.getWarrantyYears()).orElse(0)).orElse(0),primary.map(v->Optional.ofNullable(v.getWatts()).orElse(0)).orElse(0),primary.map(v->Optional.ofNullable(v.getBtu()).orElse(0)).orElse(0),source.imageUrl(),source.unlimitedStock(),source.staticContentSlug(),source.documentsJson(),source.discountPercent(),variants);
+    target.apply(source.sku(),source.name(),source.brand(),source.category(),source.description(),money(source.priceMinor()),source.stock(),primary.map(ProductVariant::getColour).orElse(""),primary.map(ProductVariant::getPaintType).orElse(""),primary.map(v->Optional.ofNullable(v.getWarrantyYears()).orElse(0)).orElse(0),primary.map(v->Optional.ofNullable(v.getWatts()).orElse(0)).orElse(0),primary.map(v->Optional.ofNullable(v.getBtu()).orElse(0)).orElse(0),source.imageUrl(),source.unlimitedStock(),source.staticContentSlug(),source.documentsJson(),source.technicalDataJson(),source.discountPercent(),variants);
     products.save(target);return ResponseEntity.noContent().build();
   }
 
@@ -103,6 +103,6 @@ public class CatalogueSyncController {
   private void set(Object target,String field,Object value){try{var f=target.getClass().getDeclaredField(field);f.setAccessible(true);f.set(target,value);}catch(Exception e){throw new IllegalStateException(e);}}
   private BigDecimal money(Long minor){return BigDecimal.valueOf(Optional.ofNullable(minor).orElse(0L),2);}
   private boolean constantTime(String a,String b){if(a==null||b==null)return false;return java.security.MessageDigest.isEqual(a.getBytes(java.nio.charset.StandardCharsets.UTF_8),b.getBytes(java.nio.charset.StandardCharsets.UTF_8));}
-  record SyncProduct(String sku,String name,String brand,String category,String description,long priceMinor,int stock,String status,boolean archived,String imageUrl,boolean unlimitedStock,String staticContentSlug,String documentsJson,Integer discountPercent,List<SyncVariant> variants){}
+  record SyncProduct(String sku,String name,String brand,String category,String description,long priceMinor,int stock,String status,boolean archived,String imageUrl,boolean unlimitedStock,String staticContentSlug,String documentsJson,String technicalDataJson,Integer discountPercent,List<SyncVariant> variants){}
   record SyncVariant(String ean,String variantSku,String configCode,String colour,String baseColour,String colourCode,String paintType,Integer heightMm,Integer widthMm,Integer depthMm,String panel,Long priceMinor,Integer stock,String availability,String productionTime,String leadTime,Integer watts,Integer btu,Integer warrantyYears,String imageUrl,boolean unlimitedStock,String imageUrlsJson,Integer discountPercent){}
 }
