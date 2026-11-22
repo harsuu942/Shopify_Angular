@@ -93,7 +93,7 @@ const authInterceptor=(req:any,next:any)=>{
 
 <ng-template #quotesView><div class="page-head"><div><p class="eyebrow">SALES</p><h1>Quotations</h1><p>Prepare, send and track customer estimates.</p></div><button class="primary" (click)="newQuote()">＋ New quotation</button></div><section class="metrics slim"><article><small>Active value</small><strong>{{quoteValue()/100|currency:'GBP'}}</strong></article><article><small>Sent & viewed</small><strong>{{quotes().length}}</strong></article><article><small>Conversion rate</small><strong>42%</strong></article></section><section class="panel list-panel"><div class="table-wrap"><table><thead><tr><th>Quotation #</th><th>Customer & Delivery Address</th><th>Valid Until</th><th>Status</th><th>Total (incl. 20% VAT)</th><th>Actions</th></tr></thead><tbody>@for(q of quotes();track q.id){<tr><td><strong>{{q.quoteNumber}}</strong><small>{{q.createdAt|date:'shortDate'}}</small></td><td><strong>{{q.customerName}}</strong><small>{{q.customerEmail}}</small>@if(q.customerAddress){<small class="muted" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;display:block">📍 {{q.customerAddress}}</small>}</td><td>{{q.expiresOn|date:'mediumDate'}}</td><td><span class="status" [attr.data-status]="q.status">{{pretty(q.status)}}</span></td><td><strong>{{q.totalMinor/100|currency:'GBP'}}</strong></td><td><div style="display:flex;gap:6px"><button class="sync-row-btn" (click)="viewQuoteDetails(q)">👁 View Quote</button><button class="sync-row-btn" [disabled]="sendingQuoteEmail()" (click)="sendQuoteEmail(q)" title="Email quotation">✉ Email</button><button class="sync-row-btn" (click)="editQuote(q)" title="Edit Quotation">✏ Edit</button><button class="delete-btn" (click)="deleteQuote(q)">🗑</button></div></td></tr>}</tbody></table></div></section></ng-template>
 
-<ng-template #purchaseOrdersView><div class="page-head"><div><p class="eyebrow">PROCUREMENT</p><h1>Purchase Orders</h1><p>Create, approve and print supplier purchase orders.</p></div><button class="primary" (click)="newPurchaseOrder()">＋ New purchase order</button></div><section class="metrics slim"><article><small>Total committed</small><strong>{{purchaseOrderValue()/100|currency:'GBP'}}</strong></article><article><small>Purchase orders</small><strong>{{purchaseOrders().length}}</strong></article><article><small>Awaiting delivery</small><strong>{{openPurchaseOrders()}}</strong></article></section><section class="panel list-panel"><div class="table-wrap"><table><thead><tr><th>PO Number</th><th>Vendor</th><th>Expected Date</th><th>Status</th><th>Total</th><th>Actions</th></tr></thead><tbody>@for(po of purchaseOrders();track po.id){<tr><td><strong>{{po.poNumber}}</strong><small>{{po.createdAt|date:'shortDate'}}</small></td><td><strong>{{po.vendorName}}</strong><small>{{po.vendorEmail||po.vendorPhone}}</small></td><td>{{po.expectedOn ? (po.expectedOn|date:'mediumDate') : 'Not set'}}</td><td><span class="status" [attr.data-status]="po.status">{{pretty(po.status)}}</span></td><td><strong>{{po.totalMinor/100|currency:'GBP'}}</strong></td><td><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="sync-row-btn" (click)="viewPurchaseOrder(po)">👁 View PO</button><button class="sync-row-btn" (click)="editPurchaseOrder(po)">✏ Edit</button><button class="delete-btn" (click)="deletePurchaseOrder(po)">🗑</button></div></td></tr>}@empty{<tr><td colspan="6" style="text-align:center;padding:36px"><strong>No purchase orders yet</strong><small>Create the first supplier purchase order to begin procurement tracking.</small></td></tr>}</tbody></table></div></section></ng-template>
+<ng-template #purchaseOrdersView><div class="page-head"><div><p class="eyebrow">PROCUREMENT</p><h1>Purchase Orders</h1><p>Create, approve, email and print supplier purchase orders with fixed 20% VAT.</p></div><button class="primary" (click)="newPurchaseOrder()">＋ New purchase order</button></div><section class="metrics slim"><article><small>Total committed</small><strong>{{purchaseOrderValue()/100|currency:'GBP'}}</strong></article><article><small>Purchase orders</small><strong>{{purchaseOrders().length}}</strong></article><article><small>Awaiting delivery</small><strong>{{openPurchaseOrders()}}</strong></article></section><section class="panel list-panel"><div class="table-wrap"><table><thead><tr><th>PO Number</th><th>Vendor</th><th>Expected Date</th><th>Status</th><th>Total</th><th>Actions</th></tr></thead><tbody>@for(po of purchaseOrders();track po.id){<tr><td><strong>{{po.poNumber}}</strong><small>{{po.createdAt|date:'shortDate'}}</small></td><td><strong>{{po.vendorName}}</strong><small>{{po.vendorEmail||po.vendorPhone}}</small></td><td>{{po.expectedOn ? (po.expectedOn|date:'mediumDate') : 'Not set'}}</td><td><span class="status" [attr.data-status]="po.status">{{pretty(po.status)}}</span></td><td><strong>{{po.totalMinor/100|currency:'GBP'}}</strong></td><td><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="sync-row-btn" (click)="viewPurchaseOrder(po)">👁 View PO</button><button class="sync-row-btn" [disabled]="!po.vendorEmail" (click)="sendPurchaseOrderEmail(po)">✉ Email</button><button class="sync-row-btn" (click)="editPurchaseOrder(po)">✏ Edit</button><button class="delete-btn" (click)="deletePurchaseOrder(po)">🗑</button></div></td></tr>}@empty{<tr><td colspan="6" style="text-align:center;padding:36px"><strong>No purchase orders yet</strong><small>Create the first supplier purchase order to begin procurement tracking.</small></td></tr>}</tbody></table></div></section></ng-template>
 
 <ng-template #ordersView><div class="page-head"><div><p class="eyebrow">COMMERCE</p><h1>Orders & fulfilment</h1><p>Track payments, courier dispatch, and live delivery status.</p></div><button class="primary" (click)="loadOrders()">↻ Refresh Orders</button></div><section class="panel list-panel"><div class="table-wrap"><table><thead><tr><th>Order</th><th>Channel</th><th>Customer</th><th>Order status</th><th>Fulfilment</th><th>Courier & Tracking</th><th>Total</th><th>Actions</th></tr></thead><tbody>@for(o of orders();track o.id){<tr><td><strong>{{o.orderNumber}}</strong><small>{{o.createdAt|date:'short'}}</small></td><td><span class="badge" [class.green]="o.channel==='STOREFRONT'" [class.blue]="o.channel!=='STOREFRONT'">{{o.channel||'STOREFRONT'}}</span></td><td><strong>{{o.customerName}}</strong><small>{{o.customerEmail}}</small><small *ngIf="o.customerPhone">📞 {{o.customerPhone}}</small></td><td><span class="status" [attr.data-status]="o.orderStatus">{{pretty(o.orderStatus)}}</span></td><td><span class="status" [attr.data-status]="o.fulfilmentStatus">{{pretty(o.fulfilmentStatus||'UNFULFILLED')}}</span></td><td>@if(o.trackingNumber){<strong>{{o.carrier||'DPD Express'}}</strong><small><code>{{o.trackingNumber}}</code></small>}@else{<span class="muted small">Awaiting Dispatch</span>}</td><td><strong>{{o.totalMinor/100|currency:'GBP'}}</strong><small *ngIf="o.discountCode" class="text-success">{{o.discountCode}}</small></td><td><div style="display:flex;gap:6px"><button class="more" (click)="openDispatchModal(o)">Dispatch / Edit</button><button class="sync-row-btn" (click)="openSendOrderModal(o)" title="Send fulfilment & tracking update to customer">✉ Send to Customer</button></div></td></tr>}</tbody></table></div></section></ng-template>
 
@@ -223,7 +223,7 @@ const authInterceptor=(req:any,next:any)=>{
   </section>
 </ng-template>
 
-@if(modal() && modal()!.type!=='purchaseOrder' && modal()!.type!=='purchaseOrderDetails'){<div class="modal-backdrop"><section class="modal" [class.product-modal]="modal()!.type==='product'" [class.product-detail-modal]="modal()!.type==='product'||modal()!.type==='productDetails'||modal()!.type==='mediaManager'||modal()!.type==='bulkProducts'||modal()!.type==='inquiryDetails'||modal()!.type==='quote'||modal()!.type==='navMenu'" (click)="$event.stopPropagation()"><header><div><p class="eyebrow">{{modal()!.kicker}}</p><h2>{{modal()!.title}}</h2></div><button (click)="closeModal()">×</button></header>
+@if(modal() && modal()!.type!=='purchaseOrder' && modal()!.type!=='purchaseOrderDetails'){<div class="modal-backdrop"><section class="modal" [class.document-edit-modal]="modal()!.type==='quote'" [class.product-modal]="modal()!.type==='product'" [class.product-detail-modal]="modal()!.type==='product'||modal()!.type==='productDetails'||modal()!.type==='mediaManager'||modal()!.type==='bulkProducts'||modal()!.type==='inquiryDetails'||modal()!.type==='quote'||modal()!.type==='navMenu'" (click)="$event.stopPropagation()"><header><div><p class="eyebrow">{{modal()!.kicker}}</p><h2>{{modal()!.title}}</h2></div><button (click)="closeModal()">×</button></header>
  @if(modal()!.type==='productDetails'){<div class="product-detail-layout"><div class="product-detail-image">@if(productDraft.imageUrl){<img [src]="productDraft.imageUrl" [alt]="productDraft.name" referrerpolicy="no-referrer">}@else{<span>{{productDraft.name.charAt(0)}}</span>}</div><div class="product-detail-info"><div class="detail-heading"><div><small>{{productDraft.brand||'Unbranded'}}</small><h3>{{productDraft.name}}</h3></div><span class="status" [attr.data-status]="productDraft.status">{{pretty(productDraft.status)}}</span></div><dl class="detail-grid"><div><dt>SKU</dt><dd>{{productDraft.sku}}</dd></div><div><dt>Category</dt><dd>{{productDraft.category||'—'}}</dd></div><div><dt>Price</dt><dd>{{productDraft.priceMinor/100|currency:'GBP'}}</dd></div><div><dt>Discount / Price drop</dt><dd>Save {{productDraft.discountPercent!=null?productDraft.discountPercent:20}}% OFF</dd></div><div><dt>Stock</dt><dd>{{productDraft.stock}} units</dd></div><div><dt>Height (mm)</dt><dd>{{productHeightSummary(productDraft)}}</dd></div><div><dt>Width (mm)</dt><dd>{{productWidthSummary(productDraft)}}</dd></div><div><dt>Tax class</dt><dd>{{pretty(productDraft.taxClass)}}</dd></div><div><dt>Shipping</dt><dd>{{pretty(productDraft.shippingClass)}}</dd></div></dl>@if(productDraft.description){<div class="detail-description"><h4>Description</h4><p>{{productDraft.description}}</p></div>}@if(productDraft.variants && productDraft.variants.length){<div class="detail-description"><h4>Variants & Sizing ({{productDraft.variants.length}})</h4><div class="table-wrap" style="max-height:180px;overflow-y:auto"><table><thead><tr><th>SKU</th><th>Height</th><th>Width</th><th>Colour</th><th>Price</th><th>Discount</th><th>Stock</th></tr></thead><tbody>@for(v of productDraft.variants;track v.variantSku||v.ean){<tr><td><code>{{v.variantSku}}</code></td><td><strong>{{v.heightMm?v.heightMm+' mm':'—'}}</strong></td><td>{{v.widthMm?v.widthMm+' mm':'—'}}</td><td>{{v.colour||'Standard'}}</td><td>{{v.priceMinor/100|currency:'GBP'}}</td><td>{{v.discountPercent?v.discountPercent+'% OFF':'0%'}}</td><td>{{v.stock}}</td></tr>}</tbody></table></div></div>}<div class="detail-actions"><button type="button" class="secondary" (click)="openStock(productDraft.id)">↕ Adjust stock</button><button class="secondary sync-row-btn" [disabled]="syncingProductId()===productDraft.id" (click)="syncSingleProduct(productDraft)"><span [class.spin]="syncingProductId()===productDraft.id">⚡</span> Sync to Storefront</button><button class="primary" (click)="editProduct(productDraft)">Edit product</button><button type="button" class="danger-btn" (click)="deleteProduct(productDraft)">🗑 Delete product</button></div></div></div>}
  @if(modal()!.type==='product'){<form (ngSubmit)="saveProduct()" class="form-grid">@if(productDraft.imageUrl){<div class="product-edit-preview full"><img [src]="productDraft.imageUrl" [alt]="productDraft.name" referrerpolicy="no-referrer"><div><strong>Current product image</strong><small>{{selectedImageName||'Uploaded or linked product image'}}</small></div></div>}<label>Product name *<input name="name" [(ngModel)]="productDraft.name" required></label><label>SKU *<input name="sku" [(ngModel)]="productDraft.sku" required></label><label>Brand<input name="brand" [(ngModel)]="productDraft.brand"></label><label>Category<input name="category" [(ngModel)]="productDraft.category"></label><label>Price (£) *<input name="price" type="number" min="0" step=".01" [(ngModel)]="productPrice" placeholder="0.00"></label><label>Discount (% Off)<input name="discountPercent" type="number" min="0" max="90" [(ngModel)]="productDraft.discountPercent" placeholder="0 (defaults to 0%)"><small class="field-hint">Calculates Was/RRP price and badge (e.g. Save 20%)</small></label><div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-size:0.68rem;font-weight:700">Stock</span><label class="checkbox-inline" style="margin:0;font-size:0.68rem"><input type="checkbox" name="unlimitedStock" [(ngModel)]="productDraft.unlimitedStock"><span>Unlimited</span></label></div><input name="stock" type="number" min="0" [(ngModel)]="productDraft.stock" [disabled]="(productDraft.variants.length > 0) || !!productDraft.unlimitedStock" placeholder="0">@if(productDraft.variants.length){<small class="field-hint" style="color:#0284c7">Auto-calculated from {{productDraft.variants.length}} variant(s)</small>}</div><label>Availability<select name="availability" [(ngModel)]="productDraft.availability"><option value="IN_STOCK">In Stock (Ready to dispatch)</option><option value="AVAILABLE_TO_ORDER">Available to Order</option><option value="MADE_TO_ORDER">Made to Order</option><option value="BACKORDER">Backorder</option></select></label><label>Lead Time<input name="leadTime" [(ngModel)]="productDraft.leadTime" placeholder="e.g. 2-3 Working Days"></label><label>Publication Status<select name="status" [(ngModel)]="productDraft.status"><option value="PUBLISHED">PUBLISHED (Visible on Storefront)</option><option value="DRAFT">DRAFT (Admin Only / Inactive)</option></select><small class="field-hint">PUBLISHED products sync live to storefront; DRAFT products remain hidden.</small></label><label class="full">Assign Buying Guide / Sizing Spec Guide<select name="staticContentGuide" [(ngModel)]="productDraft.staticContentId" (change)="onStaticGuideSelected()"><option [ngValue]="null">-- None --</option>@for(c of contents();track c.id){<option [value]="c.id">{{c.title}} (/{{c.slug}})</option>}</select></label><div class="image-upload-field full"><span>Product primary image</span><div style="display:flex;gap:10px;align-items:center;margin-top:6px"><label class="upload-dropzone" [class.uploading]="uploadingImage()" style="flex:1;margin:0"><input type="file" accept="image/jpeg,image/png,image/gif,image/webp" (change)="uploadProductImage($event)" [disabled]="uploadingImage()"><b>{{uploadingImage()?'Uploading image…':'Choose image file'}}</b><small>JPG, PNG, GIF or WebP · maximum 5 MB</small></label><button type="button" class="secondary" (click)="openMediaPicker('product')" style="white-space:nowrap;padding:16px 14px">🖼 Pick from Media Library</button></div></div><label class="full">Or use an image URL<input name="imageUrl" type="url" [(ngModel)]="productDraft.imageUrl" placeholder="https://example.com/product.jpg"></label><div class="full" style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:8px;padding:16px;margin-top:6px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div><strong style="font-size:0.92rem;color:#0f172a">Product Technical Documents & Specifications</strong><small class="d-block text-muted" style="font-size:0.76rem">Attach PDF spec sheets, installation manuals, dimensional drawings, or warranty guides.</small></div><button type="button" class="secondary" (click)="addDocToProduct()" style="font-size:0.78rem;padding:6px 12px">＋ Add Document</button></div>@for(doc of productDocuments;track $index;let dIdx=$index){<div style="display:grid;grid-template-columns:1.5fr 2fr auto auto;gap:8px;align-items:center;margin-bottom:8px;padding:8px;background:#fff;border:1px solid #e2e8f0;border-radius:6px"><input [(ngModel)]="doc.title" [name]="'doc_title_'+dIdx" placeholder="Document Title (e.g. Installation Guide)" style="font-size:0.82rem;padding:6px 10px"><input [(ngModel)]="doc.url" [name]="'doc_url_'+dIdx" placeholder="PDF URL (/api/content/files/... or https://...)" style="font-size:0.82rem;padding:6px 10px"><label class="secondary" style="margin:0;padding:6px 10px;font-size:0.78rem;cursor:pointer;white-space:nowrap" [class.uploading]="uploadingDoc()"><input type="file" accept=".pdf,application/pdf" (change)="uploadDocFile($event, doc)" style="display:none" [disabled]="uploadingDoc()"><span>{{uploadingDoc()?'Uploading…':'📁 Upload PDF'}}</span></label><button type="button" class="delete-btn" (click)="removeDocFromProduct(dIdx)" style="padding:6px 10px;margin:0" title="Remove Document">✕</button></div>}@empty{<p class="muted" style="margin:0;font-size:0.82rem;font-style:italic">No documents attached yet. Click "＋ Add Document" to attach technical spec sheets or manuals.</p>}</div><section class="variant-editor full">
   <div class="variant-head">
@@ -830,6 +830,28 @@ const authInterceptor=(req:any,next:any)=>{
       </div>
 
       <!-- Real crop selection with draggable/resizable handles -->
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:0.82rem;font-weight:700;color:#334155">Framing Format:</span>
+        <button type="button" class="secondary" (click)="fitFullImage()" style="background:#0284c7;color:#fff;border-color:#0284c7;font-weight:700;padding:6px 14px;font-size:0.8rem">
+          ↕ Fit Full Image / Full Height
+        </button>
+        <button type="button" class="secondary" (click)="setCropAspectRatio('free')" [style.background]="cropAspectRatio==='free'?'#14263e':'#fff'" [style.color]="cropAspectRatio==='free'?'#fff':'#14263e'" style="padding:6px 12px;font-size:0.8rem;font-weight:600">
+          Freeform
+        </button>
+        <button type="button" class="secondary" (click)="setCropAspectRatio('16:6')" [style.background]="cropAspectRatio==='16:6'?'#14263e':'#fff'" [style.color]="cropAspectRatio==='16:6'?'#fff':'#14263e'" style="padding:6px 12px;font-size:0.8rem;font-weight:600">
+          16:6 Banner
+        </button>
+        <button type="button" class="secondary" (click)="setCropAspectRatio('16:9')" [style.background]="cropAspectRatio==='16:9'?'#14263e':'#fff'" [style.color]="cropAspectRatio==='16:9'?'#fff':'#14263e'" style="padding:6px 12px;font-size:0.8rem;font-weight:600">
+          16:9 Wide
+        </button>
+        <button type="button" class="secondary" (click)="setCropAspectRatio('4:3')" [style.background]="cropAspectRatio==='4:3'?'#14263e':'#fff'" [style.color]="cropAspectRatio==='4:3'?'#fff':'#14263e'" style="padding:6px 12px;font-size:0.8rem;font-weight:600">
+          4:3 Standard
+        </button>
+        <button type="button" class="secondary" (click)="setCropAspectRatio('1:1')" [style.background]="cropAspectRatio==='1:1'?'#14263e':'#fff'" [style.color]="cropAspectRatio==='1:1'?'#fff':'#14263e'" style="padding:6px 12px;font-size:0.8rem;font-weight:600">
+          1:1 Square
+        </button>
+      </div>
+
       <div 
         id="banner-crop-viewport"
         (mousemove)="onCropMouseMove($event)"
@@ -861,23 +883,28 @@ const authInterceptor=(req:any,next:any)=>{
         </div>
 
         <div style="position:absolute;bottom:10px;left:12px;background:rgba(15,23,42,0.75);color:#fff;font-size:0.75rem;padding:4px 10px;border-radius:4px;pointer-events:none;backdrop-filter:blur(4px)">
-          ✋ Drag the crop box · Resize using the white handles
+          ✋ Drag the crop box · Resize using the white handles · Click "Fit Full Image" to select entire height
         </div>
       </div>
 
       <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;background:#f8fafc;padding:12px 18px;border-radius:8px;border:1px solid #e2e8f0;flex-wrap:wrap">
         <span style="font-size:0.82rem;font-weight:700;color:#334155">Selected crop: {{cropWidth | number:'1.0-0'}} × {{cropHeight | number:'1.0-0'}} px preview · Output {{getCropOutputLabel()}}</span>
         <button type="button" class="secondary" (click)="resetCropTransform()" style="padding:6px 14px;font-size:0.8rem">
-          ↺ Reset Crop Area
+          ↺ Reset Frame
         </button>
       </div>
 
       <!-- Footer Buttons -->
-      <div class="form-actions" style="margin:0;display:flex;justify-content:flex-end;gap:10px">
-        <button type="button" class="secondary" (click)="closeCropModal()">Cancel</button>
-        <button type="button" class="primary" [disabled]="croppingImage()" (click)="applyCropAndUpload()" style="display:flex;align-items:center;gap:6px">
-          <span>{{croppingImage() ? '⏳ Cropping & Uploading…' : '✓ Apply Crop & Save Image'}}</span>
+      <div class="form-actions" style="margin:0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+        <button type="button" class="secondary" (click)="useFullOriginalWithoutCrop()" [disabled]="croppingImage()" style="color:#0284c7;border-color:#38bdf8;background:#f0f9ff;font-weight:700;padding:8px 16px">
+          ⚡ Use Full Image As-Is (No Crop)
         </button>
+        <div style="display:flex;gap:10px">
+          <button type="button" class="secondary" (click)="closeCropModal()">Cancel</button>
+          <button type="button" class="primary" [disabled]="croppingImage()" (click)="applyCropAndUpload()" style="display:flex;align-items:center;gap:6px">
+            <span>{{croppingImage() ? '⏳ Cropping & Uploading…' : '✓ Apply Crop & Save Image'}}</span>
+          </button>
+        </div>
       </div>
     </div>
   </section>
@@ -971,8 +998,8 @@ const authInterceptor=(req:any,next:any)=>{
   </section>
 </div>
 }
-@if(modal()?.type==='purchaseOrder'){<div class="overlay"><section class="modal"><div class="modal-head"><div><p class="eyebrow">PROCUREMENT</p><h2>{{purchaseOrderDraft.id?'Edit Purchase Order':'New Purchase Order'}}</h2></div><button type="button" (click)="closeModal()">×</button></div><form (ngSubmit)="savePurchaseOrder()" class="form-grid"><label>Vendor name *<input name="povendor" [(ngModel)]="purchaseOrderDraft.vendorName" required></label><label>Vendor email<input name="poemail" type="email" [(ngModel)]="purchaseOrderDraft.vendorEmail"></label><label>Vendor phone<input name="pophone" [(ngModel)]="purchaseOrderDraft.vendorPhone"></label><label>Expected delivery<input name="poexpected" type="date" [(ngModel)]="purchaseOrderDraft.expectedOn"></label><label class="full">Vendor address<textarea name="poaddr" rows="3" [(ngModel)]="purchaseOrderDraft.vendorAddress"></textarea></label><label>Ship to name<input name="poshipname" [(ngModel)]="purchaseOrderDraft.shipToName"></label><label>Ship to phone<input name="poshipphone" [(ngModel)]="purchaseOrderDraft.shipToPhone"></label><label class="full">Ship to address<textarea name="poshipaddr" rows="3" [(ngModel)]="purchaseOrderDraft.shipToAddress"></textarea></label><div class="full" style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:8px;padding:16px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><strong>Purchase order items</strong><button type="button" class="secondary" (click)="addPurchaseOrderLine()">＋ Add item</button></div>@for(item of purchaseOrderDraft.lineItems;track $index;let idx=$index){<div style="display:grid;grid-template-columns:1.8fr 1fr 80px 120px 110px 38px;gap:8px;align-items:center;margin-bottom:8px"><input [(ngModel)]="item.description" [name]="'podesc_'+idx" required placeholder="Description"><input [(ngModel)]="item.itemNumber" [name]="'posku_'+idx" placeholder="Item / SKU"><input type="number" min="1" [(ngModel)]="item.quantity" [name]="'poqty_'+idx"><input type="number" min="0" step="0.01" [(ngModel)]="item.unitPrice" [name]="'poprice_'+idx"><strong>{{((item.quantity||0)*(item.unitPrice||0))|currency:'GBP'}}</strong><button type="button" class="delete-btn" [disabled]="purchaseOrderDraft.lineItems.length<=1" (click)="removePurchaseOrderLine(idx)">×</button></div>}<div style="display:flex;justify-content:flex-end;gap:16px;border-top:1px solid #cbd5e1;padding-top:12px"><label>VAT (£)<input name="potax" type="number" min="0" step="0.01" [(ngModel)]="purchaseOrderDraft.tax"></label><label>Shipping (£)<input name="poshipping" type="number" min="0" step="0.01" [(ngModel)]="purchaseOrderDraft.shipping"></label><strong style="align-self:center">Total: {{purchaseOrderTotal|currency:'GBP'}}</strong></div></div><label>Status<select name="postatus" [(ngModel)]="purchaseOrderDraft.status"><option>DRAFT</option><option>APPROVED</option><option>ORDERED</option><option>PART_RECEIVED</option><option>RECEIVED</option><option>CANCELLED</option></select></label><label class="full">Notes<textarea name="ponotes" rows="3" [(ngModel)]="purchaseOrderDraft.notes"></textarea></label><div class="form-actions full"><button type="button" class="secondary" (click)="closeModal()">Cancel</button><button class="primary" [disabled]="savingPurchaseOrder()">{{savingPurchaseOrder()?'Saving…':(purchaseOrderDraft.id?'Update Purchase Order':'Create Purchase Order')}}</button></div></form></section></div>}
-@if(modal()?.type==='purchaseOrderDetails'){<div class="overlay"><section class="modal"><div class="quote-doc-container"><div class="quote-doc-header"><div class="quote-doc-brand"><img src="/thp-logo.jpg" alt="THP Logo"><div><strong>THE HEATING & PLUMBING</strong><br><small>Dignitree Ltd • UK Specialist Heating & Plumbing</small></div></div><div class="quote-doc-meta"><h2>PURCHASE ORDER</h2><h3>{{selectedPurchaseOrder?.poNumber}}</h3><p>Date: {{selectedPurchaseOrder?.createdAt|date:'mediumDate'}}</p><p>Expected: {{selectedPurchaseOrder?.expectedOn|date:'mediumDate'}}</p><p>Status: {{selectedPurchaseOrder?.status}}</p></div></div><div class="quote-doc-addresses"><div><h4>VENDOR</h4><strong>{{selectedPurchaseOrder?.vendorName}}</strong><p>{{selectedPurchaseOrder?.vendorEmail}}</p><p>{{selectedPurchaseOrder?.vendorPhone}}</p><p style="white-space:pre-line">{{selectedPurchaseOrder?.vendorAddress}}</p></div><div><h4>SHIP TO</h4><strong>{{selectedPurchaseOrder?.shipToName}}</strong><p>{{selectedPurchaseOrder?.shipToPhone}}</p><p style="white-space:pre-line">{{selectedPurchaseOrder?.shipToAddress}}</p></div></div><table class="quote-doc-table"><thead><tr><th>Item Number</th><th>Description</th><th>Qty</th><th>Unit Price</th><th>Total</th></tr></thead><tbody>@for(item of parseQuoteLines(selectedPurchaseOrder?.lineItemsJson);track $index){<tr><td>{{item.itemNumber||'—'}}</td><td>{{item.description}}</td><td>{{item.quantity}}</td><td>{{item.unitPrice|currency:'GBP'}}</td><td><strong>{{item.quantity*item.unitPrice|currency:'GBP'}}</strong></td></tr>}</tbody></table><div class="quote-doc-total-box"><div><p>Subtotal: {{selectedPurchaseOrder?.subtotalMinor/100|currency:'GBP'}}</p><p>VAT: {{selectedPurchaseOrder?.taxMinor/100|currency:'GBP'}}</p><p>Shipping: {{selectedPurchaseOrder?.shippingMinor/100|currency:'GBP'}}</p><strong>TOTAL: {{selectedPurchaseOrder?.totalMinor/100|currency:'GBP'}}</strong></div></div><div class="form-actions btn-no-print"><button type="button" class="secondary" (click)="closeModal()">Close</button><button type="button" class="primary" (click)="printDocument()">🖨 Download PDF / Print</button></div></div></section></div>}
+@if(modal()?.type==='purchaseOrder'){<div class="overlay"><section class="modal document-edit-modal"><div class="modal-head"><div><p class="eyebrow">PROCUREMENT</p><h2>{{purchaseOrderDraft.id?'Edit Purchase Order':'New Purchase Order'}}</h2></div><button type="button" (click)="closeModal()">×</button></div><form (ngSubmit)="savePurchaseOrder()" class="form-grid"><label>Vendor name *<input name="povendor" [(ngModel)]="purchaseOrderDraft.vendorName" required></label><label>Vendor email *<input name="poemail" type="email" [(ngModel)]="purchaseOrderDraft.vendorEmail" required></label><label>Vendor phone<input name="pophone" [(ngModel)]="purchaseOrderDraft.vendorPhone"></label><label>Expected delivery<input name="poexpected" type="date" [(ngModel)]="purchaseOrderDraft.expectedOn"></label><label class="full">Vendor address<textarea name="poaddr" rows="2" [(ngModel)]="purchaseOrderDraft.vendorAddress"></textarea></label><div class="full document-lines"><div class="document-lines-head"><strong>Purchase order items</strong><button type="button" class="secondary" (click)="addPurchaseOrderLine()">＋ Add item</button></div>@for(item of purchaseOrderDraft.lineItems;track $index;let idx=$index){<div class="document-line"><select [(ngModel)]="item.selectedProductKey" (ngModelChange)="onPurchaseOrderProductSelected(item)" [name]="'poproduct_'+idx"><option [ngValue]="null">-- Select catalogue product --</option>@for(p of quoteProductCatalogue();track p.id){<option [value]="'p_'+p.id">{{p.name}} ({{p.sku}})</option>@for(v of p.variants||[];track v.variantSku||v.ean){<option [value]="'v_'+p.id+'_'+(v.variantSku||v.ean)">↳ {{p.name}} · {{v.colour||'Standard'}} · {{v.variantSku||v.ean}}</option>}}</select><input [(ngModel)]="item.description" [name]="'podesc_'+idx" required placeholder="Description"><input [(ngModel)]="item.itemNumber" [name]="'posku_'+idx" placeholder="SKU"><input type="number" min="1" [(ngModel)]="item.quantity" [name]="'poqty_'+idx"><input type="number" min="0" step="0.01" [(ngModel)]="item.unitPrice" [name]="'poprice_'+idx"><strong>{{((item.quantity||0)*(item.unitPrice||0))|currency:'GBP'}}</strong><button type="button" class="delete-btn" [disabled]="purchaseOrderDraft.lineItems.length<=1" (click)="removePurchaseOrderLine(idx)">×</button></div>}<div class="document-totals"><span>Subtotal: <strong>{{purchaseOrderSubtotal|currency:'GBP'}}</strong></span><span>VAT (fixed 20%): <strong>{{purchaseOrderVat|currency:'GBP'}}</strong></span><label>Shipping (£)<input name="poshipping" type="number" min="0" step="0.01" [(ngModel)]="purchaseOrderDraft.shipping"></label><strong>Total: {{purchaseOrderTotal|currency:'GBP'}}</strong></div></div><label>Status<select name="postatus" [(ngModel)]="purchaseOrderDraft.status"><option>DRAFT</option><option>APPROVED</option><option>ORDERED</option><option>PART_RECEIVED</option><option>RECEIVED</option><option>CANCELLED</option></select></label><label class="full">Notes<textarea name="ponotes" rows="2" [(ngModel)]="purchaseOrderDraft.notes"></textarea></label><div class="form-actions full"><button type="button" class="secondary" (click)="closeModal()">Cancel</button><button class="primary" [disabled]="savingPurchaseOrder()">{{savingPurchaseOrder()?'Saving…':(purchaseOrderDraft.id?'Update Purchase Order':'Create Purchase Order')}}</button></div></form></section></div>}
+@if(modal()?.type==='purchaseOrderDetails'){<div class="overlay"><section class="modal"><div class="quote-doc-container"><div class="quote-doc-header"><div class="quote-doc-brand"><img src="/thp-logo.jpg" alt="THP Logo"><div><strong>THE HEATING & PLUMBING</strong><br><small>Dignitree Ltd • UK Specialist Heating & Plumbing</small></div></div><div class="quote-doc-meta"><h2>PURCHASE ORDER</h2><h3>{{selectedPurchaseOrder?.poNumber}}</h3><p>Date: {{selectedPurchaseOrder?.createdAt|date:'mediumDate'}}</p><p>Expected: {{selectedPurchaseOrder?.expectedOn|date:'mediumDate'}}</p><p>Status: {{selectedPurchaseOrder?.status}}</p></div></div><div class="quote-doc-addresses"><div><h4>VENDOR</h4><strong>{{selectedPurchaseOrder?.vendorName}}</strong><p>{{selectedPurchaseOrder?.vendorEmail}}</p><p>{{selectedPurchaseOrder?.vendorPhone}}</p><p style="white-space:pre-line">{{selectedPurchaseOrder?.vendorAddress}}</p></div><div><h4>SHIP TO</h4><strong>{{selectedPurchaseOrder?.shipToName}}</strong><p>{{selectedPurchaseOrder?.shipToPhone}}</p><p style="white-space:pre-line">{{selectedPurchaseOrder?.shipToAddress}}</p></div></div><table class="quote-doc-table"><thead><tr><th>Item Number</th><th>Description</th><th>Qty</th><th>Unit Price</th><th>Total</th></tr></thead><tbody>@for(item of parseQuoteLines(selectedPurchaseOrder?.lineItemsJson);track $index){<tr><td>{{item.itemNumber||'—'}}</td><td>{{item.description}}</td><td>{{item.quantity}}</td><td>{{item.unitPrice|currency:'GBP'}}</td><td><strong>{{item.quantity*item.unitPrice|currency:'GBP'}}</strong></td></tr>}</tbody></table><div class="quote-doc-total-box"><div><p>Subtotal: {{selectedPurchaseOrder?.subtotalMinor/100|currency:'GBP'}}</p><p>VAT: {{selectedPurchaseOrder?.taxMinor/100|currency:'GBP'}}</p><p>Shipping: {{selectedPurchaseOrder?.shippingMinor/100|currency:'GBP'}}</p><strong>TOTAL: {{selectedPurchaseOrder?.totalMinor/100|currency:'GBP'}}</strong></div></div><div class="form-actions btn-no-print"><button type="button" class="secondary" (click)="closeModal()">Close</button><button type="button" class="secondary" [disabled]="!selectedPurchaseOrder?.vendorEmail" (click)="sendPurchaseOrderEmail(selectedPurchaseOrder)">✉ Email PO to Vendor</button><button type="button" class="primary" (click)="printDocument()">🖨 Download PDF / Print</button></div></div></section></div>}
 @if(toast()){<div class="toast">✓ {{toast()}}</div>}
 `})
 class App {
@@ -1285,26 +1312,36 @@ class App {
  loadPurchaseOrders(){this.fetch('/api/purchase-orders',this.purchaseOrders)}
 
  newPurchaseOrder(){
-   this.purchaseOrderDraft={vendorName:'',vendorEmail:'',vendorPhone:'',vendorAddress:'',shipToName:'The Heating & Plumbing',shipToPhone:'+44 7404 095699',shipToAddress:'First Floor 5-6 Chalice Close, Wallington, England, SM6 9RU',expectedOn:'',status:'DRAFT',notes:'',tax:0,shipping:0,lineItems:[{description:'',itemNumber:'',quantity:1,unitPrice:0}]};
+   this.loadAllProductsForAssignment();
+   this.purchaseOrderDraft={vendorName:'',vendorEmail:'',vendorPhone:'',vendorAddress:'',shipToName:'The Heating & Plumbing',shipToPhone:'+44 7404 095699',shipToAddress:'First Floor 5-6 Chalice Close, Wallington, England, SM6 9RU',expectedOn:'',status:'DRAFT',notes:'',shipping:0,lineItems:[{selectedProductKey:null,description:'',itemNumber:'',quantity:1,unitPrice:0}]};
    this.modal.set({type:'purchaseOrder'});
  }
  editPurchaseOrder(po:any){
+   this.loadAllProductsForAssignment();
    this.purchaseOrderDraft={...po,tax:(po.taxMinor||0)/100,shipping:(po.shippingMinor||0)/100,lineItems:this.parseQuoteLines(po.lineItemsJson)};
    if(!this.purchaseOrderDraft.lineItems.length)this.purchaseOrderDraft.lineItems=[{description:'',itemNumber:'',quantity:1,unitPrice:0}];
    this.modal.set({type:'purchaseOrder'});
  }
- addPurchaseOrderLine(){this.purchaseOrderDraft.lineItems.push({description:'',itemNumber:'',quantity:1,unitPrice:0})}
+ addPurchaseOrderLine(){this.purchaseOrderDraft.lineItems.push({selectedProductKey:null,description:'',itemNumber:'',quantity:1,unitPrice:0})}
+ onPurchaseOrderProductSelected(item:any){
+   if(!item.selectedProductKey)return;
+   const mirror={selectedProductKey:item.selectedProductKey,productName:item.description,sku:item.itemNumber,unitPrice:item.unitPrice};
+   this.onQuoteProductSelected(mirror);item.description=mirror.productName;item.itemNumber=mirror.sku;item.unitPrice=mirror.unitPrice;
+ }
  removePurchaseOrderLine(index:number){if(this.purchaseOrderDraft.lineItems.length>1)this.purchaseOrderDraft.lineItems.splice(index,1)}
- get purchaseOrderTotal(){return (this.purchaseOrderDraft.lineItems||[]).reduce((sum:number,item:any)=>sum+(Number(item.quantity)||0)*(Number(item.unitPrice)||0),0)+(Number(this.purchaseOrderDraft.tax)||0)+(Number(this.purchaseOrderDraft.shipping)||0)}
+ get purchaseOrderSubtotal(){return (this.purchaseOrderDraft.lineItems||[]).reduce((sum:number,item:any)=>sum+(Number(item.quantity)||0)*(Number(item.unitPrice)||0),0)}
+ get purchaseOrderVat(){return this.purchaseOrderSubtotal*0.20}
+ get purchaseOrderTotal(){return this.purchaseOrderSubtotal+this.purchaseOrderVat+(Number(this.purchaseOrderDraft.shipping)||0)}
  savePurchaseOrder(){
    if(!this.purchaseOrderDraft.vendorName){this.notify('Vendor name is required');return}
-   const subtotal=(this.purchaseOrderDraft.lineItems||[]).reduce((sum:number,item:any)=>sum+(Number(item.quantity)||0)*(Number(item.unitPrice)||0),0);
-   const payload={...this.purchaseOrderDraft,lineItemsJson:JSON.stringify(this.purchaseOrderDraft.lineItems||[]),subtotalMinor:Math.round(subtotal*100),taxMinor:Math.round((Number(this.purchaseOrderDraft.tax)||0)*100),shippingMinor:Math.round((Number(this.purchaseOrderDraft.shipping)||0)*100),totalMinor:Math.round(this.purchaseOrderTotal*100)};
+   const subtotal=this.purchaseOrderSubtotal;
+   const payload={...this.purchaseOrderDraft,lineItemsJson:JSON.stringify(this.purchaseOrderDraft.lineItems||[]),subtotalMinor:Math.round(subtotal*100),taxMinor:Math.round(this.purchaseOrderVat*100),shippingMinor:Math.round((Number(this.purchaseOrderDraft.shipping)||0)*100),totalMinor:Math.round(this.purchaseOrderTotal*100)};
    this.savingPurchaseOrder.set(true);
    const request$=payload.id?this.http.put<any>('/api/purchase-orders/'+payload.id,payload):this.http.post<any>('/api/purchase-orders',payload);
    request$.pipe(finalize(()=>this.savingPurchaseOrder.set(false))).subscribe({next:(saved)=>{this.closeModal();this.notify((payload.id?'Updated ':'Created ')+(saved.poNumber||'purchase order'));this.loadPurchaseOrders()},error:(e)=>this.notify(e.error?.message||'Could not save purchase order')});
  }
  viewPurchaseOrder(po:any){this.selectedPurchaseOrder=po;this.modal.set({type:'purchaseOrderDetails'})}
+ sendPurchaseOrderEmail(po:any){if(!po?.id||!po.vendorEmail){this.notify('Add a vendor email before sending');return}if(!confirm(`Email ${po.poNumber} to ${po.vendorEmail}?`))return;this.http.post<any>(`/api/purchase-orders/${po.id}/send-email`,{email:po.vendorEmail}).subscribe({next:r=>this.notify(r.message||'Purchase order emailed'),error:e=>this.notify(e.error?.message||'Could not email purchase order')})}
  deletePurchaseOrder(po:any){if(confirm(`Delete purchase order ${po.poNumber}?`))this.http.delete('/api/purchase-orders/'+po.id).subscribe({next:()=>{this.notify('Purchase order deleted');this.loadPurchaseOrders()},error:(e)=>this.notify(e.error?.message||'Could not delete purchase order')})}
 
  newQuote(){
@@ -3108,7 +3145,7 @@ exportMediaManifestCsv(){
   // ==========================================
   cropModalActive = signal<boolean>(false);
   croppingImage = signal<boolean>(false);
-  cropAspectRatio: '16:6' | '16:7' | '16:9' | '21:9' | '4:3' | '1:1' = '16:6';
+  cropAspectRatio: 'free' | '16:6' | '16:7' | '16:9' | '21:9' | '4:3' | '1:1' = '16:6';
   cropTargetType: 'banner' | 'navCategory' | 'navPromo' | 'subcategory' = 'banner';
   cropTargetItem: any = null;
   cropImageSrc: string = '';
@@ -3245,13 +3282,68 @@ exportMediaManifestCsv(){
     this.cropTargetItem = null;
   }
 
-  setCropAspectRatio(ratio: '16:6' | '16:7' | '16:9' | '21:9' | '4:3' | '1:1') {
+  setCropAspectRatio(ratio: 'free' | '16:6' | '16:7' | '16:9' | '21:9' | '4:3' | '1:1') {
     this.cropAspectRatio = ratio;
     this.resetCropTransform();
   }
 
+  fitFullImage() {
+    if (!this.cropDisplayWidth || !this.cropDisplayHeight) return;
+    this.cropAspectRatio = 'free';
+    this.cropX = this.cropDisplayX;
+    this.cropY = this.cropDisplayY;
+    this.cropWidth = this.cropDisplayWidth;
+    this.cropHeight = this.cropDisplayHeight;
+  }
+
+  useFullOriginalWithoutCrop() {
+    if (!this.cropImageSrc) return;
+    if (this.cropImageSrc.startsWith('data:')) {
+      this.croppingImage.set(true);
+      fetch(this.cropImageSrc)
+        .then(r => r.blob())
+        .then(blob => {
+          const file = new File([blob], `full-${Date.now()}.jpg`, { type: blob.type || 'image/jpeg' });
+          const form = new FormData();
+          form.append('file', file);
+          this.http.post<{url: string}>('/api/products/images', form).pipe(
+            finalize(() => this.croppingImage.set(false)),
+            catchError(e => { this.notify(e.error?.message || 'Upload failed'); return of(null); })
+          ).subscribe(res => {
+            if (res?.url) {
+              this.assignCroppedUrl(res.url);
+            }
+          });
+        }).catch(() => {
+          this.croppingImage.set(false);
+          this.notify('Failed to process image');
+        });
+    } else {
+      this.assignCroppedUrl(this.cropImageSrc);
+    }
+  }
+
+  assignCroppedUrl(url: string) {
+    if (this.cropTargetType === 'banner') {
+      this.bannerDraft.imageUrl = url;
+      this.notify('✓ Banner image assigned successfully!');
+    } else if (this.cropTargetType === 'navCategory') {
+      this.navMenuDraft.imageUrl = url;
+      this.notify('✓ Category image assigned successfully!');
+    } else if (this.cropTargetType === 'navPromo') {
+      if (!this.navMenuDraft.featuredPromo) this.navMenuDraft.featuredPromo = {};
+      this.navMenuDraft.featuredPromo.imageUrl = url;
+      this.notify('✓ Mega-menu promo card image assigned!');
+    } else if (this.cropTargetType === 'subcategory') {
+      if (this.cropTargetItem) this.cropTargetItem.imageUrl = url;
+      this.notify('✓ Subcategory thumbnail assigned!');
+    }
+    this.closeCropModal();
+  }
+
   getCssAspectRatio(): string {
     switch (this.cropAspectRatio) {
+      case 'free': return 'auto';
       case '16:6': return '16 / 6';
       case '16:7': return '16 / 7';
       case '16:9': return '16 / 9';
@@ -3264,6 +3356,7 @@ exportMediaManifestCsv(){
 
   getNumericAspectRatio(): number {
     switch (this.cropAspectRatio) {
+      case 'free': return (this.cropWidth && this.cropHeight) ? (this.cropWidth / this.cropHeight) : (16 / 6);
       case '16:6': return 16 / 6;
       case '16:7': return 16 / 7;
       case '16:9': return 16 / 9;
@@ -3331,6 +3424,14 @@ exportMediaManifestCsv(){
     if (this.cropAction.includes('w')) { const nx = Math.max(left, Math.min(this.cropStartX + this.cropStartWidth - minSize, this.cropStartX + dx)); w = this.cropStartWidth + (this.cropStartX - nx); x = nx; }
     if (this.cropAction.includes('n')) { const ny = Math.max(top, Math.min(this.cropStartY + this.cropStartHeight - minSize, this.cropStartY + dy)); h = this.cropStartHeight + (this.cropStartY - ny); y = ny; }
 
+    if (this.cropAspectRatio === 'free') {
+      this.cropX = x;
+      this.cropY = y;
+      this.cropWidth = w;
+      this.cropHeight = h;
+      return;
+    }
+
     const ratio = this.getNumericAspectRatio();
     if (this.cropAction === 'n' || this.cropAction === 's') w = h * ratio;
     else h = w / ratio;
@@ -3347,10 +3448,21 @@ exportMediaManifestCsv(){
 
   resetCropTransform() {
     if (!this.cropDisplayWidth || !this.cropDisplayHeight) return;
+    if (this.cropAspectRatio === 'free') {
+      this.cropWidth = this.cropDisplayWidth;
+      this.cropHeight = this.cropDisplayHeight;
+      this.cropX = this.cropDisplayX;
+      this.cropY = this.cropDisplayY;
+      return;
+    }
     const ratio = this.getNumericAspectRatio();
-    let width = this.cropDisplayWidth * 0.82;
-    let height = width / ratio;
-    if (height > this.cropDisplayHeight * 0.82) {
+    let height = this.cropTargetType === 'banner' ? this.cropDisplayHeight : this.cropDisplayHeight * 0.82;
+    let width = height * ratio;
+    if (width > this.cropDisplayWidth) {
+      width = this.cropDisplayWidth;
+      height = width / ratio;
+    }
+    if (this.cropTargetType !== 'banner' && height > this.cropDisplayHeight * 0.82) {
       height = this.cropDisplayHeight * 0.82;
       width = height * ratio;
     }
@@ -3361,6 +3473,10 @@ exportMediaManifestCsv(){
   }
 
   getCropOutputLabel() {
+    if (this.cropAspectRatio === 'free') {
+      const scale = this.cropDisplayWidth ? this.cropNaturalWidth / this.cropDisplayWidth : 1;
+      return `${Math.max(1, Math.round(this.cropWidth * scale))}×${Math.max(1, Math.round(this.cropHeight * scale))}`;
+    }
     let width = 1920;
     if (this.cropAspectRatio === '16:9') width = 1600;
     else if (this.cropAspectRatio === '4:3') width = 1200;
@@ -3369,6 +3485,7 @@ exportMediaManifestCsv(){
   }
 
   getCropFormatDescription() {
+    if (this.cropAspectRatio === 'free') return 'Custom freeform framing (unlocked top-to-bottom)';
     if (this.cropTargetType === 'banner') return this.bannerDraft.type === 'CAMPAIGN_BANNER' ? 'Campaign card · 16:9 · 1600×900' : 'Desktop hero · 16:6 · 1920×720';
     if (this.cropTargetType === 'subcategory') return 'Subcategory tile · square · 1000×1000';
     if (this.cropTargetType === 'navPromo') return 'Mega-menu promotion · 16:9 · 1600×900';
@@ -3381,14 +3498,24 @@ exportMediaManifestCsv(){
     this.croppingImage.set(true);
 
     let targetWidth = 1920;
-    if (this.cropAspectRatio === '16:9') {
-      targetWidth = 1600;
-    } else if (this.cropAspectRatio === '4:3') {
-      targetWidth = 1200;
-    } else if (this.cropAspectRatio === '1:1') {
-      targetWidth = 1000;
+    let targetHeight = 720;
+    if (this.cropAspectRatio === 'free') {
+      const selectedRatio = Math.max(0.2, (this.cropWidth || 1) / (this.cropHeight || 1));
+      if (selectedRatio >= 2) targetWidth = 1920;
+      else if (selectedRatio >= 1.4) targetWidth = 1600;
+      else if (selectedRatio >= 0.9) targetWidth = 1200;
+      else targetWidth = 1000;
+      targetHeight = Math.round(targetWidth / selectedRatio);
+    } else {
+      if (this.cropAspectRatio === '16:9') {
+        targetWidth = 1600;
+      } else if (this.cropAspectRatio === '4:3') {
+        targetWidth = 1200;
+      } else if (this.cropAspectRatio === '1:1') {
+        targetWidth = 1000;
+      }
+      targetHeight = Math.round(targetWidth / this.getNumericAspectRatio());
     }
-    const targetHeight = Math.round(targetWidth / this.getNumericAspectRatio());
 
     const canvas = document.createElement('canvas');
     canvas.width = targetWidth;
@@ -3432,25 +3559,7 @@ exportMediaManifestCsv(){
           })
         ).subscribe(res => {
           if (res && res.url) {
-            if (this.cropTargetType === 'banner') {
-              this.bannerDraft.imageUrl = res.url;
-              this.notify('✓ Banner cropped & uploaded successfully!');
-            } else if (this.cropTargetType === 'navCategory') {
-              this.navMenuDraft.imageUrl = res.url;
-              this.notify('✓ Category image cropped & uploaded successfully!');
-            } else if (this.cropTargetType === 'navPromo') {
-              if (!this.navMenuDraft.featuredPromo) {
-                this.navMenuDraft.featuredPromo = {};
-              }
-              this.navMenuDraft.featuredPromo.imageUrl = res.url;
-              this.notify('✓ Mega-menu promo card image cropped & updated!');
-            } else if (this.cropTargetType === 'subcategory') {
-              if (this.cropTargetItem) {
-                this.cropTargetItem.imageUrl = res.url;
-              }
-              this.notify('✓ Subcategory thumbnail cropped & updated!');
-            }
-            this.closeCropModal();
+            this.assignCroppedUrl(res.url);
           }
         });
       }, 'image/jpeg', 0.92);

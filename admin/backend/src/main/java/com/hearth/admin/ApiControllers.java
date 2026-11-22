@@ -147,7 +147,8 @@ class CustomerController {
 @RestController @RequestMapping("/api/quotations")
 @PreAuthorize("hasRole('ADMIN')")
 class QuotationController {
-  private final QuotationRepository repo; QuotationController(QuotationRepository r){repo=r;}
+  private final QuotationRepository repo; private final AdminDocumentMailService mail;
+  QuotationController(QuotationRepository r,AdminDocumentMailService mail){repo=r;this.mail=mail;}
   @GetMapping List<Quotation> list(){return repo.findAll(Sort.by(Sort.Direction.DESC,"createdAt"));}
   @PostMapping Quotation create(@RequestBody Quotation q){
     q.id=null;
@@ -181,13 +182,17 @@ class QuotationController {
   @PostMapping("/{id}/send-email")
   public Map<String, Object> sendQuoteEmail(@PathVariable("id") Long id, @RequestBody(required = false) Map<String, String> body) {
     var q = repo.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Quotation not found"));
+    String recipient=body!=null&&body.get("email")!=null&&!body.get("email").isBlank()?body.get("email").trim():q.customerEmail;
+    try{mail.send(recipient,"Quotation "+q.quoteNumber+" — The Heating & Plumbing",
+      "Dear "+Optional.ofNullable(q.customerName).orElse("Customer")+",\n\nYour quotation "+q.quoteNumber+" totals £"+String.format("%.2f",q.totalMinor/100.0)+" including 20% VAT.\nValid until: "+q.expiresOn+".\n\nPlease reply to this email to accept or discuss the quotation.\n\nThe Heating & Plumbing");}
+    catch(Exception e){throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,e.getMessage());}
     q.status = "SENT";
     repo.save(q);
     return Map.of(
       "success", true,
       "quoteNumber", q.quoteNumber != null ? q.quoteNumber : ("QT-" + q.id),
-      "sentTo", (q.customerEmail != null && !q.customerEmail.isBlank()) ? q.customerEmail : "customer",
-      "message", "Quotation estimate " + (q.quoteNumber != null ? q.quoteNumber : ("#" + q.id)) + " has been successfully emailed to " + (q.customerEmail != null ? q.customerEmail : "customer email")
+      "sentTo", recipient,
+      "message", "Quotation estimate " + (q.quoteNumber != null ? q.quoteNumber : ("#" + q.id)) + " has been successfully emailed to " + recipient
     );
   }
   @DeleteMapping("/{id}") void delete(@PathVariable("id") Long id){repo.deleteById(id);}
@@ -197,7 +202,8 @@ class QuotationController {
 @PreAuthorize("hasRole('ADMIN')")
 class PurchaseOrderController {
   private final PurchaseOrderRepository repo;
-  PurchaseOrderController(PurchaseOrderRepository repo){this.repo=repo;}
+  private final AdminDocumentMailService mail;
+  PurchaseOrderController(PurchaseOrderRepository repo,AdminDocumentMailService mail){this.repo=repo;this.mail=mail;}
 
   @GetMapping List<PurchaseOrder> list(){return repo.findAll(Sort.by(Sort.Direction.DESC,"createdAt"));}
 
@@ -225,10 +231,20 @@ class PurchaseOrderController {
 
   @DeleteMapping("/{id}") void delete(@PathVariable("id") Long id){repo.deleteById(id);}
 
+  @PostMapping("/{id}/send-email") Map<String,Object> sendEmail(@PathVariable("id") Long id,@RequestBody(required=false) Map<String,String> body){
+    var po=repo.findById(id).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"Purchase order not found"));
+    String recipient=body!=null&&body.get("email")!=null&&!body.get("email").isBlank()?body.get("email").trim():po.vendorEmail;
+    try{mail.send(recipient,"Purchase Order "+po.poNumber+" — The Heating & Plumbing",
+      "Dear "+Optional.ofNullable(po.vendorName).orElse("Supplier")+",\n\nPlease process purchase order "+po.poNumber+".\nSubtotal: £"+String.format("%.2f",po.subtotalMinor/100.0)+"\nVAT (20%): £"+String.format("%.2f",po.taxMinor/100.0)+"\nTotal: £"+String.format("%.2f",po.totalMinor/100.0)+".\n\nThe Heating & Plumbing");}
+    catch(Exception e){throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,e.getMessage());}
+    return Map.of("success",true,"sentTo",recipient,"message","Purchase order "+po.poNumber+" emailed to "+recipient);
+  }
+
   private void normalise(PurchaseOrder po){
     if(po.status==null||po.status.isBlank())po.status="DRAFT";
     po.status=po.status.toUpperCase();
-    po.totalMinor=Math.max(0,po.subtotalMinor)+Math.max(0,po.taxMinor)+Math.max(0,po.shippingMinor);
+    po.taxMinor=Math.round(Math.max(0,po.subtotalMinor)*0.20);
+    po.totalMinor=Math.max(0,po.subtotalMinor)+po.taxMinor+Math.max(0,po.shippingMinor);
     if(po.shipToName==null||po.shipToName.isBlank())po.shipToName="The Heating & Plumbing";
     if(po.shipToAddress==null||po.shipToAddress.isBlank())po.shipToAddress="First Floor 5-6 Chalice Close, Wallington, England, SM6 9RU";
   }

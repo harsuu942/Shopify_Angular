@@ -928,62 +928,16 @@
       </div>
 
       <div class="category-tiles-grid">
-        <button class="category-card" (click)="chooseParentCategory('Radiators')">
-          <div class="cat-card-img radiators-card"></div>
-          <div class="cat-card-body">
-            <span class="cat-pill">Central Heating</span>
-            <h3>Radiators</h3>
-            <span class="cat-card-link">Explore collection →</span>
-          </div>
-        </button>
-        <button class="category-card" (click)="chooseParentCategory('Heated Towel Rails')">
-          <div class="cat-card-img towels-card"></div>
-          <div class="cat-card-body">
-            <span class="cat-pill">Bathroom Heating</span>
-            <h3>Heated Towel Rails</h3>
-            <span class="cat-card-link">Explore collection →</span>
-          </div>
-        </button>
-        <button class="category-card" (click)="chooseParentCategory('Electric Heating')">
-          <div class="cat-card-img column-card"></div>
-          <div class="cat-card-body">
-            <span class="cat-pill">Eco Smart Heating</span>
-            <h3>Electric Heating</h3>
-            <span class="cat-card-link">Explore collection →</span>
-          </div>
-        </button>
-        <button class="category-card" (click)="chooseParentCategory('Valves & Accessories')">
-          <div class="cat-card-img valves-card"></div>
-          <div class="cat-card-body">
-            <span class="cat-pill">Valves & Finishing</span>
-            <h3>Valves & Accessories</h3>
-            <span class="cat-card-link">Explore collection →</span>
-          </div>
-        </button>
-        <button class="category-card" (click)="chooseParentCategory('Bathrooms')">
-          <div class="cat-card-img bathrooms-card"></div>
-          <div class="cat-card-body">
-            <span class="cat-pill">Baths & Suites</span>
-            <h3>Bathrooms</h3>
-            <span class="cat-card-link">Explore collection →</span>
-          </div>
-        </button>
-        <button class="category-card" (click)="chooseParentCategory('Renewables')">
-          <div class="cat-card-img renewables-card"></div>
-          <div class="cat-card-body">
-            <span class="cat-pill">Low Carbon</span>
-            <h3>Renewables</h3>
-            <span class="cat-card-link">Explore collection →</span>
-          </div>
-        </button>
-        <button class="category-card" (click)="chooseParentCategory('Plumbing')">
-          <div class="cat-card-img plumbing-card"></div>
-          <div class="cat-card-body">
-            <span class="cat-pill">Trade Essentials</span>
-            <h3>Plumbing</h3>
-            <span class="cat-card-link">Explore collection →</span>
-          </div>
-        </button>
+        @for(collection of homeCollections(); track collection.category) {
+          <button class="category-card" (click)="chooseParentCategory(collection.category)">
+            <div class="cat-card-img" [style.backgroundImage]="collection.imageUrl ? 'url(' + imageSrc(collection.imageUrl, collection.category, collection.title) + ')' : ''"></div>
+            <div class="cat-card-body">
+              <span class="cat-pill">{{collection.badge}}</span>
+              <h3>{{collection.title}}</h3>
+              <span class="cat-card-link">Explore collection →</span>
+            </div>
+          </button>
+        }
       </div>
     </section>
 
@@ -1051,8 +1005,16 @@
               </select>
             </div>
             <div class="btu-field">
-              <label>Floor Area (m²)</label>
-              <input type="number" min="4" max="100" [(ngModel)]="btuArea" (input)="calculateBtu()">
+              <label>Room Length (metres)</label>
+              <input type="number" min="1" max="30" step="0.1" [(ngModel)]="btuLength" (input)="calculateBtu()">
+            </div>
+            <div class="btu-field">
+              <label>Room Width (metres)</label>
+              <input type="number" min="1" max="30" step="0.1" [(ngModel)]="btuWidth" (input)="calculateBtu()">
+            </div>
+            <div class="btu-field">
+              <label>Ceiling Height (metres)</label>
+              <input type="number" min="1.8" max="8" step="0.1" [(ngModel)]="btuHeight" (input)="calculateBtu()">
             </div>
             <div class="btu-field">
               <label>Insulation & Glazing</label>
@@ -1061,6 +1023,20 @@
                 <option value="standard">Standard Domestic (Good)</option>
                 <option value="period">Period Property / High Ceilings</option>
               </select>
+            </div>
+            <div class="btu-field">
+              <label>Window Glazing</label>
+              <select [(ngModel)]="btuGlazing" (change)="calculateBtu()">
+                <option value="single">Single Glazed</option><option value="double">Double Glazed</option><option value="triple">Triple Glazed</option>
+              </select>
+            </div>
+            <div class="btu-field">
+              <label>Number of Windows</label>
+              <input type="number" min="0" max="12" [(ngModel)]="btuWindows" (input)="calculateBtu()">
+            </div>
+            <div class="btu-field">
+              <label>External Walls</label>
+              <input type="number" min="0" max="4" [(ngModel)]="btuExternalWalls" (input)="calculateBtu()">
             </div>
             <div class="btu-field">
               <label>Desired Comfort Level</label>
@@ -3869,6 +3845,19 @@
 <!-- ========================================================================= -->
 <!-- FLOATING HEATING SPECIALIST & WHATSAPP SUPPORT WIDGET                     -->
 <!-- ========================================================================= -->
+@if(view()==='shop' && !category && !query) {
+  <section class="home-compliance-form" aria-label="Customer enquiry form">
+    <div class="compliance-form-heading"><strong>Need help or wish to raise a concern?</strong><small>Send your details securely and our team will respond.</small></div>
+    @if(complianceSent()) {<div class="compliance-success">✓ Thank you. Your enquiry has been received.</div>}
+    <form (ngSubmit)="submitComplianceForm()">
+      <input name="complianceName" [(ngModel)]="complianceName" placeholder="Name *" required>
+      <input name="complianceEmail" type="email" [(ngModel)]="complianceEmail" placeholder="Email *" required>
+      <input name="compliancePhone" type="tel" [(ngModel)]="compliancePhone" placeholder="Phone number *" required>
+      <textarea name="complianceDetails" [(ngModel)]="complianceDetails" rows="3" placeholder="Details *" required></textarea>
+      <button type="submit" [disabled]="complianceSubmitting()">{{complianceSubmitting() ? 'Sending…' : 'Submit Enquiry'}}</button>
+    </form>
+  </section>
+}
 <aside class="floating-whatsapp-bar" aria-label="WhatsApp live support">
   <a href="https://wa.me/447404095699?text=Hello%20THP%20Heating%2C%20I%20have%20an%20enquiry" 
      target="_blank" 

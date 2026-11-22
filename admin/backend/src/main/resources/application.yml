@@ -20,6 +20,14 @@ spring:
     multipart:
       max-request-size: ${MAX_UPLOAD_SIZE:2GB}
       max-file-size: ${MAX_UPLOAD_SIZE:2GB}
+  mail:
+    host: ${SMTP_HOST:}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
 server:
   port: 8081
   error:
@@ -27,6 +35,7 @@ server:
   compression:
     enabled: true
 app:
+  mail-from: ${SMTP_FROM:${SMTP_USERNAME:}}
   upload-dir: ${ADMIN_UPLOAD_DIR:./data/product-images}
   shopify-api-url: ${SHOPIFY_API_URL:https://hearth-backend-0bbo.onrender.com}
   catalogue-sync-secret: ${CATALOGUE_SYNC_SECRET:local-catalogue-sync-secret}

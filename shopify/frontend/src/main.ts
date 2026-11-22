@@ -3,7 +3,7 @@ import {HttpClient, HttpHeaders, provideHttpClient, withInterceptors, HttpInterc
 import {Component, HostListener, computed, inject, signal, effect} from '@angular/core';
 import {FormsModule} from '@angular/forms';
 import {bootstrapApplication, Title, Meta, DomSanitizer, SafeHtml} from '@angular/platform-browser';
-import {catchError, throwError, of, forkJoin} from 'rxjs';
+import {catchError, throwError, of, forkJoin, finalize} from 'rxjs';
 
 declare const Stripe: any;
 
@@ -375,6 +375,15 @@ export class App {
     return found?.description || `Explore our high quality collection of ${cat} engineered for exceptional thermal efficiency and modern British aesthetics.`;
   });
 
+  homeCollections = computed(() => this.dynamicNavigationMenu()
+    .filter((menu: any) => menu && menu.status !== 'INACTIVE' && menu.status !== 'DRAFT')
+    .map((menu: any) => ({
+      title: menu.title || menu.category || 'Collection',
+      category: menu.category || menu.title || '',
+      badge: menu.badge || 'Curated Range',
+      imageUrl: menu.imageUrl || menu.featuredPromo?.imageUrl || menu.filterOptions?.subcategories?.find((s: any) => s.imageUrl)?.imageUrl || this.getDefaultProductImage(menu.category, menu.title)
+    })));
+
   selectedPriceRange = signal<string>('all');
   setPriceRange(range: string) {
     this.selectedPriceRange.set(range);
@@ -707,11 +716,33 @@ export class App {
 
   // BTU Calculator State
   btuRoomType = 'living';
+  btuUnit: 'm' | 'ft' = 'm';
   btuArea = 15;
+  btuLength = 4;
+  btuWidth = 3.75;
+  btuHeight = 2.4;
+  btuWindows = 1;
+  btuExternalWalls = 1;
+  btuGlazing = 'double';
   btuInsulation = 'standard';
+  btuCeiling = 'heated';
+  btuPatioDoors = false;
   btuTemp = '21';
   estimatedBtu = signal(5120);
   estimatedWatts = signal(1500);
+  btuModalOpen = signal(false);
+
+  // Floating Help & Complaint Modal State
+  complaintModalOpen = signal(false);
+  complaintName = '';
+  complaintEmail = '';
+  complaintPhone = '';
+  complaintCategory = 'General Inquiry & Support';
+  complaintOrderNumber = '';
+  complaintDetails = '';
+  complaintSubmitting = signal(false);
+  complaintSubmitted = signal(false);
+  complaintTicketNumber = signal('');
 
   // Auth / Checkout
   fullName = '';
@@ -1608,6 +1639,12 @@ export class App {
   supportUploading = signal(false);
   supportSubmitted = signal(false);
   lastSubmittedTicket = signal<{ticketNumber: string, status: string, message: string} | null>(null);
+  complianceName = '';
+  complianceEmail = '';
+  compliancePhone = '';
+  complianceDetails = '';
+  complianceSubmitting = signal(false);
+  complianceSent = signal(false);
 
   // Customer Account Support Tickets
   customerTickets = signal<any[]>([]);
@@ -3405,21 +3442,41 @@ export class App {
 
   // BTU Calculator Logic
   calculateBtu() {
-    const area = Number(this.btuArea) || 15;
-    let typeFactor = 95;
-    if (this.btuRoomType === 'bathroom') typeFactor = 110;
-    else if (this.btuRoomType === 'living') typeFactor = 100;
-    else if (this.btuRoomType === 'kitchen') typeFactor = 85;
-    else if (this.btuRoomType === 'bedroom') typeFactor = 90;
-
-    let insulationFactor = 1.0;
-    if (this.btuInsulation === 'high') insulationFactor = 0.85;
-    else if (this.btuInsulation === 'period') insulationFactor = 1.35;
-    const tempFactor = Number(this.btuTemp) === 23 ? 1.15 : (Number(this.btuTemp) === 18 ? 0.88 : 1.0);
-    const watts = Math.round(area * typeFactor * insulationFactor * tempFactor);
+    const length = Math.max(1, Number(this.btuLength) || 4);
+    const width = Math.max(1, Number(this.btuWidth) || 3.75);
+    const height = Math.max(1.8, Number(this.btuHeight) || 2.4);
+    this.btuArea = Math.round(length * width * 100) / 100;
+    const volume = length * width * height;
+    let roomFactor = 1;
+    if (this.btuRoomType === 'bathroom') roomFactor = 1.15;
+    else if (this.btuRoomType === 'kitchen') roomFactor = 0.9;
+    else if (this.btuRoomType === 'bedroom') roomFactor = 0.95;
+    else if (this.btuRoomType === 'hallway') roomFactor = 0.9;
+    const insulationFactor = this.btuInsulation === 'high' ? 0.82 : this.btuInsulation === 'period' ? 1.28 : 1;
+    const glazingFactor = this.btuGlazing === 'single' ? 1.18 : this.btuGlazing === 'triple' ? 0.9 : 1;
+    const temperatureFactor = Math.max(0.8, Math.min(1.25, Number(this.btuTemp) / 21));
+    const windowFactor = 1 + Math.max(0, Number(this.btuWindows) || 0) * 0.05;
+    const wallFactor = 1 + Math.max(0, (Number(this.btuExternalWalls) || 0) - 1) * 0.08;
+    const watts = Math.round(volume * 40 * roomFactor * insulationFactor * glazingFactor * temperatureFactor * windowFactor * wallFactor);
     const btu = Math.round(watts * 3.412);
     this.estimatedWatts.set(watts);
     this.estimatedBtu.set(btu);
+  }
+
+  submitComplianceForm() {
+    const email = this.complianceEmail.trim();
+    if (!this.complianceName.trim() || !email || !/^\S+@\S+\.\S+$/.test(email) || !this.compliancePhone.trim() || !this.complianceDetails.trim()) {
+      this.showToast('Please complete name, valid email, phone number and details.');
+      return;
+    }
+    this.complianceSubmitting.set(true);
+    this.http.post<any>('/api/inquiries', {
+      name: this.complianceName.trim(), email, phone: this.compliancePhone.trim(),
+      category: 'Compliance / General Enquiry', message: this.complianceDetails.trim()
+    }).pipe(finalize(() => this.complianceSubmitting.set(false))).subscribe({
+      next: () => { this.complianceSent.set(true); this.complianceDetails = ''; this.showToast('Your enquiry has been submitted successfully.'); },
+      error: () => this.showToast('We could not submit the form. Please try again or use WhatsApp.')
+    });
   }
 
   filterByBtu() {
