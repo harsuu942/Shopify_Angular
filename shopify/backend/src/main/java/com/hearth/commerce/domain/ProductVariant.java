@@ -7,7 +7,7 @@ import java.math.BigDecimal;
 public class ProductVariant {
   @Id @GeneratedValue(strategy=GenerationType.IDENTITY) private Long id;
   @ManyToOne(fetch=FetchType.LAZY,optional=false) @JoinColumn(name="product_id") @JsonIgnore private Product product;
-  @Column(unique=true,nullable=false) private String ean;
+  @Column(unique=true) private String ean;
   @Column(unique=true,nullable=false) private String variantSku;
   private String configCode,colour,baseColour,colourCode,paintType,panel,availability,productionTime,leadTime,image;
   private Integer heightMm,widthMm,depthMm,stock,watts,btu,warrantyYears,discountPercent;

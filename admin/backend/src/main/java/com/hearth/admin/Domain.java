@@ -76,7 +76,7 @@ class Product extends BaseEntity {
 @Entity @Table(name="product_variants", indexes={@Index(name="idx_variant_ean",columnList="ean"),@Index(name="idx_variant_sku",columnList="variantSku")})
 class ProductVariant extends BaseEntity {
   @ManyToOne(fetch=FetchType.LAZY,optional=false) @JoinColumn(name="product_id") @com.fasterxml.jackson.annotation.JsonIgnore public Product product;
-  @Column(unique=true,nullable=false) public String ean;
+  @Column(unique=true) public String ean;
   @Column(unique=true,nullable=false) public String variantSku;
   public String configCode;
   public String colour;
