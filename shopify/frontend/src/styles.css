@@ -12438,12 +12438,20 @@ a.checkout-btn:hover {
 /* The admin produces a 16:6 hero crop. Match that frame on desktop so the
    complete top-to-bottom crop fills the storefront without clipping. */
 .home-page-main .hero-banner {
-  min-height: clamp(420px, 37.5vw, 720px) !important;
-  max-height: 720px !important;
+  min-height: clamp(340px, 30vw, 500px) !important;
+  height: clamp(340px, 30vw, 500px) !important;
+  max-height: 500px !important;
   background-size: cover !important;
   background-position: center center !important;
   background-repeat: no-repeat !important;
 }
+.home-page-main .hero-banner .hero-banner-inner{min-height:100% !important;height:100% !important;padding-top:28px !important;padding-bottom:38px !important}
+
+html,body,app-root{max-width:100%;overflow-x:hidden}
+.pdp-tabs-section,.pdp-tab-content-card,.tab-panel{max-width:100%;min-width:0}
+.pdp-tab-headers{overflow-x:auto;scrollbar-width:thin}
+.pdp-tab-btn{flex:0 0 auto;white-space:nowrap}
+.overview-grid,.schematic-layout-grid{min-width:0}
 .category-card .cat-card-img { background-size: cover; background-position: center; background-repeat: no-repeat; }
 
 /* =========================================================================
@@ -12475,6 +12483,9 @@ a.checkout-btn:hover {
   box-shadow: 0 6px 20px rgba(20, 38, 62, 0.28);
   transition: all 0.2s ease-in-out;
 }
+.floating-help-btn{position:fixed;right:28px;bottom:96px;z-index:9999;display:inline-flex;align-items:center;gap:9px;border:0;border-radius:999px;padding:11px 18px;background:#14263e;color:#fff;box-shadow:0 6px 20px rgba(20,38,62,.3);cursor:pointer;font:700 .86rem/1 inherit}
+.floating-help-btn span{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:#fff;color:#14263e;font-size:1rem}
+.floating-help-btn:hover{background:#1d3557;transform:translateY(-2px)}
 .floating-complaint-btn:hover {
   background: #1d3557;
   transform: translateY(-2px);
@@ -12701,6 +12712,7 @@ a.checkout-btn:hover {
 .dynamic-schematic-card figcaption{margin-top:12px;color:#64748b;font-size:.88rem}
 
 @media(max-width: 768px) {
+  .floating-help-btn{right:14px;bottom:86px;padding:9px 14px}
   .floating-support-container {
     right: 14px;
     bottom: 14px;
