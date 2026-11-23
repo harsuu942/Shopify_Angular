@@ -42,9 +42,11 @@ public class Product {
     this.unlimitedStock=unlimitedStock;this.staticContentSlug=staticContentSlug;this.documentsJson=documentsJson;this.technicalDataJson=technicalDataJson;
     this.discountPercent=discountPercent!=null?discountPercent:20;
     var byEan=new HashMap<String,ProductVariant>();var bySku=new HashMap<String,ProductVariant>();
-    for(var current:variants){if(current.getEan()!=null)byEan.put(current.getEan(),current);if(current.getVariantSku()!=null)bySku.put(current.getVariantSku(),current);}
+    // EAN is optional: blank values are not identifiers, and each existing variant may be matched once.
+    for(var current:variants){if(current.getEan()!=null&&!current.getEan().isBlank())byEan.put(current.getEan(),current);if(current.getVariantSku()!=null)bySku.put(current.getVariantSku(),current);}
     var reconciled=new ArrayList<ProductVariant>();
-    if(incoming!=null)for(var supplied:incoming){var target=byEan.get(supplied.getEan());if(target==null)target=bySku.get(supplied.getVariantSku());if(target==null)target=supplied;else target.copyFrom(supplied);target.setProduct(this);reconciled.add(target);}
+    var matched=java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<ProductVariant,Boolean>());
+    if(incoming!=null)for(var supplied:incoming){var ean=supplied.getEan();var target=ean==null||ean.isBlank()?null:byEan.get(ean);if(target==null&&supplied.getVariantSku()!=null)target=bySku.get(supplied.getVariantSku());if(target!=null&&!matched.add(target))target=null;if(target==null)target=supplied;else target.copyFrom(supplied);target.setProduct(this);reconciled.add(target);}
     variants.clear();variants.addAll(reconciled);
   }
 }

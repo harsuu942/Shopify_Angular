@@ -58,11 +58,15 @@ class Product extends BaseEntity {
     var copy=incoming==null?java.util.List.<ProductVariant>of():new java.util.ArrayList<>(incoming);
     var byEan=new java.util.HashMap<String,ProductVariant>();
     var bySku=new java.util.HashMap<String,ProductVariant>();
-    for(var existing:variants){if(existing.ean!=null)byEan.put(existing.ean,existing);if(existing.variantSku!=null)bySku.put(existing.variantSku,existing);}
+    // EAN is optional: blank values are not identifiers, and each existing variant may be matched once.
+    for(var existing:variants){if(existing.ean!=null&&!existing.ean.isBlank())byEan.put(existing.ean.trim(),existing);if(existing.variantSku!=null&&!existing.variantSku.isBlank())bySku.put(existing.variantSku.trim(),existing);}
     var reconciled=new java.util.ArrayList<ProductVariant>();
+    var matched=java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<ProductVariant,Boolean>());
     for(var submitted:copy){
+      if(submitted.ean!=null)submitted.ean=submitted.ean.isBlank()?null:submitted.ean.trim();
       var target=submitted.ean==null?null:byEan.get(submitted.ean);
-      if(target==null&&submitted.variantSku!=null)target=bySku.get(submitted.variantSku);
+      if(target==null&&submitted.variantSku!=null)target=bySku.get(submitted.variantSku.trim());
+      if(target!=null&&!matched.add(target))target=null;
       if(target==null)target=new ProductVariant();
       target.copyFrom(submitted);target.product=this;reconciled.add(target);
     }
