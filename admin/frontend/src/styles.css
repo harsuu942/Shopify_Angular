@@ -579,7 +579,9 @@ aside nav p { font-size: 0.72rem !important; }
   color: var(--muted);
   font-size: 1.6rem;
 }
-.product-detail-modal:has(form), .document-edit-modal { width:min(1080px,94vw) !important; max-height:90vh; overflow:hidden; }
+.product-detail-modal:has(form), .document-edit-modal { width:min(1080px,94vw) !important; max-height:90vh; overflow-y:auto; overscroll-behavior:contain; }
+/* Only the product form scrolls internally (sticky save bar); every other large dialog scrolls as a whole. */
+.modal.product-modal:has(form) { overflow:hidden; }
 .product-modal>form{max-height:calc(90vh - 91px);overflow-y:auto;overscroll-behavior:contain;padding-bottom:22px}
 .product-content-actions{position:sticky;bottom:-22px;z-index:4;display:flex;align-items:center;justify-content:space-between;gap:12px;margin:8px -26px -22px;padding:14px 26px;background:rgba(255,255,255,.97);border-top:1px solid var(--line);box-shadow:0 -10px 25px rgba(23,45,41,.07);backdrop-filter:blur(10px)}
 .product-content-actions .form-actions{margin:0;padding:0}
