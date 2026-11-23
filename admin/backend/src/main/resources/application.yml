@@ -47,6 +47,9 @@ app:
     requests-per-minute: ${RATE_LIMIT_PER_MINUTE:300}
     auth-per-minute: ${AUTH_RATE_LIMIT_PER_MINUTE:10}
 management:
+  health:
+    mail:
+      enabled: false
   endpoints:
     web:
       exposure:
