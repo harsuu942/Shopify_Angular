@@ -8,3 +8,8 @@ spring:
     database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
       ddl-auto: update
+app:
+  # Production (Render) also runs with the h2 profile, so keep these overridable by
+  # environment variables; the defaults only apply to local development.
+  shopify-api-url: ${SHOPIFY_API_URL:http://127.0.0.1:8080}
+  catalogue-sync-secret: ${CATALOGUE_SYNC_SECRET:local-catalogue-sync-secret}
