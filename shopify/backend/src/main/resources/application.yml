@@ -29,6 +29,9 @@ server:
     enabled: true
   forward-headers-strategy: framework
 management:
+  health:
+    mail:
+      enabled: false
   endpoints:
     web:
       exposure:
