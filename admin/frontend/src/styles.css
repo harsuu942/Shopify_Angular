@@ -239,6 +239,29 @@ aside nav p { font-size: 0.72rem !important; }
 .table-wrap table { font-size: 0.84rem !important; }
 
 /* Formal Quotation Document Styling */
+@media screen {
+  .app-shell th, .app-shell td { font-size: .9rem !important; }
+  .form-grid label { font-size: .9rem !important; }
+  aside nav button { font-size: .94rem !important; }
+  .document-edit-modal:has([name="qname"]) .form-grid label {
+    font-size: .95rem !important;
+    font-weight: 800;
+  }
+  .quote-doc-addresses p { font-size: .92rem; }
+}
+.order-shipping-address {
+  min-width: 14ch;
+  max-width: 35ch;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.inquiry-response-message {
+  display: block;
+  width: 100%;
+  min-height: 220px;
+  resize: vertical;
+  padding: 12px;
+}
 .quote-doc-container { background: #fff; border-radius: 8px; padding: 28px; max-width: 800px; margin: auto; }
 .quote-doc-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid var(--navy, #14263e); padding-bottom: 20px; margin-bottom: 24px; }
 .quote-doc-brand { display: flex; align-items: center; gap: 14px; }

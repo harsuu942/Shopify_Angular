@@ -148,7 +148,10 @@ class CustomerController {
 @PreAuthorize("hasRole('ADMIN')")
 class QuotationController {
   private final QuotationRepository repo; private final AdminDocumentMailService mail;
-  QuotationController(QuotationRepository r,AdminDocumentMailService mail){repo=r;this.mail=mail;}
+  private final CompanyContactController companyContact;
+  QuotationController(QuotationRepository r,AdminDocumentMailService mail,CompanyContactController companyContact){
+    repo=r;this.mail=mail;this.companyContact=companyContact;
+  }
   @GetMapping List<Quotation> list(){return repo.findAll(Sort.by(Sort.Direction.DESC,"createdAt"));}
   @PostMapping Quotation create(@RequestBody Quotation q){
     q.id=null;
@@ -157,7 +160,10 @@ class QuotationController {
       q.taxMinor = Math.round(q.subtotalMinor * 0.20);
     }
     q.totalMinor=q.subtotalMinor+q.taxMinor;
-    if(q.companyEmail == null || q.companyEmail.isBlank()) q.companyEmail = "sales@theheatingandplumbing.com";
+    var company = companyContact.get();
+    if(q.companyEmail == null || q.companyEmail.isBlank()) q.companyEmail = company.get("email");
+    q.companyAddress = company.get("address");
+    q.companyPhone = company.get("phone");
     if(q.expiresOn==null) q.expiresOn=LocalDate.now().plusDays(30);
     return repo.save(q);
   }
@@ -581,10 +587,13 @@ class InternalSyncController {
                          CommerceOrderRepository orders, CustomerRepository customers,
                          ProductRepository products, InventoryTransactionRepository inventoryTxs,
                          CustomerInquiryRepository inquiries, ProductReviewRepository reviews,
-                         CmsContentRepository cms, CatalogueSyncService sync){
+                         CmsContentRepository cms, CatalogueSyncService sync, AdminDocumentMailService inquiryMail){
     this.secret=secret;this.orders=orders;this.customers=customers;this.products=products;
     this.inventoryTxs=inventoryTxs;this.inquiries=inquiries;this.reviews=reviews;this.cms=cms;this.sync=sync;
+    this.inquiryMail = inquiryMail;
   }
+
+  private final AdminDocumentMailService inquiryMail;
 
   private void checkSecret(String supplied){
     if(supplied==null||secret==null||!java.security.MessageDigest.isEqual(secret.getBytes(java.nio.charset.StandardCharsets.UTF_8),supplied.getBytes(java.nio.charset.StandardCharsets.UTF_8))){
@@ -718,6 +727,20 @@ class InternalSyncController {
     inquiry.id = null;
     inquiry.status = "NEW";
     var saved = inquiries.save(inquiry);
+    org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+      new org.springframework.transaction.support.TransactionSynchronization() {
+        @Override public void afterCommit() {
+          try {
+            inquiryMail.send("sales@theheatingandplumbing.com", "New storefront enquiry",
+              "Ticket: " + saved.ticketNumber + "\nName: " + saved.name + "\nEmail: " + saved.email
+              + "\nPhone: " + saved.phone + "\nCategory: " + saved.category
+              + "\nOrder: " + saved.orderNumber + "\nProduct: " + saved.productName + "\n\n" + saved.message);
+          } catch (RuntimeException e) {
+            org.slf4j.LoggerFactory.getLogger(InternalSyncController.class)
+              .warn("Could not send notification for enquiry ID {}", saved.id);
+          }
+        }
+      });
     return Map.of("success", true, "id", saved.id);
   }
 
@@ -1155,6 +1178,47 @@ class BannerController {
   @DeleteMapping("/{id}")
   public void delete(@PathVariable("id") Long id) {
     repo.deleteById(id);
+  }
+}
+
+@RestController @RequestMapping("/api/settings/company-contact")
+@PreAuthorize("hasRole('ADMIN')")
+class CompanyContactController {
+  private static final String SLUG = "company-contact";
+  private final CmsContentRepository repo;
+  private final tools.jackson.databind.ObjectMapper mapper = new tools.jackson.databind.ObjectMapper();
+
+  CompanyContactController(CmsContentRepository repo) { this.repo = repo; }
+
+  @GetMapping
+  public Map<String, String> get() {
+    var saved = repo.findBySlugAndStatus(SLUG, "PUBLISHED");
+    if (saved.isPresent()) {
+      return mapper.readValue(saved.get().body, new tools.jackson.core.type.TypeReference<Map<String, String>>() {});
+    }
+    return Map.of("address", "First Floor 5-6 Chalice Close, Wallington, England, SM6 9RU",
+      "email", "sales@theheatingandplumbing.com", "phone", "+44 7404 095699");
+  }
+
+  @PutMapping
+  public Map<String, String> save(@RequestBody Map<String, String> input) {
+    var address = Optional.ofNullable(input.get("address")).orElse("").strip();
+    var email = Optional.ofNullable(input.get("email")).orElse("").strip();
+    var phone = Optional.ofNullable(input.get("phone")).orElse("").strip();
+    if (address.isBlank() || address.length() > 1000 || email.length() > 254
+        || !email.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$") || phone.isBlank() || phone.length() > 50) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Enter a company address, valid email and phone number");
+    }
+    var details = Map.of("address", address, "email", email, "phone", phone);
+    var content = repo.findBySlugAndStatus(SLUG, "PUBLISHED").orElseGet(CmsContent::new);
+    content.slug = SLUG;
+    content.title = "Company contact details";
+    content.type = "SETTINGS";
+    content.status = "PUBLISHED";
+    content.publishedAt = Instant.now();
+    content.body = mapper.writeValueAsString(details);
+    repo.save(content);
+    return details;
   }
 }
 

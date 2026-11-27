@@ -25,7 +25,12 @@ class StoreControllerPricingTest {
     PromotionRepository promotions = repository(PromotionRepository.class, (proxy, method, args) ->
         method.getName().equals("findByCodeIgnoreCase") ? Optional.empty() : defaultValue(method.getReturnType()));
     return new StoreController(products, null, null, promotions, null, null, null,
-        "http://127.0.0.1:9", "test-sync-secret", "/tmp/thp-test-images", "pk_test_example", "sk_test_example", "whsec_example");
+        "http://127.0.0.1:9", "test-sync-secret", "/tmp/thp-test-images", "pk_test_example", "sk_test_example", "whsec_example") {
+      @Override
+      public ShippingRates shippingRates() {
+        return new ShippingRates(2499, 50000, 0, List.of());
+      }
+    };
   }
 
   private Object defaultValue(Class<?> type) {
@@ -46,6 +51,18 @@ class StoreControllerPricingTest {
     total.setAccessible(true);
 
     assertEquals(new BigDecimal("224.99"), total.invoke(result));
+  }
+
+  @Test
+  void rejectsExcludedPostcodesBeforeCreatingPaymentIntent() {
+    var controller = controller(null);
+    for (String postcode : List.of("BT1 5GS", "JE2 3QA", "GY1 1AA", "IM1 1AA")) {
+      var request = new StoreController.PaymentIntentRequest(List.of(), postcode, null, null, null);
+      var exception = assertThrows(ResponseStatusException.class,
+          () -> controller.createPaymentIntent(request, "test-idempotency-key"));
+      assertEquals(400, exception.getStatusCode().value());
+      assertEquals("Delivery is available only in England and Wales.", exception.getReason());
+    }
   }
 
   @Test

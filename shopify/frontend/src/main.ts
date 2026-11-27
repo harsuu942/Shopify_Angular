@@ -772,11 +772,8 @@ export class App {
   selectedPredictionIndex = signal<number>(-1);
   private addressSearchTimer: any = null;
 
-  postcodePredictions = signal<AddressPrediction[]>([]);
   showPostcodeDropdown = signal<boolean>(false);
   searchingPostcode = signal<boolean>(false);
-  selectedPostcodeIndex = signal<number>(-1);
-  private postcodeSearchTimer: any = null;
   lookingUpPostcode = signal<boolean>(false);
   cardName = '';
   cardNumber = '';
@@ -805,6 +802,8 @@ export class App {
   // Payment Method Selection - Direct Card Processing via Stripe
   paymentMethod = signal<'card'>('card');
   stripePublishableKey = signal<string>('');
+  stripeConfigured = computed(() => /^pk_(test|live)_/.test(this.stripePublishableKey()) && !this.stripePublishableKey().includes('Mock'));
+  stripeConfigLoaded = signal(false);
   stripeMode = signal<string>('sandbox_test');
   stripePaymentIntentId = signal<string>('');
   private checkoutIdempotencyKey = crypto.randomUUID();
@@ -887,7 +886,10 @@ export class App {
     this.fillTestCard('success');
   }
 
+  private mountedStripeCardHost: HTMLElement | null = null;
+
   mountStripeCard(attempt = 0) {
+    if (this.view() !== 'checkout') return;
     const host = document.getElementById('stripe-card-element');
     const key = this.stripePublishableKey();
     if (!host || typeof Stripe === 'undefined' || !key || key.includes('Mock')) {
@@ -895,10 +897,13 @@ export class App {
       else this.cardNumberError.set('Secure card fields could not be loaded. Please refresh and try again.');
       return;
     }
+    if (host === this.mountedStripeCardHost && this.stripeCardElement) return;
     try {
       if (this.stripeCardElement) {
         try { this.stripeCardElement.unmount(); } catch (_) {}
       }
+      this.mountedStripeCardHost = null;
+      this.stripeCardComplete.set(false);
       this.stripe = Stripe(key);
       this.stripeElements = this.stripe.elements();
       this.stripeCardElement = this.stripeElements.create('card', {
@@ -909,6 +914,8 @@ export class App {
         }
       });
       this.stripeCardElement.mount('#stripe-card-element');
+      this.mountedStripeCardHost = host;
+      this.cardNumberError.set('');
       this.stripeCardElement.on('change', (event: any) => {
         this.stripeCardComplete.set(!!event.complete);
         this.cardNumberError.set(event.error?.message || '');
@@ -1074,6 +1081,7 @@ export class App {
   }
 
   selectAddressPrediction(pred: AddressPrediction, source: 'street' | 'postcode' = 'street') {
+    const request = source === 'postcode' ? ++this.postcodeLookupRequest : null;
     this.showAddressDropdown.set(false);
     this.showPostcodeDropdown.set(false);
     if (source === 'postcode') {
@@ -1086,6 +1094,7 @@ export class App {
 
     this.http.get<any>(url).subscribe({
       next: (data) => {
+        if (request !== null && request !== this.postcodeLookupRequest) return;
         this.searchingAddress.set(false);
         this.searchingPostcode.set(false);
         let streetNum = '';
@@ -1106,8 +1115,6 @@ export class App {
         // 1. Postcode
         if (postalCode) {
           this.postcode = postalCode.toUpperCase();
-        } else if (source === 'postcode' && pred.mainText) {
-          this.postcode = pred.mainText.toUpperCase();
         }
         if (this.postcode) {
           const check = this.checkUkRestrictedPostcode(this.postcode);
@@ -1124,18 +1131,16 @@ export class App {
         if (streetNum && route) {
           this.addressLine = `${streetNum} ${route}`;
           this.addressError.set('');
-        } else if (route) {
+        } else if (route && source === 'street') {
           this.addressLine = route;
           this.addressError.set('');
         } else if (source === 'street') {
           this.addressLine = pred.mainText || this.addressLine;
           this.addressError.set('');
-        } else if (source === 'postcode' && pred.secondaryText) {
-          const parts = pred.secondaryText.split(',');
-          if (parts.length > 0 && parts[0].trim()) {
-            this.addressLine = parts[0].trim();
-            this.addressError.set('');
-          }
+        } else if (source === 'postcode') {
+          this.addressLine = pred.mainText || this.addressLine;
+          this.addressError.set('');
+          this.postcodeLookupMessage.set('Please confirm your house or flat number and street before paying.');
         }
 
         // 3. City / Town
@@ -1167,220 +1172,74 @@ export class App {
   }
 
   checkUkRestrictedPostcode(rawPostcode: string): { restricted: boolean; region?: string; code?: string } {
-    if (!rawPostcode) return { restricted: false };
-    const clean = rawPostcode.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-    if (!clean) return { restricted: false };
-
-    // 1. Northern Ireland: All BT prefixes
-    if (clean.startsWith('BT')) {
-      return { restricted: true, region: 'Northern Ireland (BT)', code: 'BT' };
-    }
-
-    // 2. Shetland Islands: All ZE prefixes
-    if (clean.startsWith('ZE')) {
-      return { restricted: true, region: 'Shetland Islands (ZE)', code: 'ZE' };
-    }
-
-    // 3. Scottish Highlands & Islands: All IV, all KW
-    if (clean.startsWith('IV')) {
-      return { restricted: true, region: 'Scottish Highlands & Islands (IV)', code: 'IV' };
-    }
-    if (clean.startsWith('KW')) {
-      return { restricted: true, region: 'Scottish Highlands & Islands (KW)', code: 'KW' };
-    }
-
-    // 4. Channel Islands & Isle of Man: All JE (Jersey), GY (Guernsey), IM (Isle of Man)
-    if (clean.startsWith('JE')) {
-      return { restricted: true, region: 'Channel Islands (Jersey - JE)', code: 'JE' };
-    }
-    if (clean.startsWith('GY')) {
-      return { restricted: true, region: 'Channel Islands (Guernsey - GY)', code: 'GY' };
-    }
-    if (clean.startsWith('IM')) {
-      return { restricted: true, region: 'Isle of Man (IM)', code: 'IM' };
-    }
-
-    // 5. Outward numeric range matching: PA20-80, PH6-50, PO30-41, KA27-28, KY9-10, KY14-16, TD1-8, TD10-14, TR21-25
-    const match = clean.match(/^([A-Z]{1,2})(\d{1,2})/);
-    if (match) {
-      const area = match[1];
-      const num = parseInt(match[2], 10);
-
-      // PA20-80 (Scottish Highlands & Islands)
-      if (area === 'PA' && num >= 20 && num <= 80) {
-        return { restricted: true, region: 'Scottish Highlands & Islands (PA20-PA80)', code: `PA${num}` };
-      }
-
-      // PH6-50 (Scottish Highlands & Islands)
-      if (area === 'PH' && num >= 6 && num <= 50) {
-        return { restricted: true, region: 'Scottish Highlands & Islands (PH6-PH50)', code: `PH${num}` };
-      }
-
-      // PO30-41 (Isle of Wight)
-      if (area === 'PO' && num >= 30 && num <= 41) {
-        return { restricted: true, region: 'Isle of Wight (PO30-PO41)', code: `PO${num}` };
-      }
-
-      // KA27-28 (Kilmarnock/Arran)
-      if (area === 'KA' && (num === 27 || num === 28)) {
-        return { restricted: true, region: 'Offshore Communities (Arran - KA27-28)', code: `KA${num}` };
-      }
-
-      // KY9-10, KY14-16 (Kirkcaldy)
-      if (area === 'KY' && ((num >= 9 && num <= 10) || (num >= 14 && num <= 16))) {
-        return { restricted: true, region: 'Remote Communities (Kirkcaldy - KY9-10, KY14-16)', code: `KY${num}` };
-      }
-
-      // TD1-8, TD10-14 (Galashiels)
-      if (area === 'TD' && ((num >= 1 && num <= 8) || (num >= 10 && num <= 14))) {
-        return { restricted: true, region: 'Remote Communities (Galashiels - TD1-8, TD10-14)', code: `TD${num}` };
-      }
-
-      // TR21-25 (Isles of Scilly)
-      if (area === 'TR' && num >= 21 && num <= 25) {
-        return { restricted: true, region: 'Isles of Scilly (TR21-25)', code: `TR${num}` };
-      }
-    }
-
-    return { restricted: false };
+    const prefix = rawPostcode.trim().toUpperCase().slice(0, 2);
+    const excluded = ['BT', 'GY', 'JE', 'IM'].includes(prefix);
+    return excluded ? { restricted: true, region: 'Outside England and Wales', code: prefix } : { restricted: false };
   }
 
-  onPostcodeInput(event: Event) {
-    const input = event.target as HTMLInputElement;
-    const raw = (input.value || '').toUpperCase();
-    this.postcode = raw;
-    this.postcodeError.set('');
+  postcodeLookupMessage = signal('');
+  postcodeMatches = signal<AddressPrediction[]>([]);
+  private postcodeLookupRequest = 0;
 
-    const query = raw.trim();
-    if (query.length >= 2) {
-      const restricted = this.checkUkRestrictedPostcode(query);
-      if (restricted.restricted) {
-        this.restrictedPostcodeInfo.set(restricted);
-        this.postcodeError.set(`Restricted UK Delivery Area (${restricted.region}). Standard online courier delivery is unavailable.`);
-      } else {
-        this.restrictedPostcodeInfo.set(null);
-      }
-    } else {
-      this.restrictedPostcodeInfo.set(null);
-      this.postcodePredictions.set([]);
-      this.showPostcodeDropdown.set(false);
-      if (this.postcodeSearchTimer) clearTimeout(this.postcodeSearchTimer);
+  onPostcodeInput(event: Event) {
+    this.postcode = (event.target as HTMLInputElement).value.toUpperCase();
+    ++this.postcodeLookupRequest;
+    this.lookingUpPostcode.set(false);
+    this.postcodeLookupMessage.set('');
+    this.postcodeMatches.set([]);
+    this.updatePostcodeRestriction();
+  }
+
+  private updatePostcodeRestriction() {
+    const check = this.checkUkRestrictedPostcode(this.postcode);
+    this.restrictedPostcodeInfo.set(check.restricted ? check : null);
+    this.postcodeError.set(check.restricted
+      ? `Restricted UK Delivery Area (${check.region}). Standard online courier delivery is unavailable.`
+      : '');
+  }
+
+  findCheckoutAddress() {
+    const request = ++this.postcodeLookupRequest;
+    const clean = this.postcode.replace(/\s+/g, '').toUpperCase();
+    this.postcodeMatches.set([]);
+    this.postcodeLookupMessage.set('');
+    if (!/^(?:[A-Z]{1,2}[0-9][A-Z0-9]?|GIR)[0-9][A-Z]{2}$/.test(clean)) {
+      this.postcodeLookupMessage.set('Enter a full UK postcode.');
       return;
     }
 
-    if (this.postcodeSearchTimer) clearTimeout(this.postcodeSearchTimer);
-    this.postcodeSearchTimer = setTimeout(() => {
-      this.fetchPostcodePredictions(query);
-    }, 200);
-  }
-
-  onPostcodeFocus() {
-    if (this.postcodePredictions().length > 0) {
-      this.showPostcodeDropdown.set(true);
-    }
-  }
-
-  onPostcodeBlur() {
-    setTimeout(() => {
-      this.showPostcodeDropdown.set(false);
-    }, 250);
-  }
-
-  onPostcodeKeyDown(event: KeyboardEvent) {
-    const preds = this.postcodePredictions();
-    if (!this.showPostcodeDropdown() || preds.length === 0) return;
-
-    if (event.key === 'ArrowDown') {
-      event.preventDefault();
-      this.selectedPostcodeIndex.update(i => (i + 1 < preds.length ? i + 1 : 0));
-    } else if (event.key === 'ArrowUp') {
-      event.preventDefault();
-      this.selectedPostcodeIndex.update(i => (i - 1 >= 0 ? i - 1 : preds.length - 1));
-    } else if (event.key === 'Enter') {
-      const idx = this.selectedPostcodeIndex();
-      if (idx >= 0 && idx < preds.length) {
-        event.preventDefault();
-        this.selectAddressPrediction(preds[idx], 'postcode');
-      }
-    } else if (event.key === 'Escape') {
-      this.showPostcodeDropdown.set(false);
-    }
-  }
-
-  fetchPostcodePredictions(query: string) {
-    this.searchingPostcode.set(true);
-    const headers = new HttpHeaders({
-      'Content-Type': 'application/json',
-      'X-Goog-Api-Key': this.googlePlacesApiKey
-    });
-
-    const body = {
-      input: query,
-      includedRegionCodes: ['gb']
-    };
-
-    this.http.post<any>('https://places.googleapis.com/v1/places:autocomplete', body, { headers }).subscribe({
-      next: (res) => {
-        this.searchingPostcode.set(false);
-        const suggestions = res?.suggestions || [];
-        const mapped: AddressPrediction[] = suggestions.map((s: any) => {
-          const p = s.placePrediction;
-          return {
-            placeId: p.placeId || (p.place ? p.place.replace('places/', '') : ''),
-            mainText: p.structuredFormat?.mainText?.text || p.text?.text || '',
-            secondaryText: p.structuredFormat?.secondaryText?.text || '',
-            fullText: p.text?.text || ''
-          };
-        }).filter((p: AddressPrediction) => !!p.placeId && !!p.mainText);
-
-        this.postcodePredictions.set(mapped);
-        this.showPostcodeDropdown.set(mapped.length > 0);
-        this.selectedPostcodeIndex.set(-1);
-
-        const clean = query.replace(/\s+/g, '');
-        if (/^[A-Z]{1,2}[0-9][A-Z0-9]?[0-9][A-Z]{2}$/.test(clean) && !this.city.trim()) {
-          this.lookupPostcode(query);
-        }
-      },
-      error: () => {
-        this.searchingPostcode.set(false);
-        this.lookupPostcode(query);
-      }
-    });
-  }
-
-  lookupPostcode(code: string) {
-    const clean = (code || '').replace(/\s+/g, '').toUpperCase();
-    if (clean.length < 5) return;
-
     this.lookingUpPostcode.set(true);
-    this.http.get<any>(`https://api.postcodes.io/postcodes/${encodeURIComponent(clean)}`).subscribe({
-      next: (res) => {
-        this.lookingUpPostcode.set(false);
-        if (res && res.result) {
-          const r = res.result;
-          const town = r.parish || r.admin_ward || r.admin_district || r.region || '';
-          if (town) {
-            this.city = town;
-            this.cityError.set('');
-            this.showToast(`Found UK location: ${town}`);
-          }
-          if (r.postcode) {
-            this.postcode = r.postcode;
-            const check = this.checkUkRestrictedPostcode(r.postcode);
-            if (check.restricted) {
-              this.restrictedPostcodeInfo.set(check);
-              this.postcodeError.set(`Restricted UK Delivery Area (${check.region}). Standard online courier delivery is unavailable.`);
-            } else {
-              this.restrictedPostcodeInfo.set(null);
-            }
-          }
-        }
+    const input = clean.slice(0, -3) + ' ' + clean.slice(-3);
+    const headers = new HttpHeaders({'X-Goog-Api-Key': this.googlePlacesApiKey});
+    this.http.post<{suggestions?: {placePrediction?: {
+      placeId?: string; types?: string[]; text?: {text?: string};
+    }}[]}>('https://places.googleapis.com/v1/places:autocomplete', {
+      input, includedRegionCodes: ['gb']
+    }, {headers}).pipe(finalize(() => {
+      if (request === this.postcodeLookupRequest) this.lookingUpPostcode.set(false);
+    })).subscribe({
+      next: response => {
+        if (request !== this.postcodeLookupRequest) return;
+        const matches = (response.suggestions || []).flatMap(({placePrediction: place}) => {
+          const fullText = place?.text?.text;
+          if (!place?.placeId || !fullText || !place.types?.some(type =>
+            ['street_address', 'premise', 'subpremise'].includes(type))) return [];
+          return [{placeId: place.placeId, fullText, mainText: fullText.split(',')[0], secondaryText: ''}];
+        });
+        this.postcodeMatches.set(matches);
+        if (!matches.length) this.postcodeLookupMessage.set('No property addresses found. Search by street address or enter the details manually.');
       },
       error: () => {
-        this.lookingUpPostcode.set(false);
+        if (request === this.postcodeLookupRequest) {
+          this.postcodeLookupMessage.set('Address lookup is unavailable. You can enter your address manually.');
+        }
       }
     });
+  }
+
+  selectCheckoutPostcodeResult(placeId: string) {
+    const match = this.postcodeMatches().find(result => result.placeId === placeId);
+    if (match) this.selectAddressPrediction(match, 'postcode');
   }
 
   validateName(): boolean {
@@ -2425,8 +2284,10 @@ export class App {
 
   shippingCost = computed(() => {
     if (this.appliedCoupon()?.freeShipping) return 0;
-    return this.subtotal() >= 500 ? 0 : 24.99;
+    const rates = this.deliveryRates();
+    return Math.round(this.subtotal() * 100) >= rates.freeFromMinor ? 0 : rates.standardMinor / 100;
   });
+  private deliveryRates = signal({standardMinor: 2499, freeFromMinor: 50000});
 
   discountTotal = computed(() => {
     const coupon = this.appliedCoupon();
@@ -2502,7 +2363,11 @@ export class App {
   });
 
   compatibleValves = computed(() => {
-    return this.products().filter(p => p.category === 'Valves & Accessories' || p.category === 'Valves' || p.name.includes('Valve')).slice(0, 3);
+    const product = this.selected();
+    if (!product) return [];
+    const skus = String(this.productTechnicalData(product)?.relatedSkus || '')
+      .split(',').map(sku => sku.trim().toUpperCase()).filter(Boolean);
+    return this.products().filter(p => p.id !== product.id && skus.includes(p.sku.toUpperCase()));
   });
 
   private isPopState = false;
@@ -2557,7 +2422,13 @@ export class App {
     }
   }
 
+  private loadDeliveryRates() {
+    this.http.get<{standardMinor: number; freeFromMinor: number}>('/api/checkout/shipping-rates')
+      .subscribe({next: rates => this.deliveryRates.set(rates), error: () => {}});
+  }
+
   constructor() {
+    this.loadDeliveryRates();
     try {
       localStorage.removeItem('thp_addresses');
     } catch (_) {}
@@ -2705,7 +2576,8 @@ export class App {
   }
 
   loadStripeConfig() {
-    this.http.get<any>('/api/checkout/stripe/config').subscribe({
+    this.http.get<any>('/api/checkout/stripe/config')
+      .pipe(finalize(() => this.stripeConfigLoaded.set(true))).subscribe({
       next: (cfg) => {
         if (cfg?.publishableKey) {
           this.stripePublishableKey.set(cfg.publishableKey);
@@ -5185,6 +5057,7 @@ export class App {
     this.orderSubmitting.set(true);
 
     const intentPayload = {
+      postcode: this.postcode.trim(),
       items: this.cart().map(l => ({
         productId: l.product.id,
         variantId: l.variant?.id,
@@ -5198,6 +5071,13 @@ export class App {
     const paymentHeaders = new HttpHeaders({ 'Idempotency-Key': this.checkoutIdempotencyKey });
     this.http.post<any>('/api/checkout/stripe/create-payment-intent', intentPayload, { headers: paymentHeaders }).subscribe({
       next: (intentRes) => {
+        if (intentRes?.clientSecret && intentRes.amountMinor !== Math.round(this.grandTotal() * 100)) {
+          this.orderSubmitting.set(false);
+          this.checkoutIdempotencyKey = crypto.randomUUID();
+          this.loadDeliveryRates();
+          this.error.set('Your order total changed. Review the updated total before paying.');
+          return;
+        }
         const paymentIntentId = intentRes?.paymentIntentId || ('pi_stripe_' + Date.now());
         this.stripePaymentIntentId.set(paymentIntentId);
         if (!this.stripe || !this.stripeCardElement || !intentRes?.clientSecret) {

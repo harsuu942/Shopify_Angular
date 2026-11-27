@@ -34,6 +34,72 @@ public class StoreController {
   private final CustomerInquiryRepository inquiries;
   private final ProductReviewRepository reviews;
   private final RestClient restClient;
+  private final RestClient postcodeClient = RestClient.builder()
+    .baseUrl("https://api.postcodes.io")
+    .requestFactory(postcodeRequestFactory())
+    .build();
+
+  private static org.springframework.http.client.SimpleClientHttpRequestFactory postcodeRequestFactory() {
+    var factory = new org.springframework.http.client.SimpleClientHttpRequestFactory();
+    factory.setConnectTimeout(3000);
+    factory.setReadTimeout(4000);
+    return factory;
+  }
+
+  record ShippingRates(long standardMinor, long freeFromMinor, long minimumMinor, List<String> excludedPostcodes) {}
+  record PostcodeResult(String country) {}
+  record PostcodeResponse(PostcodeResult result) {}
+
+  @GetMapping("/checkout/shipping-rates")
+  public ShippingRates shippingRates() {
+    try {
+      return Objects.requireNonNull(restClient.get().uri("/api/settings/shipping").retrieve().body(ShippingRates.class));
+    } catch (RuntimeException e) {
+      throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Delivery rates are temporarily unavailable. Please try again.");
+    }
+  }
+
+  @GetMapping("/checkout/delivery-availability")
+  public Map<String, Boolean> deliveryAvailability(@RequestParam("postcode") String postcode) {
+    requireEligibleDelivery(postcode);
+    return Map.of("eligible", true);
+  }
+
+  private void requireEligibleDelivery(String postcode) {
+    String normalized = postcode == null ? "" : postcode.replaceAll("\\s+", "").toUpperCase(Locale.ROOT);
+    if (!normalized.matches("(?:[A-Z]{1,2}[0-9][A-Z0-9]?|GIR)[0-9][A-Z]{2}")) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Enter a valid delivery postcode.");
+    }
+    if (normalized.matches("(BT|GY|JE|IM).*")) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Delivery is available only in England and Wales.");
+    }
+    var exclusions = shippingRates().excludedPostcodes();
+    if (exclusions != null && (exclusions.contains(normalized) || exclusions.contains(normalized.substring(0, normalized.length() - 3)))) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Delivery is unavailable for this postcode.");
+    }
+    PostcodeResponse match;
+    try {
+      match = postcodeClient.get().uri("/postcodes/{postcode}", normalized).retrieve().body(PostcodeResponse.class);
+    } catch (org.springframework.web.client.HttpClientErrorException.NotFound e) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Delivery postcode was not found.");
+    } catch (org.springframework.web.client.RestClientException e) {
+      throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Delivery postcode verification is temporarily unavailable.");
+    }
+    String country = match == null || match.result() == null ? null : match.result().country();
+    if (!"England".equals(country) && !"Wales".equals(country)) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Delivery is available only in England and Wales.");
+    }
+  }
+
+  private BigDecimal shippingCharge(BigDecimal subtotal, boolean promotionalFreeShipping) {
+    ShippingRates rates = shippingRates();
+    if (subtotal.compareTo(BigDecimal.valueOf(rates.minimumMinor(), 2)) < 0) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The basket is below the minimum order value for delivery.");
+    }
+    return promotionalFreeShipping || subtotal.compareTo(BigDecimal.valueOf(rates.freeFromMinor(), 2)) >= 0
+      ? BigDecimal.ZERO.setScale(2)
+      : BigDecimal.valueOf(rates.standardMinor(), 2);
+  }
   private final String syncSecret;
   private final String uploadDir;
   private final String stripePublishableKey;
@@ -63,7 +129,7 @@ public class StoreController {
     this.stripePublishableKey = stripePublishableKey;
     this.stripeSecretKey = stripeSecretKey;
     this.stripeWebhookSecret = stripeWebhookSecret;
-    this.restClient = RestClient.builder().baseUrl(adminApiUrl).build();
+    this.restClient = RestClient.builder().baseUrl(adminApiUrl).requestFactory(postcodeRequestFactory()).build();
   }
 
   @GetMapping("/products")
@@ -145,9 +211,9 @@ public class StoreController {
     if (request.shippingAddress() == null || request.shippingAddress().isBlank()) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Shipping address is required for checkout (*)");
     }
-    if (isRestrictedUkPostcode(request.shippingAddress())) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Standard online delivery is restricted for Highlands, Islands, and Remote Offshore UK postcodes. Please contact our freight team on 020 8123 4567 or orders@theheatingandplumbing.co.uk.");
-    }
+    var postcode = java.util.regex.Pattern.compile("(?i)\\b((?:[A-Z]{1,2}[0-9][A-Z0-9]?|GIR)\\s*[0-9][A-Z]{2})\\s*$")
+      .matcher(request.shippingAddress());
+    requireEligibleDelivery(postcode.find() ? postcode.group(1) : null);
 
     BigDecimal subtotal = BigDecimal.ZERO;
     List<Map<String,Object>> itemDetails = new ArrayList<>();
@@ -215,8 +281,7 @@ public class StoreController {
     CalculatedDiscount calc = computeDiscount(request.discountCode(), subtotal);
     BigDecimal discount = calc.discount();
     String validDiscountCode = calc.validCode();
-    boolean freeShip = calc.freeShipping() || subtotal.compareTo(new BigDecimal("500")) >= 0;
-    BigDecimal shipping = freeShip ? BigDecimal.ZERO : new BigDecimal("24.99");
+    BigDecimal shipping = shippingCharge(subtotal, calc.freeShipping());
     BigDecimal grandTotal = subtotal.subtract(discount).max(BigDecimal.ZERO).add(shipping);
 
     String stripeId = Optional.ofNullable(request.stripePaymentIntentId()).orElse("").trim();
@@ -300,6 +365,7 @@ public class StoreController {
   public ResponseEntity<Map<String, Object>> createPaymentIntent(
       @Valid @RequestBody PaymentIntentRequest body,
       @RequestHeader(value="Idempotency-Key", required=false) String idempotencyKey) {
+    requireEligibleDelivery(body.postcode());
     BasketPrice basket = calculateBasket(body.items(), body.discountCode());
     long amountMinor = basket.total().movePointRight(2).longValueExact();
     String currency = "gbp";
@@ -341,6 +407,7 @@ public class StoreController {
             Map<String, Object> res = new HashMap<>();
             res.put("clientSecret", resp.get("client_secret"));
             res.put("paymentIntentId", resp.get("id"));
+            res.put("amountMinor", amountMinor);
             res.put("status", piStatus);
             res.put("publishableKey", stripePublishableKey);
             res.put("mode", stripeSecretKey.startsWith("sk_live_") ? "live" : "stripe_test");
@@ -685,8 +752,7 @@ public class StoreController {
     subtotal = subtotal.setScale(2, java.math.RoundingMode.HALF_UP);
     CalculatedDiscount calculated = computeDiscount(discountCode, subtotal);
     BigDecimal discount = calculated.discount().setScale(2, java.math.RoundingMode.HALF_UP);
-    boolean freeShipping = calculated.freeShipping() || subtotal.compareTo(new BigDecimal("500.00")) >= 0;
-    BigDecimal shipping = freeShipping ? BigDecimal.ZERO.setScale(2) : new BigDecimal("24.99");
+    BigDecimal shipping = shippingCharge(subtotal, calculated.freeShipping());
     return new BasketPrice(subtotal, discount, shipping,
         subtotal.subtract(discount).max(BigDecimal.ZERO).add(shipping).setScale(2, java.math.RoundingMode.HALF_UP));
   }
@@ -1455,6 +1521,7 @@ public class StoreController {
   public record CartLine(@NotNull Long productId, Long variantId, @Min(1) @Max(99) int quantity){}
   public record PaymentIntentRequest(
     @NotEmpty List<@Valid CartLine> items,
+    @NotBlank @Size(max=12) String postcode,
     String discountCode,
     @Email @Size(max=190) String customerEmail,
     @Size(max=120) String customerName

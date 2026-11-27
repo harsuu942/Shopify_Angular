@@ -37,7 +37,7 @@ class SecurityConfig {
   @Bean SecurityFilterChain chain(HttpSecurity http, JwtFilter jwt, CorsConfigurationSource cors) throws Exception {
     return http.csrf(c->c.disable()).cors(c->c.configurationSource(cors))
       .sessionManagement(s->s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-      .authorizeHttpRequests(a->a.requestMatchers("/api/auth/login","/actuator/health","/api/internal/**").permitAll().requestMatchers(HttpMethod.GET,"/api/product-images/**","/api/products/import-workbook/sample").permitAll().anyRequest().authenticated())
+      .authorizeHttpRequests(a->a.requestMatchers("/api/auth/login","/actuator/health","/api/internal/**").permitAll().requestMatchers(HttpMethod.GET,"/api/settings/shipping","/api/product-images/**","/api/products/import-workbook/sample").permitAll().anyRequest().authenticated())
       .addFilterBefore(jwt, UsernamePasswordAuthenticationFilter.class)
       .headers(h->h.frameOptions(f->f.deny()).contentTypeOptions(c->{})
         .contentSecurityPolicy(c->c.policyDirectives("default-src 'none'; frame-ancestors 'none'; base-uri 'none'"))

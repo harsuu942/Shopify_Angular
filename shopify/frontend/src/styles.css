@@ -8828,6 +8828,43 @@ a {
   background: linear-gradient(90deg, rgba(7, 20, 31, 0.94) 0%, rgba(7, 20, 31, 0.72) 48%, rgba(7, 20, 31, 0.18) 100%) !important;
   z-index: 1;
 }
+.home-campaign:nth-child(2)::before { content: none; }
+.home-campaign:nth-child(2) .campaign-inner {
+  background: #14263e;
+  border-radius: 8px;
+  width: fit-content;
+  padding: 12px 16px;
+}
+.checkout-container { max-width: 1220px; }
+.checkout-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.checkout-basket-summary {
+  background: #fff;
+  border: 1px solid #dbe2ea;
+  border-radius: 12px;
+  padding: 20px;
+}
+.checkout-basket-summary h2 { font-size: 1.25rem; }
+.checkout-basket-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid #dbe2ea;
+}
+.checkout-basket-line div { min-width: 0; overflow-wrap: anywhere; }
+.checkout-basket-line small { display: block; }
+.checkout-basket-product { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; align-items: center; }
+.checkout-basket-product img { width: 56px; height: 56px; object-fit: contain; border-radius: 8px; background: #f5f7fa; }
+.checkout-basket-total { font-size: 1.1rem; }
+@media (max-width: 850px) {
+  .checkout-layout { grid-template-columns: minmax(0, 1fr); }
+  .checkout-basket-summary { grid-row: 1; }
+}
 .campaign-inner {
   position: relative;
   z-index: 2;
@@ -12439,8 +12476,8 @@ a.checkout-btn:hover {
    complete top-to-bottom crop fills the storefront without clipping. */
 .home-page-main .hero-banner {
   min-height: clamp(340px, 30vw, 500px) !important;
-  height: clamp(340px, 30vw, 500px) !important;
-  max-height: 500px !important;
+  height: clamp(360px, 34vw, 560px) !important;
+  max-height: 560px !important;
   background-size: cover !important;
   background-position: center center !important;
   background-repeat: no-repeat !important;
