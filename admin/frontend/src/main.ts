@@ -1074,7 +1074,14 @@ const authInterceptor=(req:any,next:any)=>{
             <p>Supplier names match the product’s catalogue brand. Mixed baskets use the highest applicable charge.</p>
             @for(rule of shippingSuppliers; track $index; let i = $index) {
               <div class="technical-builder-grid">
-                <label>Supplier / brand<input [name]="'supplier'+i" required maxlength="100" [(ngModel)]="rule.supplier"></label>
+                <label>Supplier / brand
+                  <select [name]="'supplier'+i" required [(ngModel)]="rule.supplier">
+                    <option value="" disabled>Select a supplier or brand</option>
+                    @for(brand of shippingSupplierOptions(rule.supplier); track brand) {
+                      <option [value]="brand">{{brand}}</option>
+                    }
+                  </select>
+                </label>
                 <label>Charge mode<select [name]="'shipMode'+i" [(ngModel)]="rule.mode"><option value="WEIGHT">Weight based</option><option value="FIXED">Fixed</option><option value="MINIMUM">Minimum</option></select></label>
                 <label>Charge (pence)<input type="number" min="0" max="1000000" required [name]="'supplierCharge'+i" [(ngModel)]="rule.amountMinor"></label>
                 <label><input type="checkbox" style="width:auto" [name]="'vatExclusive'+i" [(ngModel)]="rule.vatExclusive"> Amount excludes VAT</label>
@@ -1512,6 +1519,13 @@ class App {
  addShippingSupplier() {
    this.shippingSuppliers.push({supplier:'',mode:'WEIGHT',amountMinor:0,active:true,capExempt:false});
  }
+ shippingSupplierOptions(selected: string) {
+   const options = new Set([...this.productBrandOptions(), 'Kartel', 'Ultraheat']);
+   if (selected) options.add(selected);
+   const used = new Set(this.shippingSuppliers
+     .filter(rule => rule.supplier !== selected).map(rule => rule.supplier.trim().toLowerCase()));
+   return [...options].filter(brand => !used.has(brand.trim().toLowerCase())).sort((a,b) => a.localeCompare(b));
+ }
  savingShippingSettings = signal(false);
  checkingShippingPreview = signal(false);
  shippingPreviewPostcode = '';
@@ -1521,6 +1535,7 @@ class App {
  shippingPreviewResult = signal('');
 
  openShippingSettings() {
+   this.loadProductFormOptions();
    this.http.get<any>('/api/settings/shipping').subscribe({
      next: rates => {
        this.shippingSettings = {standard: rates.standardMinor / 100, freeFrom: rates.freeFromMinor / 100,
