@@ -79,7 +79,7 @@ class InternalSyncControllerTest {
 
     var controller = new InternalSyncController("secret", orders, customers, products, inventory,
         mock(CustomerInquiryRepository.class), mock(ProductReviewRepository.class),
-        mock(CmsContentRepository.class), mock(CatalogueSyncService.class));
+        mock(CmsContentRepository.class), mock(CatalogueSyncService.class), mock(AdminDocumentMailService.class));
     var item = new StorefrontOrderItem(500L, 999L, "PARENT-1", "PARENT-1",
         "VAR-BLACK", "5000000000002", 2, 1000);
     var payload = new StorefrontOrderPayload("ORD-1", "Buyer", "buyer@example.com", "07123456789",
