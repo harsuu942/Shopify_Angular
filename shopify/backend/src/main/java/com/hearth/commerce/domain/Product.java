@@ -23,6 +23,9 @@ public class Product {
   private boolean unlimitedStock;
   private String staticContentSlug;
   @Column(length=4000) private String documentsJson;
+  @Column(precision=12,scale=3) private BigDecimal shippingWeightKg;
+  public BigDecimal getShippingWeightKg(){return shippingWeightKg;}
+  public void setShippingWeightKg(BigDecimal weight){this.shippingWeightKg=weight;}
   @Column(length=16000) private String technicalDataJson;
   private Integer discountPercent = 20;
   @OneToMany(mappedBy="product",cascade=CascadeType.ALL,orphanRemoval=true,fetch=FetchType.EAGER) @OrderBy("id asc") private List<ProductVariant> variants=new ArrayList<>();

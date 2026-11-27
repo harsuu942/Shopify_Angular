@@ -10,6 +10,9 @@ public class ProductVariant {
   @Column(unique=true) private String ean;
   @Column(unique=true,nullable=false) private String variantSku;
   private String configCode,colour,baseColour,colourCode,paintType,panel,availability,productionTime,leadTime,image;
+  @Column(precision=12,scale=3) private BigDecimal shippingWeightKg;
+  public BigDecimal getShippingWeightKg(){return shippingWeightKg;}
+  public void setShippingWeightKg(BigDecimal weight){this.shippingWeightKg=weight;}
   private Integer heightMm,widthMm,depthMm,stock,watts,btu,warrantyYears,discountPercent;
   private BigDecimal price;
   private boolean unlimitedStock;
@@ -20,5 +23,5 @@ public class ProductVariant {
   public Integer getDiscountPercent(){return discountPercent!=null?discountPercent:0;} public void setDiscountPercent(Integer d){this.discountPercent=d!=null?d:0;}
   public boolean isUnlimitedStock(){return unlimitedStock;} public void setUnlimitedStock(boolean u){this.unlimitedStock=u;}
   public String getImageUrlsJson(){return imageUrlsJson;} public void setImageUrlsJson(String j){this.imageUrlsJson=j;}
-  public void copyFrom(ProductVariant v){ean=v.ean;variantSku=v.variantSku;configCode=v.configCode;colour=v.colour;baseColour=v.baseColour;colourCode=v.colourCode;paintType=v.paintType;heightMm=v.heightMm;widthMm=v.widthMm;depthMm=v.depthMm;panel=v.panel;price=v.price;stock=v.stock;availability=v.availability;productionTime=v.productionTime;leadTime=v.leadTime;watts=v.watts;btu=v.btu;warrantyYears=v.warrantyYears;image=v.image;unlimitedStock=v.unlimitedStock;imageUrlsJson=v.imageUrlsJson;discountPercent=v.discountPercent!=null?v.discountPercent:0;}
+  public void copyFrom(ProductVariant v){ean=v.ean;variantSku=v.variantSku;configCode=v.configCode;colour=v.colour;baseColour=v.baseColour;colourCode=v.colourCode;paintType=v.paintType;heightMm=v.heightMm;widthMm=v.widthMm;depthMm=v.depthMm;shippingWeightKg=v.shippingWeightKg;panel=v.panel;price=v.price;stock=v.stock;availability=v.availability;productionTime=v.productionTime;leadTime=v.leadTime;watts=v.watts;btu=v.btu;warrantyYears=v.warrantyYears;image=v.image;unlimitedStock=v.unlimitedStock;imageUrlsJson=v.imageUrlsJson;discountPercent=v.discountPercent!=null?v.discountPercent:0;}
 }

@@ -37,6 +37,7 @@ class Product extends BaseEntity {
   public Integer discountPercent = 0;
   public String status = "DRAFT";
   public String taxClass = "STANDARD";
+  @jakarta.validation.constraints.PositiveOrZero public java.math.BigDecimal shippingWeightKg;
   public String shippingClass = "STANDARD";
   public String imageUrl;
   public String sourceUrl;
@@ -90,6 +91,7 @@ class ProductVariant extends BaseEntity {
   public Integer heightMm;
   public Integer widthMm;
   public Integer depthMm;
+  @jakarta.validation.constraints.PositiveOrZero public java.math.BigDecimal shippingWeightKg;
   public String panel;
   public Long priceMinor;
   public Long costMinor;
@@ -107,7 +109,7 @@ class ProductVariant extends BaseEntity {
 
   void copyFrom(ProductVariant v){
     ean=v.ean;variantSku=v.variantSku;configCode=v.configCode;colour=v.colour;baseColour=v.baseColour;colourCode=v.colourCode;paintType=v.paintType;
-    heightMm=v.heightMm;widthMm=v.widthMm;depthMm=v.depthMm;panel=v.panel;priceMinor=v.priceMinor;costMinor=v.costMinor;discountPercent=v.discountPercent!=null?v.discountPercent:0;stock=v.stock;
+    shippingWeightKg=v.shippingWeightKg;heightMm=v.heightMm;widthMm=v.widthMm;depthMm=v.depthMm;panel=v.panel;priceMinor=v.priceMinor;costMinor=v.costMinor;discountPercent=v.discountPercent!=null?v.discountPercent:0;stock=v.stock;
     unlimitedStock=v.unlimitedStock;availability=v.availability;productionTime=v.productionTime;leadTime=v.leadTime;watts=v.watts;btu=v.btu;warrantyYears=v.warrantyYears;imageUrl=v.imageUrl;imageUrlsJson=v.imageUrlsJson;
   }
 }
