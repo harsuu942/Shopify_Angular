@@ -26,6 +26,14 @@ public class CustomerOrder {
   @com.fasterxml.jackson.annotation.JsonIgnore private String stripeClientSecret;
   @Column(nullable=false) private Instant createdAt;
   private String shippingAddress;
+  private BigDecimal deliveryCharge;
+  @Lob private String deliveryRuleSnapshot;
+
+  public BigDecimal getDeliveryCharge(){return deliveryCharge;}
+  public void recordDeliveryCharge(BigDecimal charge, String ruleSnapshot){
+    this.deliveryCharge = charge;
+    this.deliveryRuleSnapshot = ruleSnapshot;
+  }
 
   protected CustomerOrder(){}
   public CustomerOrder(String email,String itemsJson,BigDecimal total,String address){

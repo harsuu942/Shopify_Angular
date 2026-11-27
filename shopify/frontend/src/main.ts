@@ -2283,13 +2283,18 @@ export class App {
   cartCount = computed(() => this.cart().reduce((s, l) => s + l.quantity, 0));
 
   shippingCost = computed(() => {
+    if (this.weightShippingActive()) return this.deliveryQuote()?.shipping ?? 0;
     if (this.appliedCoupon()?.freeShipping) return 0;
     const rates = this.deliveryRates();
     return Math.round(this.subtotal() * 100) >= rates.freeFromMinor ? 0 : rates.standardMinor / 100;
   });
-  private deliveryRates = signal({standardMinor: 2499, freeFromMinor: 50000});
+  private deliveryRates = signal<{standardMinor: number; freeFromMinor: number; weightPolicy?: unknown}>({standardMinor: 2499, freeFromMinor: 50000});
+  weightShippingActive = computed(() => !!this.deliveryRates().weightPolicy);
+  deliveryQuote = signal<{shipping: number; discount: number; total: number} | null>(null);
+  deliveryQuoteError = signal('');
 
   discountTotal = computed(() => {
+    if (this.weightShippingActive() && this.deliveryQuote()) return this.deliveryQuote()!.discount;
     const coupon = this.appliedCoupon();
     if (!coupon) return 0;
     if (coupon.discountPercent) {
@@ -2302,6 +2307,7 @@ export class App {
   });
 
   grandTotal = computed(() => {
+    if (this.weightShippingActive() && this.deliveryQuote()) return this.deliveryQuote()!.total;
     return Math.max(0, this.subtotal() - this.discountTotal() + this.shippingCost());
   });
 
@@ -2423,12 +2429,29 @@ export class App {
   }
 
   private loadDeliveryRates() {
-    this.http.get<{standardMinor: number; freeFromMinor: number}>('/api/checkout/shipping-rates')
+    this.http.get<{standardMinor: number; freeFromMinor: number; weightPolicy?: unknown}>('/api/checkout/shipping-rates')
       .subscribe({next: rates => this.deliveryRates.set(rates), error: () => {}});
   }
 
   constructor() {
     this.loadDeliveryRates();
+    effect(onCleanup => {
+      const cart = this.cart();
+      const discountCode = this.appliedCoupon()?.code;
+      const view = this.view();
+      const enabled = this.weightShippingActive();
+      this.deliveryQuote.set(null);
+      this.deliveryQuoteError.set('');
+      if (!enabled || !cart.length || (view !== 'cart' && view !== 'checkout')) return;
+      const request = this.http.post<{shipping:number; discount:number; total:number}>('/api/checkout/shipping-quote', {
+        items: cart.map(line => ({productId:line.product.id, variantId:line.variant?.id, quantity:line.quantity})),
+        discountCode
+      }).subscribe({
+        next: quote => this.deliveryQuote.set(quote),
+        error: error => this.deliveryQuoteError.set(error.error?.message || 'Could not calculate delivery. Review your basket and try again.')
+      });
+      onCleanup(() => request.unsubscribe());
+    });
     try {
       localStorage.removeItem('thp_addresses');
     } catch (_) {}

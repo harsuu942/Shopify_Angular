@@ -46,7 +46,33 @@ public class StoreController {
     return factory;
   }
 
-  record ShippingRates(long standardMinor, long freeFromMinor, long minimumMinor, List<String> excludedPostcodes) {}
+  record ShippingRates(long standardMinor, long freeFromMinor, long minimumMinor, List<String> excludedPostcodes,
+                       WeightPolicy weightPolicy) {
+    ShippingRates(long standardMinor, long freeFromMinor, long minimumMinor, List<String> excludedPostcodes) {
+      this(standardMinor, freeFromMinor, minimumMinor, excludedPostcodes, null);
+    }
+  }
+  record WeightBracket(BigDecimal upToKg, long chargeMinor) {}
+  record SupplierRule(String supplier, String mode, long amountMinor, boolean active, boolean capExempt,
+                      boolean vatExclusive, BigDecimal vatPercent) {
+    SupplierRule(String supplier, String mode, long amountMinor, boolean active, boolean capExempt) {
+      this(supplier, mode, amountMinor, active, capExempt, false, null);
+    }
+    long inclusiveAmountMinor() {
+      if (!vatExclusive || vatPercent == null) return amountMinor;
+      return BigDecimal.valueOf(amountMinor).multiply(BigDecimal.ONE.add(vatPercent.movePointLeft(2)))
+        .setScale(0, java.math.RoundingMode.HALF_UP).longValueExact();
+    }
+  }
+  record WeightPolicy(List<WeightBracket> brackets, long overMaxMinor, long fallbackMinor, long capMinor,
+                      List<SupplierRule> suppliers) {}
+  record ShippingItem(String supplier, BigDecimal weightKg, int quantity) {}
+
+  private ShippingItem shippingItem(Product product, ProductVariant variant, int quantity) {
+    BigDecimal weight = variant != null && variant.getShippingWeightKg() != null
+      ? variant.getShippingWeightKg() : product.getShippingWeightKg();
+    return new ShippingItem(Objects.toString(product.getBrand(), "").strip(), weight, quantity);
+  }
   record PostcodeResult(String country) {}
   record PostcodeResponse(PostcodeResult result) {}
 
@@ -63,6 +89,26 @@ public class StoreController {
   public Map<String, Boolean> deliveryAvailability(@RequestParam("postcode") String postcode) {
     requireEligibleDelivery(postcode);
     return Map.of("eligible", true);
+  }
+
+  @GetMapping("/checkout/shipping-preview")
+  public Map<String, Object> shippingPreview(@RequestParam("postcode") String postcode,
+      @RequestParam("subtotalMinor") long subtotalMinor,
+      @RequestParam(value="weightKg", required=false) BigDecimal weightKg,
+      @RequestParam(value="suppliers", defaultValue="") String suppliers) {
+    if (subtotalMinor < 0 || (weightKg != null && weightKg.signum() < 0) || suppliers.length() > 1000) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid basket preview.");
+    }
+    requireEligibleDelivery(postcode);
+    var items = new ArrayList<ShippingItem>();
+    var names = suppliers.split(",", -1);
+    for (int i = 0; i < names.length; i++) {
+      items.add(new ShippingItem(names[i].strip(), i == 0 ? weightKg : BigDecimal.ZERO, 1));
+    }
+    var rates = shippingRates();
+    if (subtotalMinor < rates.minimumMinor()) return Map.of("eligible", false, "minimumMinor", rates.minimumMinor());
+    var charge = shippingCharge(BigDecimal.valueOf(subtotalMinor, 2), BigDecimal.ZERO, false, items);
+    return Map.of("eligible", true, "chargeMinor", charge.movePointRight(2).longValueExact());
   }
 
   private void requireEligibleDelivery(String postcode) {
@@ -91,14 +137,44 @@ public class StoreController {
     }
   }
 
-  private BigDecimal shippingCharge(BigDecimal subtotal, boolean promotionalFreeShipping) {
-    ShippingRates rates = shippingRates();
+  private BigDecimal shippingCharge(BigDecimal subtotal, BigDecimal discount, boolean promotionalFreeShipping,
+                                    List<ShippingItem> items) {
+    return shippingCharge(shippingRates(), subtotal, discount, promotionalFreeShipping, items);
+  }
+
+  private BigDecimal shippingCharge(ShippingRates rates, BigDecimal subtotal, BigDecimal discount,
+                                    boolean promotionalFreeShipping, List<ShippingItem> items) {
     if (subtotal.compareTo(BigDecimal.valueOf(rates.minimumMinor(), 2)) < 0) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The basket is below the minimum order value for delivery.");
     }
-    return promotionalFreeShipping || subtotal.compareTo(BigDecimal.valueOf(rates.freeFromMinor(), 2)) >= 0
-      ? BigDecimal.ZERO.setScale(2)
-      : BigDecimal.valueOf(rates.standardMinor(), 2);
+    BigDecimal eligibleSubtotal = rates.weightPolicy() == null ? subtotal : subtotal.subtract(discount).max(BigDecimal.ZERO);
+    if (promotionalFreeShipping || eligibleSubtotal.compareTo(BigDecimal.valueOf(rates.freeFromMinor(), 2)) >= 0) {
+      return BigDecimal.ZERO.setScale(2);
+    }
+    var policy = rates.weightPolicy();
+    if (policy == null) return BigDecimal.valueOf(rates.standardMinor(), 2);
+    return BigDecimal.valueOf(weightPolicyCharge(policy, items), 2);
+  }
+
+  static long weightPolicyCharge(WeightPolicy policy, List<ShippingItem> items) {
+    boolean missing = items.stream().anyMatch(item -> item.weightKg() == null || item.weightKg().signum() < 0);
+    BigDecimal weight = items.stream().map(item -> Objects.requireNonNullElse(item.weightKg(), BigDecimal.ZERO)
+      .multiply(BigDecimal.valueOf(item.quantity()))).reduce(BigDecimal.ZERO, BigDecimal::add);
+    long weightCharge = missing ? policy.fallbackMinor() : policy.brackets().stream()
+      .filter(bracket -> weight.compareTo(bracket.upToKg()) <= 0)
+      .findFirst().map(WeightBracket::chargeMinor).orElse(policy.overMaxMinor());
+    long highest = 0;
+    for (String supplier : items.stream().map(ShippingItem::supplier).distinct().toList()) {
+      var rule = policy.suppliers().stream().filter(r -> r.active() && r.supplier().strip().equalsIgnoreCase(supplier)).findFirst();
+      long charge = rule.map(r -> switch (r.mode()) {
+        case "FIXED" -> r.inclusiveAmountMinor();
+        case "MINIMUM" -> Math.max(weightCharge, r.inclusiveAmountMinor());
+        default -> weightCharge;
+      }).orElse(weightCharge);
+      if (rule.isEmpty() || !rule.get().capExempt()) charge = Math.min(charge, policy.capMinor());
+      highest = Math.max(highest, charge);
+    }
+    return highest;
   }
   private final String syncSecret;
   private final String uploadDir;
@@ -218,6 +294,7 @@ public class StoreController {
     BigDecimal subtotal = BigDecimal.ZERO;
     List<Map<String,Object>> itemDetails = new ArrayList<>();
     List<Map<String,Object>> syncItems = new ArrayList<>();
+    List<ShippingItem> deliveryItems = new ArrayList<>();
 
     for (var item : request.items()) {
       var product = products.findByIdForUpdate(item.productId()).orElseThrow(()->new ResponseStatusException(HttpStatus.BAD_REQUEST,"Invalid product: " + item.productId()));
@@ -248,6 +325,7 @@ public class StoreController {
         product.setStock(Math.max(0, product.getStock() - item.quantity()));
       }
       products.save(product);
+      deliveryItems.add(shippingItem(product, variant, item.quantity()));
 
       BigDecimal lineTotal = itemPrice.multiply(BigDecimal.valueOf(item.quantity()));
       subtotal = subtotal.add(lineTotal);
@@ -281,7 +359,8 @@ public class StoreController {
     CalculatedDiscount calc = computeDiscount(request.discountCode(), subtotal);
     BigDecimal discount = calc.discount();
     String validDiscountCode = calc.validCode();
-    BigDecimal shipping = shippingCharge(subtotal, calc.freeShipping());
+    ShippingRates appliedShippingRates = shippingRates();
+    BigDecimal shipping = shippingCharge(appliedShippingRates, subtotal, discount, calc.freeShipping(), deliveryItems);
     BigDecimal grandTotal = subtotal.subtract(discount).max(BigDecimal.ZERO).add(shipping);
 
     String stripeId = Optional.ofNullable(request.stripePaymentIntentId()).orElse("").trim();
@@ -308,7 +387,7 @@ public class StoreController {
       safeAddress = safeAddress.substring(0, 500);
     }
 
-    CustomerOrder saved = orders.saveAndFlush(new CustomerOrder(
+    CustomerOrder order = new CustomerOrder(
       orderNumber,
       email,
       custName,
@@ -321,7 +400,10 @@ public class StoreController {
       pMethod,
       pStatus,
       stripeId
-    ));
+    );
+    order.recordDeliveryCharge(shipping, objectMapper.writeValueAsString(Map.of(
+      "rates", appliedShippingRates, "items", deliveryItems, "promotionalFreeShipping", calc.freeShipping())));
+    CustomerOrder saved = orders.saveAndFlush(order);
     captureStripePayment(stripeId);
 
     // Resilient sync to Admin backend via SyncRetryService
@@ -721,20 +803,29 @@ public class StoreController {
 
   private record CalculatedDiscount(BigDecimal discount, boolean freeShipping, String validCode) {}
   private record BasketPrice(BigDecimal subtotal, BigDecimal discount, BigDecimal shipping, BigDecimal total) {}
+  public record ShippingQuoteRequest(@NotEmpty List<@Valid CartLine> items, String discountCode) {}
+
+  @PostMapping("/checkout/shipping-quote")
+  public Map<String, BigDecimal> shippingQuote(@Valid @RequestBody ShippingQuoteRequest request) {
+    var basket = calculateBasket(request.items(), request.discountCode());
+    return Map.of("shipping", basket.shipping(), "discount", basket.discount(), "total", basket.total());
+  }
 
   private BasketPrice calculateBasket(List<CartLine> lines, String discountCode) {
     if (lines == null || lines.isEmpty()) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cart is empty");
     }
     BigDecimal subtotal = BigDecimal.ZERO;
+    List<ShippingItem> deliveryItems = new ArrayList<>();
     for (CartLine line : lines) {
       Product product = products.findById(line.productId())
           .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid product: " + line.productId()));
       BigDecimal price = product.getPrice();
       int available = product.getStock();
       boolean unlimited = product.isUnlimitedStock();
+      ProductVariant variant = null;
       if (line.variantId() != null) {
-        ProductVariant variant = product.getVariants().stream()
+        variant = product.getVariants().stream()
             .filter(v -> line.variantId().equals(v.getId())).findFirst()
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid variant: " + line.variantId()));
         price = variant.getPrice();
@@ -748,11 +839,12 @@ public class StoreController {
         throw new ResponseStatusException(HttpStatus.CONFLICT, "Insufficient stock for " + product.getName());
       }
       subtotal = subtotal.add(price.multiply(BigDecimal.valueOf(line.quantity())));
+      deliveryItems.add(shippingItem(product, variant, line.quantity()));
     }
     subtotal = subtotal.setScale(2, java.math.RoundingMode.HALF_UP);
     CalculatedDiscount calculated = computeDiscount(discountCode, subtotal);
     BigDecimal discount = calculated.discount().setScale(2, java.math.RoundingMode.HALF_UP);
-    BigDecimal shipping = shippingCharge(subtotal, calculated.freeShipping());
+    BigDecimal shipping = shippingCharge(subtotal, discount, calculated.freeShipping(), deliveryItems);
     return new BasketPrice(subtotal, discount, shipping,
         subtotal.subtract(discount).max(BigDecimal.ZERO).add(shipping).setScale(2, java.math.RoundingMode.HALF_UP));
   }

@@ -14,6 +14,32 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 
 class StoreControllerPricingTest {
+  @Test
+  void appliesWeightBoundariesAndHighestSupplierCharge() {
+    var policy = new StoreController.WeightPolicy(List.of(
+        new StoreController.WeightBracket(BigDecimal.TEN, 1500),
+        new StoreController.WeightBracket(new BigDecimal("20"), 2000),
+        new StoreController.WeightBracket(new BigDecimal("50"), 3000)),
+        5000, 5000, 5000, List.of(
+        new StoreController.SupplierRule("Kartel", "FIXED", 5000, true, false),
+        new StoreController.SupplierRule("Ultraheat", "MINIMUM", 5000, true, false),
+        new StoreController.SupplierRule("A", "FIXED", 2500, true, false),
+        new StoreController.SupplierRule("B", "FIXED", 3500, true, false),
+        new StoreController.SupplierRule("C", "FIXED", 7000, true, false)));
+
+    assertEquals(1500, StoreController.weightPolicyCharge(policy, List.of(item("", "10"))));
+    assertEquals(2000, StoreController.weightPolicyCharge(policy, List.of(item("", "15"))));
+    assertEquals(3000, StoreController.weightPolicyCharge(policy, List.of(item("", "50"))));
+    assertEquals(5000, StoreController.weightPolicyCharge(policy, List.of(item("", "50.001"))));
+    assertEquals(5000, StoreController.weightPolicyCharge(policy, List.of(item("", null))));
+    assertEquals(3500, StoreController.weightPolicyCharge(policy, List.of(item("A", "5"), item("B", "5"))));
+    assertEquals(5000, StoreController.weightPolicyCharge(policy, List.of(item("Kartel", "5"), item("Ultraheat", "5"), item("", "5"))));
+    assertEquals(5000, StoreController.weightPolicyCharge(policy, List.of(item("C", "1"))));
+  }
+
+  private StoreController.ShippingItem item(String supplier, String kg) {
+    return new StoreController.ShippingItem(supplier, kg == null ? null : new BigDecimal(kg), 1);
+  }
   @SuppressWarnings("unchecked")
   private <T> T repository(Class<T> type, java.lang.reflect.InvocationHandler handler) {
     return (T) Proxy.newProxyInstance(type.getClassLoader(), new Class<?>[]{type}, handler);

@@ -1047,6 +1047,7 @@ const authInterceptor=(req:any,next:any)=>{
   </section>
   <section class="panel" style="margin-top:16px">
       <form class="form-grid" #shippingForm="ngForm" (ngSubmit)="saveShippingSettings()">
+        <label class="full"><input type="checkbox" name="weightEnabled" [(ngModel)]="weightShippingEnabled" (ngModelChange)="enableWeightShipping($event)" style="width:auto"> Enable weight and supplier pricing</label>
         <label>Standard delivery (£)<input name="standardRate" type="number" min="0" max="10000" step=".01" required [(ngModel)]="shippingSettings.standard"></label>
         <label>Free delivery from (£)<input name="freeFrom" type="number" min="0" max="1000000" step=".01" required [(ngModel)]="shippingSettings.freeFrom"></label>
         <label>Minimum order value (£)<input name="minimum" type="number" min="0" max="1000000" step=".01" required [(ngModel)]="shippingSettings.minimum"></label>
@@ -1054,12 +1055,49 @@ const authInterceptor=(req:any,next:any)=>{
           <textarea name="excludedPostcodes" rows="3" maxlength="1000" [(ngModel)]="shippingSettings.excluded"></textarea>
           <small class="muted">Enter full postcodes or outward codes separated by commas or new lines. For example, HA7 2ES or HA7.</small>
         </label>
+        @if(weightShippingEnabled) {
+          <section class="full document-lines">
+            <div class="document-lines-head"><strong>Basket weight brackets</strong><button type="button" class="secondary" (click)="weightBrackets.push({upToKg:0,chargeMinor:0})">Add bracket</button></div>
+            @for(bracket of weightBrackets; track $index; let i = $index) {
+              <div class="technical-builder-grid">
+                <label>Up to and including (kg)<input type="number" min="0.001" step="0.001" required [name]="'weightLimit'+i" [(ngModel)]="bracket.upToKg"></label>
+                <label>Delivery charge (pence, VAT included)<input type="number" min="0" max="1000000" step="1" required [name]="'weightCharge'+i" [(ngModel)]="bracket.chargeMinor"></label>
+                <button type="button" class="secondary" (click)="weightBrackets.splice(i,1)" [disabled]="weightBrackets.length<=1">Remove bracket</button>
+              </div>
+            }
+          </section>
+          <label>Above highest bracket (pence)<input type="number" name="overMaxMinor" min="0" max="1000000" required [(ngModel)]="weightOverMaxMinor"></label>
+          <label>Missing weight fallback (pence)<input type="number" name="fallbackMinor" min="0" max="1000000" required [(ngModel)]="weightFallbackMinor"></label>
+          <label>Order cap (pence)<input type="number" name="capMinor" min="0" max="1000000" required [(ngModel)]="weightCapMinor"></label>
+          <section class="full document-lines">
+            <div class="document-lines-head"><strong>Supplier rules</strong><button type="button" class="secondary" (click)="addShippingSupplier()">Add supplier</button></div>
+            <p>Supplier names match the product’s catalogue brand. Mixed baskets use the highest applicable charge.</p>
+            @for(rule of shippingSuppliers; track $index; let i = $index) {
+              <div class="technical-builder-grid">
+                <label>Supplier / brand<input [name]="'supplier'+i" required maxlength="100" [(ngModel)]="rule.supplier"></label>
+                <label>Charge mode<select [name]="'shipMode'+i" [(ngModel)]="rule.mode"><option value="WEIGHT">Weight based</option><option value="FIXED">Fixed</option><option value="MINIMUM">Minimum</option></select></label>
+                <label>Charge (pence)<input type="number" min="0" max="1000000" required [name]="'supplierCharge'+i" [(ngModel)]="rule.amountMinor"></label>
+                <label><input type="checkbox" style="width:auto" [name]="'vatExclusive'+i" [(ngModel)]="rule.vatExclusive"> Amount excludes VAT</label>
+                @if(rule.vatExclusive) {
+                  <label>VAT percentage<input type="number" min="0" max="100" step=".01" required [name]="'vatPercent'+i" [(ngModel)]="rule.vatPercent"></label>
+                }
+                <label><input type="checkbox" style="width:auto" [name]="'supplierActive'+i" [(ngModel)]="rule.active"> Active</label>
+                <label><input type="checkbox" style="width:auto" [name]="'capExempt'+i" [(ngModel)]="rule.capExempt"> Exempt from order cap</label>
+                <button type="button" class="secondary" (click)="shippingSuppliers.splice(i,1)">Remove supplier</button>
+              </div>
+            }
+          </section>
+        }
         <div class="form-actions full"><button class="primary" [disabled]="shippingForm.invalid || savingShippingSettings()">Save rates</button></div>
       </form>
       <form class="form-grid" #previewForm="ngForm" (ngSubmit)="previewShipping()">
         <strong class="full">Test postcode and basket using saved rates</strong>
         <label>Postcode<input name="testPostcode" required maxlength="12" [(ngModel)]="shippingPreviewPostcode"></label>
-        <label>Basket subtotal (£)<input name="testSubtotal" type="number" min="0" required step=".01" [(ngModel)]="shippingPreviewSubtotal"></label>
+        <label>Basket subtotal after discounts (£)<input name="testSubtotal" type="number" min="0" required step=".01" [(ngModel)]="shippingPreviewSubtotal"></label>
+        @if(weightShippingEnabled) {
+          <label>Combined basket weight (kg)<input name="testWeight" type="number" min="0" step=".001" [(ngModel)]="shippingPreviewWeight" placeholder="Blank tests missing weight"></label>
+          <label>Supplier / brand names<input name="testSuppliers" maxlength="1000" [(ngModel)]="shippingPreviewSuppliers" placeholder="e.g. Kartel, Ultraheat"></label>
+        }
         <div class="form-actions full"><button class="secondary" [disabled]="previewForm.invalid || checkingShippingPreview()">Test delivery</button></div>
         <p class="full" role="status">{{shippingPreviewResult()}}</p>
       </form>
@@ -1459,18 +1497,44 @@ class App {
 
  companyContact = { address: '', email: '', phone: '' };
  shippingSettings = {standard: 24.99, freeFrom: 500, minimum: 0, excluded: ''};
+ weightShippingEnabled = false;
+ weightBrackets = [{upToKg:10,chargeMinor:1500},{upToKg:20,chargeMinor:2000},{upToKg:50,chargeMinor:3000}];
+ weightOverMaxMinor = 5000;
+ weightFallbackMinor = 5000;
+ weightCapMinor = 5000;
+ shippingSuppliers: {supplier:string;mode:string;amountMinor:number;active:boolean;capExempt:boolean;vatExclusive?:boolean;vatPercent?:number}[] = [
+   {supplier:'Kartel',mode:'FIXED',amountMinor:5000,active:true,capExempt:false},
+   {supplier:'Ultraheat',mode:'MINIMUM',amountMinor:5000,active:true,capExempt:false}
+ ];
+ enableWeightShipping(enabled: boolean) {
+   if (enabled && this.shippingSettings.freeFrom === 500) this.shippingSettings.freeFrom = 300;
+ }
+ addShippingSupplier() {
+   this.shippingSuppliers.push({supplier:'',mode:'WEIGHT',amountMinor:0,active:true,capExempt:false});
+ }
  savingShippingSettings = signal(false);
  checkingShippingPreview = signal(false);
  shippingPreviewPostcode = '';
  shippingPreviewSubtotal = 0;
+ shippingPreviewWeight: number | null = null;
+ shippingPreviewSuppliers = '';
  shippingPreviewResult = signal('');
 
  openShippingSettings() {
-   this.http.get<{standardMinor: number; freeFromMinor: number; minimumMinor?: number; excludedPostcodes?: string[]}>('/api/settings/shipping').subscribe({
+   this.http.get<any>('/api/settings/shipping').subscribe({
      next: rates => {
        this.shippingSettings = {standard: rates.standardMinor / 100, freeFrom: rates.freeFromMinor / 100,
          minimum: (rates.minimumMinor || 0) / 100, excluded: (rates.excludedPostcodes || []).join('\n')};
        this.shippingPreviewResult.set('');
+       const policy = rates.weightPolicy;
+       this.weightShippingEnabled = !!policy;
+       if (policy) {
+         this.weightBrackets = policy.brackets;
+         this.shippingSuppliers = policy.suppliers;
+         this.weightOverMaxMinor = policy.overMaxMinor;
+         this.weightFallbackMinor = policy.fallbackMinor;
+         this.weightCapMinor = policy.capMinor;
+       }
        this.go('shippingSettings');
      },
      error: () => this.notify('Could not load shipping settings')
@@ -1489,7 +1553,11 @@ class App {
      standardMinor: Math.round(this.shippingSettings.standard * 100),
      freeFromMinor: Math.round(this.shippingSettings.freeFrom * 100),
      minimumMinor: Math.round(this.shippingSettings.minimum * 100),
-     excludedPostcodes
+     excludedPostcodes,
+     weightPolicy: this.weightShippingEnabled ? {
+       brackets: this.weightBrackets, suppliers: this.shippingSuppliers, overMaxMinor: this.weightOverMaxMinor,
+       fallbackMinor: this.weightFallbackMinor, capMinor: this.weightCapMinor
+     } : null
    }).pipe(finalize(() => this.savingShippingSettings.set(false))).subscribe({
      next: () => { this.shippingPreviewResult.set(''); this.notify('Shipping rates saved'); },
      error: () => this.notify('Could not save shipping rates')
@@ -1500,10 +1568,11 @@ class App {
    this.checkingShippingPreview.set(true);
    this.shippingPreviewResult.set('');
    this.http.get<{eligible: boolean; chargeMinor: number; minimumMinor?: number}>('/api/settings/shipping/preview', {
-     params: {postcode: this.shippingPreviewPostcode.trim(), subtotalMinor: Math.round(this.shippingPreviewSubtotal * 100)}
+     params: {postcode: this.shippingPreviewPostcode.trim(), subtotalMinor: Math.round(this.shippingPreviewSubtotal * 100),
+       suppliers: this.shippingPreviewSuppliers, ...(this.shippingPreviewWeight === null ? {} : {weightKg:this.shippingPreviewWeight})}
    }).pipe(finalize(() => this.checkingShippingPreview.set(false))).subscribe({
      next: result => this.shippingPreviewResult.set(result.eligible
-       ? 'Delivery available. Standard charge: ' + (result.chargeMinor / 100).toLocaleString('en-GB', {style:'currency', currency:'GBP'})
+       ? 'Delivery available. Charge: ' + (result.chargeMinor / 100).toLocaleString('en-GB', {style:'currency', currency:'GBP'})
        : result.minimumMinor
          ? 'Basket is below the minimum delivery order of £' + (result.minimumMinor / 100).toFixed(2) + '.'
          : 'Delivery unavailable for this postcode. Check the delivery zones and additional exclusions.'),
